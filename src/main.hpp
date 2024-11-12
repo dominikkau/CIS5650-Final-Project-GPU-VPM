@@ -20,14 +20,10 @@ GLuint positionLocation = 0;   // Match results from glslUtility::createProgram.
 GLuint velocitiesLocation = 1; // Also see attribtueLocations below.
 const char *attributeLocations[] = { "Position", "Velocity" };
 
-GLuint boidVAO = 0;
-GLuint boidVBO_positions = 0;
-GLuint boidVBO_velocities = 0;
-GLuint boidIBO = 0;
 GLuint displayImage;
 GLuint program[2];
 
-const unsigned int PROG_BOID = 0;
+const unsigned int PROG_GPUVPM = 0;
 
 const float fovy = (float) (PI / 4);
 const float zNear = 0.10f;

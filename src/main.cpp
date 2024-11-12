@@ -1,11 +1,3 @@
-/**
-* @file      main.cpp
-* @brief     Example Boids flocking simulation for CIS 5650
-* @authors   Liam Boone, Kai Ninomiya, Kangning (Gary) Li
-* @date      2013-2017
-* @copyright University of Pennsylvania
-*/
-
 #include "main.hpp"
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
@@ -16,12 +8,7 @@
 // Configuration
 // ================
 
-// LOOKED-2.1 LOOKED-2.3 - toggles for UNIFORM_GRID and COHERENT_GRID
-#define VISUALIZE 1
-#define UNIFORM_GRID 1
-#define COHERENT_GRID 1
-
-// LOOKED-1.2 - change this to adjust particle count in the simulation
+// Change this to adjust particle count in the simulation
 const int N_FOR_VIS = 5000;
 const float DT = 0.2f;
 
@@ -32,12 +19,8 @@ int main(int argc, char* argv[]) {
   projectName = "GPU-VPM";
 
   if (init(argc, argv)) {
-    float chord = 1.0f;
-    float span = 5.0f;
-    auto wingVertices = createWingVertices(chord, span);
-
     mainLoop();
-    Boids::endSimulation();
+    GPUVPM::endSimulation();
     return 0;
   } else {
     return 1;
@@ -113,11 +96,11 @@ bool init(int argc, char **argv) {
   // change the device ID.
   cudaGLSetGLDevice(0);
 
-  cudaGLRegisterBufferObject(boidVBO_positions);
-  cudaGLRegisterBufferObject(boidVBO_velocities);
+  //cudaGLRegisterBufferObject(boidVBO_positions);
+  //cudaGLRegisterBufferObject(boidVBO_velocities);
 
   // Initialize N-body simulation
-  Boids::initSimulation(N_FOR_VIS);
+  GPUVPM::initSimulation(N_FOR_VIS);
 
   updateCamera();
 
@@ -130,60 +113,60 @@ bool init(int argc, char **argv) {
 
 void initVAO() {
 
-  std::unique_ptr<GLfloat[]> bodies{ new GLfloat[4 * (N_FOR_VIS)] };
-  std::unique_ptr<GLuint[]> bindices{ new GLuint[N_FOR_VIS] };
+  //std::unique_ptr<GLfloat[]> bodies{ new GLfloat[4 * (N_FOR_VIS)] };
+  //std::unique_ptr<GLuint[]> bindices{ new GLuint[N_FOR_VIS] };
 
-  glm::vec4 ul(-1.0, -1.0, 1.0, 1.0);
-  glm::vec4 lr(1.0, 1.0, 0.0, 0.0);
+  //glm::vec4 ul(-1.0, -1.0, 1.0, 1.0);
+  //glm::vec4 lr(1.0, 1.0, 0.0, 0.0);
 
-  for (int i = 0; i < N_FOR_VIS; i++) {
-    bodies[4 * i + 0] = 0.0f;
-    bodies[4 * i + 1] = 0.0f;
-    bodies[4 * i + 2] = 0.0f;
-    bodies[4 * i + 3] = 1.0f;
-    bindices[i] = i;
-  }
+  //for (int i = 0; i < N_FOR_VIS; i++) {
+  //  bodies[4 * i + 0] = 0.0f;
+  //  bodies[4 * i + 1] = 0.0f;
+  //  bodies[4 * i + 2] = 0.0f;
+  //  bodies[4 * i + 3] = 1.0f;
+  //  bindices[i] = i;
+  //}
 
 
-  glGenVertexArrays(1, &boidVAO); // Attach everything needed to draw a particle to this
-  glGenBuffers(1, &boidVBO_positions);
-  glGenBuffers(1, &boidVBO_velocities);
-  glGenBuffers(1, &boidIBO);
+  //glGenVertexArrays(1, &boidVAO); // Attach everything needed to draw a particle to this
+  //glGenBuffers(1, &boidVBO_positions);
+  //glGenBuffers(1, &boidVBO_velocities);
+  //glGenBuffers(1, &boidIBO);
 
-  glBindVertexArray(boidVAO);
+  //glBindVertexArray(boidVAO);
 
   // Bind the positions array to the boidVAO by way of the boidVBO_positions
-  glBindBuffer(GL_ARRAY_BUFFER, boidVBO_positions); // bind the buffer
-  glBufferData(GL_ARRAY_BUFFER, 4 * (N_FOR_VIS) * sizeof(GLfloat), bodies.get(), GL_DYNAMIC_DRAW); // transfer data
+  //glBindBuffer(GL_ARRAY_BUFFER, boidVBO_positions); // bind the buffer
+  //glBufferData(GL_ARRAY_BUFFER, 4 * (N_FOR_VIS) * sizeof(GLfloat), bodies.get(), GL_DYNAMIC_DRAW); // transfer data
 
-  glEnableVertexAttribArray(positionLocation);
-  glVertexAttribPointer((GLuint)positionLocation, 4, GL_FLOAT, GL_FALSE, 0, 0);
+  //glEnableVertexAttribArray(positionLocation);
+  //glVertexAttribPointer((GLuint)positionLocation, 4, GL_FLOAT, GL_FALSE, 0, 0);
 
   // Bind the velocities array to the boidVAO by way of the boidVBO_velocities
-  glBindBuffer(GL_ARRAY_BUFFER, boidVBO_velocities);
-  glBufferData(GL_ARRAY_BUFFER, 4 * (N_FOR_VIS) * sizeof(GLfloat), bodies.get(), GL_DYNAMIC_DRAW);
-  glEnableVertexAttribArray(velocitiesLocation);
-  glVertexAttribPointer((GLuint)velocitiesLocation, 4, GL_FLOAT, GL_FALSE, 0, 0);
+  //glBindBuffer(GL_ARRAY_BUFFER, boidVBO_velocities);
+  //glBufferData(GL_ARRAY_BUFFER, 4 * (N_FOR_VIS) * sizeof(GLfloat), bodies.get(), GL_DYNAMIC_DRAW);
+  //glEnableVertexAttribArray(velocitiesLocation);
+  //glVertexAttribPointer((GLuint)velocitiesLocation, 4, GL_FLOAT, GL_FALSE, 0, 0);
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, boidIBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS) * sizeof(GLuint), bindices.get(), GL_STATIC_DRAW);
+  //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, boidIBO);
+  //glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS) * sizeof(GLuint), bindices.get(), GL_STATIC_DRAW);
 
-  glBindVertexArray(0);
+  //glBindVertexArray(0);
 }
 
 void initShaders(GLuint * program) {
   GLint location;
 
-  program[PROG_BOID] = glslUtility::createProgram(
+  program[PROG_GPUVPM] = glslUtility::createProgram(
     "shaders/boid.vert.glsl",
     "shaders/boid.geom.glsl",
     "shaders/boid.frag.glsl", attributeLocations, 2);
-    glUseProgram(program[PROG_BOID]);
+    glUseProgram(program[PROG_GPUVPM]);
 
-    if ((location = glGetUniformLocation(program[PROG_BOID], "u_projMatrix")) != -1) {
+    if ((location = glGetUniformLocation(program[PROG_GPUVPM], "u_projMatrix")) != -1) {
       glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
     }
-    if ((location = glGetUniformLocation(program[PROG_BOID], "u_cameraPos")) != -1) {
+    if ((location = glGetUniformLocation(program[PROG_GPUVPM], "u_cameraPos")) != -1) {
       glUniform3fv(location, 1, &cameraPosition[0]);
     }
   }
@@ -200,33 +183,21 @@ void initShaders(GLuint * program) {
     float *dptrVertPositions = NULL;
     float *dptrVertVelocities = NULL;
 
-    cudaGLMapBufferObject((void**)&dptrVertPositions, boidVBO_positions);
-    cudaGLMapBufferObject((void**)&dptrVertVelocities, boidVBO_velocities);
+    //cudaGLMapBufferObject((void**)&dptrVertPositions, boidVBO_positions);
+    //cudaGLMapBufferObject((void**)&dptrVertVelocities, boidVBO_velocities);
 
     // execute the kernel
-    #if UNIFORM_GRID && COHERENT_GRID
-    Boids::stepSimulationCoherentGrid(DT);
-    #elif UNIFORM_GRID
-    Boids::stepSimulationScatteredGrid(DT);
-    #else
-    Boids::stepSimulationNaive(DT);
-    #endif
+    GPUVPM::stepSimulationNaive(DT);
 
-    #if VISUALIZE
-    Boids::copyBoidsToVBO(dptrVertPositions, dptrVertVelocities);
-    #endif
     // unmap buffer object
-    cudaGLUnmapBufferObject(boidVBO_positions);
-    cudaGLUnmapBufferObject(boidVBO_velocities);
+    //cudaGLUnmapBufferObject(boidVBO_positions);
+    //cudaGLUnmapBufferObject(boidVBO_velocities);
   }
 
   void mainLoop() {
     double fps = 0;
     double timebase = 0;
     int frame = 0;
-
-    Boids::unitTest(); // LOOKED-1.2 We run some basic example code to make sure
-                       // your CUDA development setup is ready to go.
 
     while (!glfwWindowShouldClose(window)) {
       glfwPollEvents();
@@ -251,9 +222,8 @@ void initShaders(GLuint * program) {
 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-      #if VISUALIZE
-      glUseProgram(program[PROG_BOID]);
-      glBindVertexArray(boidVAO);
+      glUseProgram(program[PROG_GPUVPM]);
+      //glBindVertexArray(boidVAO);
       glPointSize((GLfloat)pointSize);
       glDrawElements(GL_POINTS, N_FOR_VIS + 1, GL_UNSIGNED_INT, 0);
       glPointSize(1.0f);
@@ -262,7 +232,6 @@ void initShaders(GLuint * program) {
       glBindVertexArray(0);
 
       glfwSwapBuffers(window);
-      #endif
     }
     glfwDestroyWindow(window);
     glfwTerminate();
@@ -314,8 +283,8 @@ void initShaders(GLuint * program) {
 
     GLint location;
 
-    glUseProgram(program[PROG_BOID]);
-    if ((location = glGetUniformLocation(program[PROG_BOID], "u_projMatrix")) != -1) {
+    glUseProgram(program[PROG_GPUVPM]);
+    if ((location = glGetUniformLocation(program[PROG_GPUVPM], "u_projMatrix")) != -1) {
       glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
     }
   }

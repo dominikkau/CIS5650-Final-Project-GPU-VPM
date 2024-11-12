@@ -9,5 +9,7 @@
 #include <vector>
 
 namespace GPUVPM {
-
+    void initSimulation(int N);
+    void stepSimulationNaive(float dt);
+    void endSimulation();
 }
