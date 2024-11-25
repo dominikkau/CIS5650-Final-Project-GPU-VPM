@@ -10,6 +10,39 @@ struct OCCBAirfoilData {
     Eigen::VectorXd cd_spline; // Spline for drag coefficient
 };
 
+// Define the Rotor geometry structure
+struct OCCBRotor {
+    std::vector<double> r;         // Radial locations (m)
+    std::vector<double> chord;     // Chord lengths (m)
+    std::vector<double> theta;     // Total twist including pitch (rad)
+    std::vector<OCCBAirfoilData> af; // Airfoil data for each section
+    double Rhub;                   // Hub radius (m)
+    double Rtip;                   // Tip radius (m)
+    int B;                         // Number of blades
+    double precone;                // Precone angle (rad)
+
+    // Constructor for easy initialization
+    OCCBRotor(const std::vector<double>& r_,
+        const std::vector<double>& chord_,
+        const std::vector<double>& theta_,
+        const std::vector<OCCBAirfoilData>& af_,
+        double Rhub_, double Rtip_, int B_, double precone_)
+        : r(r_), chord(chord_), theta(theta_), af(af_), Rhub(Rhub_), Rtip(Rtip_), B(B_), precone(precone_) {}
+};
+
+// Define the operating point structure for turbine/propeller
+struct OCCBInflow {
+    std::vector<double> Vx;  // Axial inflow velocity (m/s)
+    std::vector<double> Vy;  // Tangential inflow velocity (m/s)
+    double rho;              // Air density (kg/m^3)
+
+    // Constructor for easy initialization
+    OCCBInflow(const std::vector<double>& Vx_,
+        const std::vector<double>& Vy_,
+        double rho_)
+        : Vx(Vx_), Vy(Vy_), rho(rho_) {}
+};
+
 // Function to create a spline from x and y data
 Eigen::VectorXd createSpline(const Eigen::VectorXd& x, const Eigen::VectorXd& y) {
     // Validate input sizes
