@@ -1,13 +1,24 @@
 #include <boost/math/interpolators/cardinal_cubic_b_spline.hpp>
-#include <Eigen/Dense>
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include <cmath>
 
-// Structure to hold airfoil data
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+
+// Define OCCBAirfoilData with appropriate types for splines
 struct OCCBAirfoilData {
-    Eigen::VectorXd cl_spline; // Spline for lift coefficient
-    Eigen::VectorXd cd_spline; // Spline for drag coefficient
+    boost::math::interpolators::cardinal_cubic_b_spline<double> cl_spline;
+    boost::math::interpolators::cardinal_cubic_b_spline<double> cd_spline;
+
+    // Constructor
+    OCCBAirfoilData(
+        const boost::math::interpolators::cardinal_cubic_b_spline<double>& cl,
+        const boost::math::interpolators::cardinal_cubic_b_spline<double>& cd)
+        : cl_spline(cl), cd_spline(cd) {}
 };
 
 // Define the Rotor geometry structure
@@ -43,71 +54,71 @@ struct OCCBInflow {
         : Vx(Vx_), Vy(Vy_), rho(rho_) {}
 };
 
-// Function to create a spline from x and y data
-Eigen::VectorXd createSpline(const Eigen::VectorXd& x, const Eigen::VectorXd& y) {
-    // Validate input sizes
-    if (x.size() < 2 || x.size() != y.size()) {
-        throw std::invalid_argument("Invalid input for spline interpolation.");
-    }
-
-    // Convert Eigen::VectorXd to std::vector for Boost
-    std::vector<double> xVec(x.data(), x.data() + x.size());
-    std::vector<double> yVec(y.data(), y.data() + y.size());
-
-    // Create Boost cubic spline
-    auto spline = boost::math::interpolators::cardinal_cubic_b_spline<double>(
-        yVec.begin(), yVec.end(), xVec[0], xVec[1] - xVec[0]);
-
-    // Generate spline values on the x grid
-    Eigen::VectorXd splineResult(x.size());
-    for (int i = 0; i < x.size(); ++i) {
-        splineResult[i] = spline(xVec[i]);
-    }
-
-    return splineResult;
-}
-
-// Main function to generate airfoil data
+// Function to create an airfoil spline from alpha, cl, and cd arrays
 OCCBAirfoilData occb_af_from_data(const std::vector<double>& alpha,
     const std::vector<double>& cl,
     const std::vector<double>& cd,
     int spl_k = 3) {
-    // Validate input size
+    // Ensure alpha has enough points for spline interpolation
     if (alpha.size() < 2) {
         throw std::invalid_argument("Alpha array too small for spline interpolation.");
     }
 
-    // Convert std::vector to Eigen::VectorXd for compatibility
-    Eigen::VectorXd alphaEigen = Eigen::Map<const Eigen::VectorXd>(alpha.data(), alpha.size());
-    Eigen::VectorXd clEigen = Eigen::Map<const Eigen::VectorXd>(cl.data(), cl.size());
-    Eigen::VectorXd cdEigen = Eigen::Map<const Eigen::VectorXd>(cd.data(), cd.size());
+    int k = std::min(static_cast<int>(alpha.size()) - 1, spl_k); // Determine spline degree
 
-    // Create splines for cl and cd
-    Eigen::VectorXd afcl = createSpline(alphaEigen, clEigen);
-    Eigen::VectorXd afcd = createSpline(alphaEigen, cdEigen);
+    // Convert alpha to radians
+    std::vector<double> alpha_rad(alpha.size());
+    for (size_t i = 0; i < alpha.size(); ++i) {
+        alpha_rad[i] = alpha[i] * M_PI / 180.0;
+    }
 
-    // Return the airfoil data structure
-    return { afcl, afcd };
+    // Spline creation with smoothing approximation
+    // (Boost's spline doesn't directly support smoothing; use approximate smoothing or preprocess data)
+    auto afcl = boost::math::interpolators::cardinal_cubic_b_spline<double>(
+        cl.data(), cl.size(), alpha_rad.front(), (alpha_rad.back() - alpha_rad.front()) / (alpha.size() - 1));
+
+    auto afcd = boost::math::interpolators::cardinal_cubic_b_spline<double>(
+        cd.data(), cd.size(), alpha_rad.front(), (alpha_rad.back() - alpha_rad.front()) / (alpha.size() - 1));
+
+    return OCCBAirfoilData{ afcl, afcd };
 }
 
-//// Example usage
-//int main() {
-//    try {
-//        // Example inputs
-//        std::vector<double> alpha = { -10, 0, 10, 20, 30 };
-//        std::vector<double> cl = { 0.1, 0.5, 0.8, 0.4, -0.1 };
-//        std::vector<double> cd = { 0.02, 0.03, 0.05, 0.07, 0.1 };
-//
-//        // Create airfoil data
-//        OCCBAirfoilData airfoil = occb_af_from_data(alpha, cl, cd);
-//
-//        // Display results
-//        std::cout << "CL spline: " << airfoil.cl_spline.transpose() << std::endl;
-//        std::cout << "CD spline: " << airfoil.cd_spline.transpose() << std::endl;
-//    }
-//    catch (const std::exception& e) {
-//        std::cerr << "Error: " << e.what() << std::endl;
-//    }
-//
-//    return 0;
-//}
+// Function to evaluate airfoil spline at a given alpha
+std::pair<double, double> occb_airfoil(const OCCBAirfoilData& af, double alpha) {
+    // Convert alpha to radians
+    double alpha_rad = alpha * M_PI / 180.0;
+
+    // Evaluate splines
+    double cl = af.cl_spline(alpha_rad);
+    double cd = af.cd_spline(alpha_rad);
+
+    return { cl, cd };
+}
+
+
+
+
+
+int main() {
+    try {
+        // Example inputs
+        std::vector<double> alpha = { -10, 0, 10, 20, 30 };
+        std::vector<double> cl = { 0.1, 0.5, 0.8, 0.4, -0.1 };
+        std::vector<double> cd = { 0.02, 0.03, 0.05, 0.07, 0.1 };
+
+        // Create airfoil data
+        OCCBAirfoilData airfoil = occb_af_from_data(alpha, cl, cd);
+
+        // Evaluate airfoil properties at alpha = 15 degrees
+        auto [cl_val, cd_val] = occb_airfoil(airfoil, 15.0);
+
+        std::cout << "At alpha = 15 degrees:" << std::endl;
+        std::cout << "CL = " << cl_val << ", CD = " << cd_val << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+
+    return 0;
+}
+
