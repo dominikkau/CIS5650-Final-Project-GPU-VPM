@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.18)
 project(GPU-VPM LANGUAGES CUDA CXX)
 
+set(CMAKE_CXX_STANDARD 17)
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
@@ -10,7 +12,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Enable C++11 for host code
-set(CMAKE_CXX_STANDARD 11)
+# set(CMAKE_CXX_STANDARD 11)
 if(NOT DEFINED CMAKE_CUDA_STANDARD)
     set(CMAKE_CUDA_STANDARD 11)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
@@ -50,13 +52,29 @@ set(GLM_ROOT_DIR "${CMAKE_SOURCE_DIR}/external")
 find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
 
+set(EIGEN_ROOT_DIR "${CMAKE_SOURCE_DIR}/external")
+find_package(EIGEN REQUIRED)
+include_directories(${EIGEN_INCLUDE_DIRS})
+
+set(BOOST_ROOT_DIR "${CMAKE_SOURCE_DIR}/external")
+find_package(BOOST REQUIRED)
+include_directories(${BOOST_INCLUDE_DIRS})
+
 set(headers
     src/cudaMat4.hpp
     src/glslUtility.hpp
     src/kernel.h
     src/main.hpp
     src/utilityCore.hpp
-    src/wing.h
+    src/FLOWVLM.h
+    src/FLOWVLM_dt.h
+    src/FLOWVLM_postprocessing.h
+    src/FLOWVLM_rotor.h
+    src/FLOWVLM_rotor_ccb.h
+    src/FLOWVLM_solver.h
+    src/FLOWVLM_tools.h
+    src/FLOWVLM_wing.h
+    src/FLOWVLM_wingsystem.h
     )
 
 set(sources
@@ -64,7 +82,15 @@ set(sources
     src/kernel.cu
     src/main.cpp
     src/utilityCore.cpp
-    src/wing.cpp
+    src/FLOWVLM.cpp
+    src/FLOWVLM_dt.cpp
+    src/FLOWVLM_postprocessing.cpp
+    src/FLOWVLM_rotor.cpp
+    src/FLOWVLM_rotor_ccb.cpp
+    src/FLOWVLM_solver.cpp
+    src/FLOWVLM_tools.cpp
+    src/FLOWVLM_wing.cpp
+    src/FLOWVLM_wingsystem.cpp
     )
 
 list(SORT headers)

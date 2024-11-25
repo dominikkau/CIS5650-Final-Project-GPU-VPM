@@ -1,11 +1,6 @@
-cis5650_boids
-cis5650_boids_generated_kernel*
 *.orig
 *.filters
-*.sln
-*.vcxproj
 *.xcodeproj
-build
 
 # Created by https://www.gitignore.io/api/linux,osx,sublimetext,windows,jetbrains,vim,emacs,cmake,c++,cuda,visualstudio,webstorm,eclipse,xcode
 
@@ -248,7 +243,6 @@ install_manifest.txt
 [Rr]eleases/
 x64/
 x86/
-build/
 bld/
 [Bb]in/
 [Oo]bj/
@@ -544,7 +538,6 @@ local.properties
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
 
 ## Build generated
-build/
 DerivedData
 
 ## Various settings
