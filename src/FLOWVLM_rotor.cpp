@@ -49,3 +49,95 @@ i - th blade.
 < !--NOTE TO SELF : r is the y - direction on a wing, hence, remember to build the
     blade from root in the direction of positive y. -->
     */
+
+#include <vector>
+#include <tuple>
+#include <cmath>
+#include <map>
+#include <string>
+#include <memory>
+#include <iostream>
+#include "constants.h"
+
+    // Forward declarations for external dependencies.
+class Polar;  // Placeholder for `ap.Polar`
+class WingSystem;  // Placeholder for `WingSystem`
+
+// Rotor class definition
+class Rotor {
+public:
+    // Constructor arguments
+    bool CW;  // Clockwise rotation
+    std::vector<double> r;  // Radius positions
+    std::vector<double> chord;  // Chord length
+    std::vector<double> theta;  // Angle of attack (degrees)
+    std::vector<double> LE_x;  // Leading edge x-coordinates
+    std::vector<double> LE_z;  // Leading edge z-coordinates
+    int B;  // Number of blades
+    std::vector<std::tuple<double, std::shared_ptr<Polar>>> airfoils;  // Airfoil properties
+    bool turbine_flag;
+
+    // Properties
+    double RPM;  // Revolutions per minute
+    double hubR;  // Hub radius
+    double rotorR;  // Rotor radius
+    int m;  // Number of control points per blade
+    std::map<std::string, std::any> sol;  // Solution fields (e.g., CCBlade outputs)
+
+    // Internal data storage
+    WingSystem* wingsystem;  // Pointer to a WingSystem instance
+    std::vector<double> _r, _chord, _theta, _LE_x, _LE_z;
+    std::vector<std::shared_ptr<Polar>> _polars;
+    std::shared_ptr<Polar> _polarroot, _polartip;
+
+    // Constructor
+    Rotor(bool CW, const std::vector<double>& r, const std::vector<double>& chord,
+        const std::vector<double>& theta, const std::vector<double>& LE_x,
+        const std::vector<double>& LE_z, int B,
+        const std::vector<std::tuple<double, std::shared_ptr<Polar>>>& airfoils = {},
+        bool turbine_flag = false)
+        : CW(CW), r(r), chord(chord), theta(theta), LE_x(LE_x), LE_z(LE_z), B(B),
+        airfoils(airfoils), turbine_flag(turbine_flag), RPM(0),
+        hubR(r.front()), rotorR(r.back()), m(0), wingsystem(nullptr) {
+        // Initialize Polar objects
+        _polarroot = std::make_shared<Polar>();  // Replace with a dummy Polar equivalent
+        _polartip = std::make_shared<Polar>();
+    }
+
+    // Function to initialize the geometry
+    void initialize(int n, double r_lat = 1.0, bool central = false, bool verif = false) {
+        // Generate blade geometry
+        generateBlade(n, r_lat, central);
+
+        // Configure and add blades to the rotor
+        double d_angle = 2 * M_PI / B;
+        for (int i = 0; i < B; ++i) {
+            double this_angle = i * d_angle;
+            configureBlade(i, this_angle);
+        }
+
+        // Set the global coordinate system for the rotor
+        setGlobalCoordinateSystem();
+    }
+
+private:
+    void generateBlade(int n, double r_lat, bool central) {
+        // Placeholder for generating blade geometry and storing it in internal variables
+        // (e.g., _r, _chord, _theta, _LE_x, _LE_z).
+    }
+
+    void configureBlade(int bladeIndex, double angle) {
+        // Placeholder for configuring blade orientation and position in the rotor system
+    }
+
+    void setGlobalCoordinateSystem() {
+        // Placeholder for setting the rotor in the global coordinate system
+    }
+};
+
+// Constants for hub/tip loss corrections
+constexpr std::tuple<double, double, double, double> nohubcorrection = { 1, 0, INFINITY, 5 * std::numeric_limits<double>::epsilon() };
+constexpr std::tuple<double, double, double, double> notipcorrection = { 1, 0, INFINITY, 5 * std::numeric_limits<double>::epsilon() };
+constexpr std::pair<std::tuple<double, double, double, double>, std::tuple<double, double, double, double>> hubtiploss_nocorrection = { nohubcorrection, notipcorrection };
+constexpr std::pair<std::tuple<double, double, double, double>, std::tuple<double, double, double, double>> hubtiploss_correction_prandtl = { {1, 1, 1, 1.0}, {1, 1, 1, 1.0} };
+constexpr std::pair<std::tuple<double, double, double, double>, std::tuple<double, double, double, double>> hubtiploss_correction_modprandtl = { {0.6, 5, 0.5, 10}, {2, 1, 0.25, 0.05} };

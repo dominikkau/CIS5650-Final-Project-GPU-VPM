@@ -67,6 +67,7 @@ set(headers
     src/FLOWVLM_tools.h
     src/FLOWVLM_wing.h
     src/FLOWVLM_wingsystem.h
+    src/constants.h
     )
 
 set(sources
