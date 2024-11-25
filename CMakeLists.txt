@@ -52,14 +52,6 @@ set(GLM_ROOT_DIR "${CMAKE_SOURCE_DIR}/external")
 find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
 
-set(EIGEN_ROOT_DIR "${CMAKE_SOURCE_DIR}/external")
-find_package(EIGEN REQUIRED)
-include_directories(${EIGEN_INCLUDE_DIRS})
-
-set(BOOST_ROOT_DIR "${CMAKE_SOURCE_DIR}/external")
-find_package(BOOST REQUIRED)
-include_directories(${BOOST_INCLUDE_DIRS})
-
 set(headers
     src/cudaMat4.hpp
     src/glslUtility.hpp
@@ -101,6 +93,15 @@ source_group(Sources FILES ${sources})
 
 add_executable(${CMAKE_PROJECT_NAME} ${sources} ${headers})
 target_link_libraries(${CMAKE_PROJECT_NAME} ${LIBRARIES})
+
+# Add Eigen include directory
+set(EIGEN_DIR "${CMAKE_SOURCE_DIR}/external/include/eigen")
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${EIGEN_DIR})
+
+# Add boost include directory
+set(BOOST_DIR "${CMAKE_SOURCE_DIR}/external/include/boost")
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${BOOST_DIR})
+
 if(CMAKE_VERSION VERSION_LESS "3.23.0")
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES OFF)
 elseif(CMAKE_VERSION VERSION_LESS "3.24.0")

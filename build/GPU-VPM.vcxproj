@@ -87,7 +87,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -109,10 +109,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;GLEW_STATIC;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <CudaCompile>
-      <Include>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(Include)</Include>
+      <Include>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(Include)</Include>
       <Defines>%(Defines);_WINDOWS;GLEW_STATIC;CMAKE_INTDIR="Debug"</Defines>
       <AdditionalOptions>%(AdditionalOptions) -arch=native -Xcompiler="/EHsc -Zi -Ob0"</AdditionalOptions>
       <CodeGeneration>
@@ -128,7 +128,7 @@
       <UseHostInclude>false</UseHostInclude>
     </CudaCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -168,7 +168,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -191,10 +191,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <CudaCompile>
-      <Include>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(Include)</Include>
+      <Include>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(Include)</Include>
       <Defines>%(Defines);_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR="Release"</Defines>
       <AdditionalOptions>%(AdditionalOptions) -arch=native -Xcompiler="/EHsc -Ob2"</AdditionalOptions>
       <CodeGeneration>
@@ -209,7 +209,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <UseHostInclude>false</UseHostInclude>
     </CudaCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -249,7 +249,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -272,10 +272,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <CudaCompile>
-      <Include>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(Include)</Include>
+      <Include>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(Include)</Include>
       <Defines>%(Defines);_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR="MinSizeRel"</Defines>
       <AdditionalOptions>%(AdditionalOptions) -arch=native -Xcompiler="/EHsc -Ob1"</AdditionalOptions>
       <CodeGeneration>
@@ -290,7 +290,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <UseHostInclude>false</UseHostInclude>
     </CudaCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -330,7 +330,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -352,10 +352,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <CudaCompile>
-      <Include>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(Include)</Include>
+      <Include>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(Include)</Include>
       <Defines>%(Defines);_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR="RelWithDebInfo"</Defines>
       <AdditionalOptions>%(AdditionalOptions) -arch=native -Xcompiler="/EHsc -Zi -Ob1"</AdditionalOptions>
       <CodeGeneration>
@@ -370,7 +370,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <UseHostInclude>false</UseHostInclude>
     </CudaCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\eigen;C:\Users\Nadine\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -502,18 +502,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.6.targets" />
-    <Import Project="packages\Eigen3.3.3.9\build\native\Eigen3.targets" Condition="Exists('packages\Eigen3.3.3.9\build\native\Eigen3.targets')" />
   </ImportGroup>
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('packages\Eigen3.3.3.9\build\native\Eigen3.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Eigen3.3.3.9\build\native\Eigen3.targets'))" />
-  </Target>
 </Project>

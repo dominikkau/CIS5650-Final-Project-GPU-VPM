@@ -22,7 +22,7 @@ Eigen::VectorXd createSpline(const Eigen::VectorXd& x, const Eigen::VectorXd& y)
     std::vector<double> yVec(y.data(), y.data() + y.size());
 
     // Create Boost cubic spline
-    auto spline = boost::math::cardinal_cubic_b_spline<double>(
+    auto spline = boost::math::interpolators::cardinal_cubic_b_spline<double>(
         yVec.begin(), yVec.end(), xVec[0], xVec[1] - xVec[0]);
 
     // Generate spline values on the x grid
@@ -57,24 +57,24 @@ OCCBAirfoilData occb_af_from_data(const std::vector<double>& alpha,
     return { afcl, afcd };
 }
 
-// Example usage
-int main() {
-    try {
-        // Example inputs
-        std::vector<double> alpha = { -10, 0, 10, 20, 30 };
-        std::vector<double> cl = { 0.1, 0.5, 0.8, 0.4, -0.1 };
-        std::vector<double> cd = { 0.02, 0.03, 0.05, 0.07, 0.1 };
-
-        // Create airfoil data
-        OCCBAirfoilData airfoil = occb_af_from_data(alpha, cl, cd);
-
-        // Display results
-        std::cout << "CL spline: " << airfoil.cl_spline.transpose() << std::endl;
-        std::cout << "CD spline: " << airfoil.cd_spline.transpose() << std::endl;
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-
-    return 0;
-}
+//// Example usage
+//int main() {
+//    try {
+//        // Example inputs
+//        std::vector<double> alpha = { -10, 0, 10, 20, 30 };
+//        std::vector<double> cl = { 0.1, 0.5, 0.8, 0.4, -0.1 };
+//        std::vector<double> cd = { 0.02, 0.03, 0.05, 0.07, 0.1 };
+//
+//        // Create airfoil data
+//        OCCBAirfoilData airfoil = occb_af_from_data(alpha, cl, cd);
+//
+//        // Display results
+//        std::cout << "CL spline: " << airfoil.cl_spline.transpose() << std::endl;
+//        std::cout << "CD spline: " << airfoil.cd_spline.transpose() << std::endl;
+//    }
+//    catch (const std::exception& e) {
+//        std::cerr << "Error: " << e.what() << std::endl;
+//    }
+//
+//    return 0;
+//}
