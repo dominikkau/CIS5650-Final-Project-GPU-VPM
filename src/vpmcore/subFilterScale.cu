@@ -3,6 +3,7 @@
 #include "particle.h"
 #include "vpmUtils.h"
 
+template <typename Kernel>
 __device__ void calcEstrNaive(int index, ParticleField* source, ParticleField* target, Kernel kernel)
 {
     Particle& targetParticle = target.particles[index];

@@ -5,6 +5,7 @@
 
 #define EPS 1e-6f
 
+template <typename Kernel>
 __device__ void calcVelJacNaive(int index, ParticleField* source, ParticleField* target, Kernel kernel)
 {
     Particle& targetParticle = target.particles[index];
@@ -30,7 +31,7 @@ __device__ void calcVelJacNaive(int index, ParticleField* source, ParticleField*
         targetParticle.U += g_sgm * crossProd;
 
         // Compute Jacobian
-        float aux = dg_sgmdr / (sourceParticle.sigma * r) - 3.0f * g_sgm / powf(r, 2.0f);
+        float aux = dg_sgmdr / (sourceParticle.sigma * r) - 3.0f * g_sgm / (r*r);
         glm::vec3 dX_norm = dX / r;
 
         for (int l = 0; l < 3; ++l) {
