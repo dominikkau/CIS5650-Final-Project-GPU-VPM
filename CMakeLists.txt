@@ -59,6 +59,8 @@ set(headers
     src/vpmcore/timeIntegration.h
     src/vpmcore/velocities.h
     src/vpmcore/vpmUtils.h
+    src/utilityCore.hpp
+    src/wing.h
     )
 
 set(sources
@@ -68,6 +70,8 @@ set(sources
     src/vpmcore/subFilterScale.cu
     src/vpmcore/timeIntegration.cu
     src/vpmcore/velocities.cu
+    src/utilityCore.cpp
+    src/wing.cpp
     )
 
 list(SORT headers)
