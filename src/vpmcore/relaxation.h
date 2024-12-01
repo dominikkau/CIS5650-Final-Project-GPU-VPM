@@ -1,22 +1,19 @@
 #pragma once
 
-struct ParticleField;
 struct Particle;
 
-class PedrizzettiRelaxation {
-public:
+struct PedrizzettiRelaxation {
     float relaxFactor;
-
-    __host__ __device__ PedrizzettiRelaxation(float relaxFactor) : relaxFactor(relaxFactor) {}
-
-    __device__ void relax(int index, ParticleField* field);
+    PedrizzettiRelaxation(float relaxFactor) : relaxFactor(relaxFactor) {}
+    __host__ __device__ void operator()(int index, Particle& particle);
 };
 
-class CorrectedPedrizzettiRelaxation {
-public:
+struct CorrectedPedrizzettiRelaxation {
     float relaxFactor;
+    CorrectedPedrizzettiRelaxation(float relaxFactor) : relaxFactor(relaxFactor) {}
+    __host__ __device__ void operator()(int index, Particle& particle);
+};
 
-    __host__ __device__ CorrectedPedrizzettiRelaxation(float relaxFactor) : relaxFactor(relaxFactor) {}
-
-    __device__ void relax(int index, ParticleField* field);
+struct NoRelaxation {
+    __host__ __device__ void operator()(int index, Particle& particle);
 };

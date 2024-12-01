@@ -5,7 +5,7 @@
 #include "velocities.h"
 
 template <typename Kernel>
-__device__ void calcEstrNaive(int index, ParticleField* source, ParticleField* target, Kernel& kernel) {
+__device__ void calcEstrNaive(int index, ParticleField* source, ParticleField* target, Kernel kernel) {
     Particle& targetParticle = target->particles[index];
 
     for (int i = 0; i < source->np; ++i) {
@@ -94,4 +94,21 @@ __device__ void dynamicProcedure(int index, ParticleField* field, float alpha, f
 
     // Clear temporary variable
     particle.M = 0;
+}
+
+__host__ __device__ void DynamicSFS::operator()(int index, ParticleField* field, float a=1.0f, float b=1.0f) {
+    Particle& particle = field->particles[index];
+
+    if (a == 1.0f || a == 0.0f) {
+        dynamicProcedure(index, field, alpha, relaxFactor, forcePositive, minC, maxC);
+
+        if (particle.C[0] * glm::dot(particle.Gamma, particle.SFS) < 0) particle.C[0] = 0;
+    }
+    else {
+        _reset_particles(field);
+        calcVelJacNaive(index, field);
+
+        _reset_particles_sfs(field);
+        calcEstrNaive(index, field);
+    }
 }

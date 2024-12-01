@@ -12,16 +12,14 @@ constexpr float sqrt2 = sqrt(2.0f);
 
 // TODO: check if g_dgdr is necessary (compute is free)
 
-class SingularKernel {
-public:
+struct SingularKernel {
 	__host__ __device__ inline float zeta(float r) { return (r == 0.0f) ? 1.0f : 0.0f; }
 	__host__ __device__ inline float g   (float r) { return 1.0f; }
 	__host__ __device__ inline float dgdr(float r) { return 0.0f; }
 	__host__ __device__ inline glm::vec2 g_dgdr(float r) { return glm::vec2{ 1.0f, 0.0f }; }
 };
 
-class GaussianKernel {
-public:
+struct GaussianKernel {
 	__host__ __device__ inline float zeta(float r) { 
 		return const3 * exp(- r*r*r);
 	}
@@ -37,8 +35,7 @@ public:
 	}
 };
 
-class GaussianErfKernel {
-public:
+struct GaussianErfKernel {
 	__host__ __device__ inline float zeta(float r) {
 		return const1 * exp(- r*r / 2.0f);
 	}
@@ -54,8 +51,7 @@ public:
 	}
 };
 
-class WinckelmansKernel {
-public:
+struct WinckelmansKernel {
 	__host__ __device__ inline float zeta(float r) {
 		return const4 * 7.5f / pow(r*r + 1.0f, 3.5f);
 	}
