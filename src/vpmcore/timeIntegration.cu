@@ -4,6 +4,7 @@
 #include "vlmUtils.h"
 #include <glm/glm.hpp>
 #include "relaxation.h"
+#include "timeIntegration.h"
 
 template <class Relax, class SFS>
 __global__ void rungekutta(int N, ParticleField* field, float dt, bool relax, Relax relaxation, SFS sfs) {

@@ -59,7 +59,8 @@ set(headers
     src/vpmcore/timeIntegration.h
     src/vpmcore/velocities.h
     src/vpmcore/vpmUtils.h
-    src/utilityCore.hpp
+    src/vpmcore/particleField.h
+    src/vpmcore/particle.h
     src/wing.h
     )
 
@@ -70,7 +71,8 @@ set(sources
     src/vpmcore/subFilterScale.cu
     src/vpmcore/timeIntegration.cu
     src/vpmcore/velocities.cu
-    src/utilityCore.cpp
+    src/vpmcore/particleField.cu
+    src/vpmcore/particle.cu
     src/wing.cpp
     )
 

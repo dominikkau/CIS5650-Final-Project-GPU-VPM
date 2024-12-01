@@ -2,6 +2,7 @@
 #include "particlefield.h"
 #include "particle.h"
 #include "kernels.h"
+#include "velocities.h"
 
 #define EPS 1e-6f
 

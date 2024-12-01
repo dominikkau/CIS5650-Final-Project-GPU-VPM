@@ -25,7 +25,7 @@ struct Particle {
     // Internal variables
     glm::mat3 M;               // Auxiliary memory
     glm::vec3 C;               // SFS coefficient, numerator, denominator
-    glm::vec3 _SFS;               
+    glm::vec3 SFS;               
 
     // Constructor
     Particle();

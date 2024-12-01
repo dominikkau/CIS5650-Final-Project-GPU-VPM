@@ -1,4 +1,4 @@
-#include "Particle.h"
+#include "particle.h"
 
 // Constructor
 Particle::Particle() 

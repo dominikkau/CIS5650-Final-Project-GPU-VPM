@@ -1,6 +1,7 @@
 #include <glm/glm.hpp>
 #include "particle.h"
 #include "vpmUtils.h"
+#include "relaxation.h"
 
 __host__ __device__ void PedrizzettiRelaxation::operator()(Particle& particle) {
     glm::vec3 omega = nablaCrossX(particle.J);

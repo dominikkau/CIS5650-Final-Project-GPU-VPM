@@ -3,6 +3,7 @@
 #include "particle.h"
 #include "vpmUtils.h"
 #include "velocities.h"
+#include "subFilterScale.h"
 
 template <typename Kernel>
 __device__ void calcEstrNaive(int index, ParticleField* source, ParticleField* target, Kernel kernel) {
@@ -16,7 +17,7 @@ __device__ void calcEstrNaive(int index, ParticleField* source, ParticleField* t
         glm::vec3 dX = targetParticle.X - sourceParticle.X;
         float r = glm::length(dX);
 
-        targetParticle.SFS = kernel.zeta(r / sourceParticle.sigma) / powf(sourceParticle.sigma, 3.0f) * S;
+        targetParticle.SFS += kernel.zeta(r / sourceParticle.sigma) / powf(sourceParticle.sigma, 3.0f) * S;
     }
 }
 
