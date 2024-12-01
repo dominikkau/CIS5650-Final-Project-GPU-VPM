@@ -51,18 +51,23 @@ find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
-    src/cudaMat4.hpp
-    src/glslUtility.hpp
     src/kernel.h
     src/main.hpp
-    src/utilityCore.hpp
+    src/vpmcore/kernels.h
+    src/vpmcore/relaxation.h
+    src/vpmcore/subFilterScale.h
+    src/vpmcore/timeIntegration.h
+    src/vpmcore/velocities.h
+    src/vpmcore/vpmUtils.h
     )
 
 set(sources
-    src/glslUtility.cpp
     src/kernel.cu
     src/main.cpp
-    src/utilityCore.cpp
+    src/vpmcore/relaxation.cu
+    src/vpmcore/subFilterScale.cu
+    src/vpmcore/timeIntegration.cu
+    src/vpmcore/velocities.cu
     )
 
 list(SORT headers)
