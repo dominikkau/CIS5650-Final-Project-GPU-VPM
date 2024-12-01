@@ -5,11 +5,11 @@
 #include "velocities.h"
 
 template <typename Kernel>
-__device__ void calcEstrNaive(int index, ParticleField& source, ParticleField& target, Kernel& kernel) {
-    Particle& targetParticle = target.particles[index];
+__device__ void calcEstrNaive(int index, ParticleField* source, ParticleField* target, Kernel& kernel) {
+    Particle& targetParticle = target->particles[index];
 
-    for (int i = 0; i < source.np; ++i) {
-        Particle& sourceParticle = source.particles[i];
+    for (int i = 0; i < source->np; ++i) {
+        Particle& sourceParticle = source->particles[i];
 
         glm::vec3 S = xDotNablaY(sourceParticle.Gamma, targetParticle.J - sourceTarget.J);
 
@@ -20,21 +20,23 @@ __device__ void calcEstrNaive(int index, ParticleField& source, ParticleField& t
     }
 }
 
-__device__ void calcEstrNaive(int index, ParticleField& field) {
-    calcEstrNaive(index, field, field, field.kernel);
+__device__ void calcEstrNaive(int index, ParticleField* field) {
+    calcEstrNaive(index, field, field, field->kernel);
 }
 
-__device__ void dynamicProcedure(int index, ParticleField& field, float alpha, float relaxFactor,
+__device__ void dynamicProcedure(int index, ParticleField* field, float alpha, float relaxFactor,
                                  bool forcePositive, float minC, float maxC) {
-    Particle& particle = field.particles[index];
+    Particle& particle = field->particles[index];
 
     // CALCULATIONS WITH TEST FILTER
     particle.sigma *= alpha;
 
-    field.resetParticles();
+    // field.resetParticles();
+    _reset_particles(field);
     calcVelJacNaive(index, field);
 
-    field.resetParticlesSFS();
+    // field.resetParticlesSFS();
+    _reset_particles_sfs(field);
     calcEstrNaive(index, field);
 
     // Clear temporary variable (really necessary?)
@@ -51,7 +53,7 @@ __device__ void dynamicProcedure(int index, ParticleField& field, float alpha, f
     calcVelJacNaive(index, field);
 
     // field.resetParticlesSFS();
-    _reset_particles(field);
+    _reset_particles_sfs(field);
     calcEstrNaive(index, field);
 
     // Save temporary variables
@@ -63,7 +65,7 @@ __device__ void dynamicProcedure(int index, ParticleField& field, float alpha, f
     numerator *= 3.0f * alpha - 2.0f;
 
     float denominator = glm::dot(particle.M[1], particle.Gamma);
-    denominator *= particle.sigma * particle.sigma * particle.sigma / field.kernel.zeta(0);
+    denominator *= particle.sigma * particle.sigma * particle.sigma / field->kernel.zeta(0);
 
     // Don't initialize denominator to 0
     if (particle.C[2] == 0) particle.C[2] = denominator;
@@ -90,6 +92,6 @@ __device__ void dynamicProcedure(int index, ParticleField& field, float alpha, f
     // Force the coefficient to be positive
     if (forcePositive) particle.C[0] = fabs(particle.C[0]);
 
-    // Clear temporal variable
+    // Clear temporary variable
     particle.M = 0;
 }
