@@ -1,10 +1,8 @@
 #include <glm/glm.hpp>
-#include "particleField.h"
 #include "particle.h"
 #include "vpmUtils.h"
 #include "velocities.h"
 #include "subFilterScale.h"
-#include <cuda.h>
 
 template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
 __device__ void calcEstrNaive(int index, ParticleField<Rs, Ss, Ks>* source, ParticleField<Rt, St, Kt>* target, K kernel) {
@@ -113,4 +111,14 @@ __device__ void DynamicSFS::operator()(int index, ParticleField<R, S, K>* field,
         particle.resetSFS();
         calcEstrNaive(index, field);
     }
+}
+
+
+template <typename R, typename S, typename K>
+__device__ void NoSFS::operator()(int index, ParticleField<R, S, K>* field, float a, float b) {
+    Particle& particle = field->particles[index];
+
+    particle.reset();
+
+    calcVelJacNaive(index, field);
 }

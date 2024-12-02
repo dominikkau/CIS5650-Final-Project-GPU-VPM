@@ -1,4 +1,3 @@
-#include "particlefield.h"
 #include "particle.h"
 #include "velocities.h"
 #include "vpmUtils.h"
