@@ -32,7 +32,7 @@ __global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool 
         float b = rungeKuttaCoefs[i][1];
 
         // RUN SFS
-        field->SFS(field, a, b);
+        field->SFS(index, field, a, b);
 
         __syncthreads();
 
@@ -58,4 +58,40 @@ __global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool 
 
         field->relaxation(particle);
     }
+}
+
+void runVPM() {
+    int numParticles{ 1000 };
+
+    int blockSize{ 128 };
+    int fullBlocksPerGrid{ (numParticles + blockSize - 1) / blockSize };
+
+    // Declare host particle buffer
+    Particle* particleBuffer = new Particle[numParticles];
+
+    // Declare device particle buffer
+    Particle* dev_particleBuffer;
+    cudaMalloc((void**)&dev_particleBuffer, numParticles * sizeof(Particle));
+
+    // Initialize host Buffer somehow
+
+    // Copy particle buffer from host to device
+    cudaMemcpy(dev_particleBuffer, particleBuffer, numParticles * sizeof(Particle), cudaMemcpyHostToDevice);
+
+    glm::vec3 Uinf{ 1, 0, 0 };
+    ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel> field{ numParticles };
+
+    field.particles = dev_particleBuffer;
+
+
+    // Declare device particle field
+    ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>* dev_field;
+    cudaMalloc((void**)&dev_field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>));
+
+    cudaMemcpy(dev_field, &field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>), cudaMemcpyHostToDevice);
+
+
+    rungekutta<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel><<<fullBlocksPerGrid, blockSize>>>(
+        numParticles, dev_field, 0.01f, true
+        );
 }
