@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include <iostream>
 
 // Constructor
 Particle::Particle() 
@@ -206,6 +207,7 @@ __global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool 
     }
 }
 
+
 void runVPM() {
     int numParticles{ 1000 };
 
@@ -236,10 +238,16 @@ void runVPM() {
 
     cudaMemcpy(dev_field, &field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>), cudaMemcpyHostToDevice);
 
+    for (int i = 0; i < 10; ++i) {
+        rungekutta<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel> << <fullBlocksPerGrid, blockSize >> > (
+            numParticles, dev_field, 0.01f, true
+            );
 
-    rungekutta<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel><<<fullBlocksPerGrid, blockSize>>>(
-        numParticles, dev_field, 0.01f, true
-    );
+        cudaMemcpy(&field, dev_field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>), cudaMemcpyDeviceToHost);
+        cudaMemcpy(particleBuffer, dev_particleBuffer, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
+
+        std::cout << "Ran kernel sucessfully! " << particleBuffer[0].U.x << std::endl;
+    }
 }
 
 template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
