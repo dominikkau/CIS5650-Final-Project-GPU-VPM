@@ -96,7 +96,7 @@ add_executable(${CMAKE_PROJECT_NAME} ${sources} ${headers})
 target_link_libraries(${CMAKE_PROJECT_NAME} ${LIBRARIES})
 
 # Add Eigen include directory
-set(EIGEN_DIR "${CMAKE_SOURCE_DIR}/external/include/eigen")
+set(EIGEN_DIR "${CMAKE_SOURCE_DIR}/external/include/Eigen")
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${EIGEN_DIR})
 
 # Add boost include directory
