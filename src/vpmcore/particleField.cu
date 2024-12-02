@@ -3,26 +3,19 @@
 #include <stdexcept>
 #include <functional>
 #include <particle.h>
-#include <formulation.h>
-#include <subfilterscale.h>
-#include <viscousscheme.h>
-
-// CHECK - Forward declarations
-struct Relaxation;
-struct FMM;
-struct Kernel;
-struct Particle;
+#include <subFilterScale.h>
+#include <relaxation.h>
+#include <kernels.h>
 
 // ParticleField definition
-template <typename R=double, typename F=Formulation, typename V=ViscousScheme, typename S=SubFilterScale>
+template <typename R=double, typename Rel=PedrizzettiRelaxation, typename S=DynamicSFS, typename K = GaussianErfKernel>
 class ParticleField {
 public:
     // User inputs
     int maxParticles;                      // Maximum number of particles
-    std::vector<Particle> particles;       // Array of particles
-    std::vector<void*> bodies;             // CHECK - Placeholder for ExaFMM array of bodies
-    F formulation;                         // VPM formulation
-    V viscous;                             // Viscous scheme
+    // std::vector<void*> bodies;             // CHECK - Placeholder for ExaFMM array of bodies
+    // F formulation;                         // VPM formulation
+    // V viscous;                             // Viscous scheme
 
     // Internal properties
     int np;                            // Number of particles in the field
@@ -30,55 +23,44 @@ public:
     R t;                          // Current time
 
     // Solver settings
-    Kernel kernel;                        // Vortex particle kernel
-    std::function<void()> UJ;              // Particle-to-particle calculation
+    K kernel;                        // Vortex particle kernel
+    // std::function<void()> UJ;              // Particle-to-particle calculation
 
     // Optional inputs
-    std::function<glm::vec3(R)> Uinf;      // Uniform freestream function Uinf(t)
+    glm::vec3 Uinf;      // Uniform freestream function Uinf(t)
     S SFS;                                 // Subfilter-scale contributions scheme
-    std::function<void()> integration;
     bool transposed;                       // Transposed vortex stretch scheme
-    Relaxation relaxation;                // Relaxation scheme
+    Rel relaxation;                // Relaxation scheme
     FMM fmm;                              // Fast-multipole settings
 
-    // Internal memory for computation
-    std::vector<R> M;
 
     // Constructor
     ParticleField(
         int maxparticles,
-        std::vector<Particle> particles,
-        td::vector<void*> bodies,
-        F formulation,
-        V viscous,
+        // std::vector<void*> bodies,
         int np = 0,
         int nt = 0,
         R t = R(0.0),
-        Kernel kernel = kernel_default,
-        std::function<void()> UJ=UJ_fmm,
-        std::function<glm::vec3(R)> Uinf = Uinf_default,
-        S SFS = SFS_default,
-        sstd::function<void()> integration = rungekutta3,
+        K kernel = GaussianErfKernel(),
+        // std::function<void()> UJ=UJ_fmm,
+        glm::vec3 Uinf = glm::vec3(0, 0, 0),
+        S SFS = DynamicSFS(),
         bool transposed = true,
-        Relaxation relaxation = relaxation_default,
-        Matrix M = M(4, 0.0))
-    )
-        : maxparticles(maxparticles),
-          particles(particles),
-          bodies(bodies),
-          formulation(formulation),
-          viscous(viscous),
+        Rel relaxation = PedrizzettiRelaxation(0.005))
+        : 
+        //   particles(particles),
+        //   bodies(bodies),
+        //   formulation(formulation),
+        //   viscous(viscous),
+          maxparticles(maxparticles),
           np(np),
           nt(nt),
           t(t),
           kernel(kernel),
-          interaction(interaction),
           Uinf(Uinf),
           SFS(SFS),
-          integration(integration),
           transposed(transposed),
-          relaxation(relaxation),
-          M(M) {}
+          relaxation(relaxation), {}
 
 
 
@@ -154,39 +136,3 @@ public:
     }
 };
 
-template <typename T>
-void _reset_particle(Particle& P, T tzero) {
-    std::fill(P.U.begin(), P.U.end(), tzero);
-    
-    for (auto& row : P.J) {
-        std::fill(row.begin(), row.end(), tzero);
-    }
-
-    std::fill(P.PSE.begin(), P.PSE.end(), tzero);
-}
-
-// Reset all particles in the ParticleField
-template <typename R, typename F, typename V>
-void _reset_particles(ParticleField<R, F, V>& field) {
-    R tzero = R(0);
-    for (auto& P : field.particles) {
-        _reset_particle(P, tzero);
-    }
-}
-
-// Function to reset the SFS (Subfilter Scale) data for an individual particle
-template <typename T>
-void _reset_particle_sfs(Particle & P, T tzero) {
-    std::fill(P._SFS.begin(), P._SFS.end(), tzero);
-}
-
-// Reset SFS data for all particles in the ParticleField
-template <typename R, typename F, typename V>
-void _reset_particles_sfs(ParticleField<R, F, V>& field) {
-    R tzero = R(0);  
-    for (auto& P : field.particles) {
-        _reset_particle_sfs(P, tzero);
-    }
-}
-
-};

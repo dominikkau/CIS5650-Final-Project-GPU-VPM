@@ -1,5 +1,7 @@
 #include <glm/glm.hpp>
 #include <vector>
+#include <cuda.h>
+#include <cuda_runtime.h>
 
 //CHECK - Initialization of member variables
 #ifndef PARTICLE_H
@@ -30,23 +32,8 @@ struct Particle {
     // Constructor
     Particle();
 
-    // Accessor functions
-    glm::vec3 get_U(const Particle& P) ;
-
-    // Vorticity component calculations
-    float get_W1(const Particle& P);
-    float get_W2(const Particle& P);
-    float get_W3(const Particle& P);
-    std::tuple<float, float, float> get_W(const Particle& P);
-
-    // SFS component accessors and mutators
-    float get_SFS1(const Particle& P);
-    float get_SFS2(const Particle& P);
-    float get_SFS3(const Particle& P);
-
-    void add_SFS1(Particle& P, float val);
-    void add_SFS2(Particle& P, float val);
-    void add_SFS3(Particle& P, float val);
+    // Reset particle Jacobian, PSE and SFS
+    __host__ __device__ void resetParticle(Particle &particle);
 };
 
 #endif // PARTICLE_H
