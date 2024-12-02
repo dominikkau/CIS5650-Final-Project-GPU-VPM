@@ -33,7 +33,8 @@ struct Particle {
     Particle();
 
     // Reset particle Jacobian, PSE and SFS
-    __host__ __device__ void resetParticle(Particle &particle);
+    __host__ __device__ void Particle::reset();
+    __host__ __device__ void Particle::resetSFS();
 };
 
 #endif // PARTICLE_H
