@@ -1,7 +1,10 @@
 #pragma once
 
-constexpr float PI = 3.14159265358979f;
-constexpr float const4 = 1 / (4 * PI);
+#include <cuda.h>
+#include <cuda_runtime.h>
+
+const float PI = 3.14159265358979f;
+const float const4 = 1 / (4 * PI);
 
 struct ParticleField;
 struct Kernel;

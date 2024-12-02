@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+
 struct ParticleField;
 
 template <class Relax, class SFS>

@@ -1,7 +1,7 @@
 #include "particlefield.h"
 #include "particle.h"
 #include "velocities.h"
-#include "vlmUtils.h"
+#include "vpmUtils.h"
 #include <glm/glm.hpp>
 #include "relaxation.h"
 #include "timeIntegration.h"
@@ -19,7 +19,7 @@ __global__ void rungekutta(int N, ParticleField* field, float dt, bool relax, Re
     float zeta0 = field->kernel.zeta(0.0f);
 
     // Reset temp variable (necessary?)
-    particle.M = 0.0f;
+    particle.M = glm::mat3{ 0 };
 
     float rungeKuttaCoefs[3][2] = {
         {0.0f, 1.0f / 3.0f},

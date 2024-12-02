@@ -1,11 +1,12 @@
 #include <glm/glm.hpp>
-#include "particlefield.h"
+#include "particleField.h"
 #include "particle.h"
 #include "vpmUtils.h"
 #include "velocities.h"
 #include "subFilterScale.h"
+#include <cuda.h>
 
-template <typename Kernel>
+template <class Kernel>
 __device__ void calcEstrNaive(int index, ParticleField* source, ParticleField* target, Kernel kernel) {
     Particle& targetParticle = target->particles[index];
 
@@ -41,7 +42,7 @@ __device__ void dynamicProcedure(int index, ParticleField* field, float alpha, f
     calcEstrNaive(index, field);
 
     // Clear temporary variable (really necessary?)
-    particle.M = 0;
+    particle.M = glm::mat3{ 0.0f };
 
     // temporary variables
     particle.M[0] = xDotNablaY(particle.Gamma, particle.J);
@@ -49,12 +50,10 @@ __device__ void dynamicProcedure(int index, ParticleField* field, float alpha, f
 
     // CALCULATIONS WITH DOMAIN FILTER
     particle.sigma /= alpha;
-    // field.resetParticles();
-    _reset_particles(field);
+    particle.reset();
     calcVelJacNaive(index, field);
 
-    // field.resetParticlesSFS();
-    _reset_particles_sfs(field);
+    particle.resetSFS(field);
     calcEstrNaive(index, field);
 
     // Save temporary variables
@@ -97,7 +96,7 @@ __device__ void dynamicProcedure(int index, ParticleField* field, float alpha, f
     particle.M = 0;
 }
 
-__host__ __device__ void DynamicSFS::operator()(int index, ParticleField* field, float a=1.0f, float b=1.0f) {
+__device__ void DynamicSFS::operator()(int index, ParticleField* field, float a=1.0f, float b=1.0f) {
     Particle& particle = field->particles[index];
 
     if (a == 1.0f || a == 0.0f) {
@@ -106,10 +105,10 @@ __host__ __device__ void DynamicSFS::operator()(int index, ParticleField* field,
         if (particle.C[0] * glm::dot(particle.Gamma, particle.SFS) < 0) particle.C[0] = 0;
     }
     else {
-        _reset_particles(field);
+        particle.reset();
         calcVelJacNaive(index, field);
 
-        _reset_particles_sfs(field);
+        particle.resetSFS();
         calcEstrNaive(index, field);
     }
 }

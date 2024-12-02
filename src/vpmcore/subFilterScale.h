@@ -1,8 +1,12 @@
 #pragma once
 
-struct ParticleField;
-struct Kernel;
+#include <cuda.h>
+#include <cuda_runtime.h>
 
+struct ParticleField;
+//struct Kernel;
+
+template <class Kernel>
 __device__ void calcEstrNaive(int index, ParticleField* source, ParticleField* target, Kernel kernel);
 __device__ void calcEstrNaive(int index, ParticleField* field);
 __device__ void dynamicProcedure(int index, ParticleField* field, float alpha, float relaxFactor,
@@ -18,5 +22,5 @@ struct DynamicSFS {
     DynamicSFS(float minC = 0, float maxC = 1, float alpha = 0.667, float relaxFactor = 0.005, bool forcePositive = true)
         : minC(minC), maxC(maxC), alpha(alpha), relaxFactor(relaxFactor), forcePositive(forcePositive) {}
 
-    __host__ __device__ void operator()(int index, Particle& particle);
+    __device__ void operator()(int index, Particle& particle);
 };

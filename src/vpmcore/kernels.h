@@ -1,14 +1,16 @@
 #pragma once
 
+#include <cuda.h>
+#include <cuda_runtime.h>
 #include <glm/glm.hpp>
 
 // Constants
-constexpr float PI = 3.14159265358979f;
-constexpr float const1 = pow(1.0f / (2.0f * PI), 1.5f);
-constexpr float const2 = sqrt(2.0f / PI);
-constexpr float const3 = 3.0f / (4.0f * PI);
-constexpr float const4 = 1.0f / (4.0f * PI);
-constexpr float sqrt2 = sqrt(2.0f);
+const float PI = 3.14159265358979f;
+const float const1 = pow(1.0f / (2.0f * PI), 1.5f);
+const float const2 = sqrt(2.0f / PI);
+const float const3 = 3.0f / (4.0f * PI);
+const float const4 = 1.0f / (4.0f * PI);
+const float sqrt2 = sqrt(2.0f);
 
 // TODO: check if g_dgdr is necessary (compute is free)
 
@@ -62,7 +64,7 @@ struct WinckelmansKernel {
 		return 7.5f * r*r / pow(r*r + 1.0f, 3.5f);
 	}
 	__host__ __device__ inline glm::vec2 g_dgdr(float r) {
-		float tmp =  pow(r*r + 1.0f, 2.5f)
+		float tmp = pow(r * r + 1.0f, 2.5f);
 		return glm::vec2{ r*r*r * (r*r + 2.5f) / tmp,
 					      7.5f * r*r / (tmp * (r*r + 1.0f)) };
 	}
