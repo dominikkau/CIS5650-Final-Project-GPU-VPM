@@ -1,11 +1,10 @@
-#include <vector>
+#include <cuda.h>
+#include <cuda_runtime.h>
 #include <glm/glm.hpp>
-#include <stdexcept>
-#include <functional>
-#include <particle.h>
-#include <subFilterScale.h>
-#include <relaxation.h>
-#include <kernels.h>
+#include "particle.h"
+#include "subFilterScale.h"
+#include "relaxation.h"
+#include "kernels.h"
 
 // ParticleField definition
 template <typename R=double, typename Rel=PedrizzettiRelaxation, typename S=DynamicSFS, typename K = GaussianErfKernel>

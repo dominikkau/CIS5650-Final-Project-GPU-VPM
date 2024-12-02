@@ -1,14 +1,10 @@
-#include <glm/glm.hpp>
-#include <vector>
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <glm/glm.hpp>
 
 //CHECK - Initialization of member variables
 #ifndef PARTICLE_H
 #define PARTICLE_H
-
-#include <glm/glm.hpp>
-#include <tuple>
 
 struct Particle {
     // User-defined variables

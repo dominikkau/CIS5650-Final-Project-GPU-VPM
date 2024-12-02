@@ -71,7 +71,6 @@ set(sources
     src/vpmcore/subFilterScale.cu
     src/vpmcore/timeIntegration.cu
     src/vpmcore/velocities.cu
-    src/vpmcore/particleField.cu
     src/vpmcore/particle.cu
     src/wing.cpp
     )
