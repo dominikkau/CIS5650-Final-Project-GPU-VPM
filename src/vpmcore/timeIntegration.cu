@@ -73,7 +73,7 @@ void runVPM() {
     Particle* dev_particleBuffer;
     cudaMalloc((void**)&dev_particleBuffer, numParticles * sizeof(Particle));
 
-    // Initialize host Buffer somehow
+    // Initialize host Buffer somehow !!
 
     // Copy particle buffer from host to device
     cudaMemcpy(dev_particleBuffer, particleBuffer, numParticles * sizeof(Particle), cudaMemcpyHostToDevice);
@@ -93,5 +93,5 @@ void runVPM() {
 
     rungekutta<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel><<<fullBlocksPerGrid, blockSize>>>(
         numParticles, dev_field, 0.01f, true
-        );
+    );
 }

@@ -52,24 +52,13 @@ include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
     src/main.hpp
-    src/vpmcore/kernels.h
-    src/vpmcore/relaxation.h
-    src/vpmcore/subFilterScale.h
-    src/vpmcore/timeIntegration.h
-    src/vpmcore/velocities.h
-    src/vpmcore/vpmUtils.h
-    src/vpmcore/particleField.h
-    src/vpmcore/particle.h
+    src/vpmcore/kernel.h
     src/wing.h
     )
 
 set(sources
     src/main.cpp
-    src/vpmcore/relaxation.cu
-    src/vpmcore/subFilterScale.cu
-    src/vpmcore/timeIntegration.cu
-    src/vpmcore/velocities.cu
-    src/vpmcore/particle.cu
+    src/vpmcore/kernel.cu
     src/wing.cpp
     )
 
