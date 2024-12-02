@@ -1,5 +1,9 @@
-#include "kernel.h"
 #include <iostream>
+#include <vector>
+#include <string>
+#include "kernel.h"
+#include "../lean_vtk.hpp"
+#include <random>
 
 // Constructor
 Particle::Particle() 
@@ -207,49 +211,6 @@ __global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool 
     }
 }
 
-
-void runVPM() {
-    int numParticles{ 1000 };
-
-    int blockSize{ 128 };
-    int fullBlocksPerGrid{ (numParticles + blockSize - 1) / blockSize };
-
-    // Declare host particle buffer
-    Particle* particleBuffer = new Particle[numParticles];
-
-    // Declare device particle buffer
-    Particle* dev_particleBuffer;
-    cudaMalloc((void**)&dev_particleBuffer, numParticles * sizeof(Particle));
-
-    // Initialize host Buffer somehow !!
-
-    // Copy particle buffer from host to device
-    cudaMemcpy(dev_particleBuffer, particleBuffer, numParticles * sizeof(Particle), cudaMemcpyHostToDevice);
-
-    glm::vec3 Uinf{ 1, 0, 0 };
-    ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel> field{ numParticles };
-
-    field.particles = dev_particleBuffer;
-
-
-    // Declare device particle field
-    ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>* dev_field;
-    cudaMalloc((void**)&dev_field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>));
-
-    cudaMemcpy(dev_field, &field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>), cudaMemcpyHostToDevice);
-
-    for (int i = 0; i < 10; ++i) {
-        rungekutta<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel> << <fullBlocksPerGrid, blockSize >> > (
-            numParticles, dev_field, 0.01f, true
-            );
-
-        cudaMemcpy(&field, dev_field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>), cudaMemcpyDeviceToHost);
-        cudaMemcpy(particleBuffer, dev_particleBuffer, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
-
-        std::cout << "Ran kernel sucessfully! " << particleBuffer[0].U.x << std::endl;
-    }
-}
-
 template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
 __device__ void calcVelJacNaive(int index, ParticleField<Rs, Ss, Ks>* source, ParticleField<Rt, St, Kt>* target, K kernel) {
     Particle& targetParticle = target->particles[index];
@@ -299,4 +260,85 @@ __device__ void calcVelJacNaive(int index, ParticleField<Rs, Ss, Ks>* source, Pa
 template <typename R, typename S, typename K>
 __device__ void calcVelJacNaive(int index, ParticleField<R, S, K>* field) {
     calcVelJacNaive(index, field, field, field->kernel);
+}
+
+void runVPM() {
+    int numParticles{ 1000 };
+    int numTimeSteps{ 100 };
+    float dt = 0.01f;
+
+    int blockSize{ 128 };
+    int fullBlocksPerGrid{ (numParticles + blockSize - 1) / blockSize };
+
+    // Declare host particle buffer
+    Particle* particleBuffer = new Particle[numParticles];
+
+    // Declare device particle buffer
+    Particle* dev_particleBuffer;
+    cudaMalloc((void**)&dev_particleBuffer, numParticles * sizeof(Particle));
+
+    // Initialize host Buffer somehow !!
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> pos_dist(-10.0f, 10.0f); // Position range
+    std::uniform_real_distribution<float> vel_dist(-1.0f, 1.0f);   // Velocity range
+
+    for (int i = 0; i < numParticles; ++i) {
+        Particle& particle = particleBuffer[i];
+        particle.U = glm::vec3{ vel_dist(gen), vel_dist(gen), vel_dist(gen) };
+        particle.X = glm::vec3{ pos_dist(gen), pos_dist(gen), pos_dist(gen) };
+    }
+
+    // Copy particle buffer from host to device
+    cudaMemcpy(dev_particleBuffer, particleBuffer, numParticles * sizeof(Particle), cudaMemcpyHostToDevice);
+
+    glm::vec3 Uinf{ 1, 0, 0 };
+    ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel> field{ numParticles };
+
+    field.particles = dev_particleBuffer;
+
+
+    // Declare device particle field
+    ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>* dev_field;
+    cudaMalloc((void**)&dev_field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>));
+
+    cudaMemcpy(dev_field, &field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>), cudaMemcpyHostToDevice);
+
+    int dim = 3;
+    std::vector<double> particleX;
+    std::vector<double> particleU;
+    std::vector<double> particleSigma;
+    std::vector<double> particleIdx;
+    particleX.reserve(dim * numParticles);
+    particleU.reserve(dim * numParticles);
+    particleSigma.reserve(numParticles);
+    particleIdx.reserve(numParticles);
+
+    for (int i = 0; i < numTimeSteps; ++i) {
+        rungekutta<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel> << <fullBlocksPerGrid, blockSize >> > (
+            numParticles, dev_field, dt, true
+            );
+
+        cudaMemcpy(&field, dev_field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>), cudaMemcpyDeviceToHost);
+        cudaMemcpy(particleBuffer, dev_particleBuffer, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
+    }
+    
+    for (int i = 0; i < numParticles; ++i) {
+        Particle& particle = particleBuffer[i];
+
+        particleIdx.push_back(i);
+        particleSigma.push_back(particle.sigma);
+
+        for (int j = 0; j < dim; ++j) {
+            particleU.push_back(particle.U[j]);
+            particleX.push_back(particle.X[j]);
+        }
+    }
+
+    leanvtk::VTUWriter writer;
+
+    writer.add_scalar_field("index", particleIdx);
+    //writer.add_scalar_field("sigma", particleSigma);
+    writer.add_vector_field("position", particleX, dim);
+    writer.write_point_cloud("test.vtu", dim, particleX);
 }

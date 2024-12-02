@@ -54,12 +54,14 @@ set(headers
     src/main.hpp
     src/vpmcore/kernel.h
     src/wing.h
+    src/lean_vtk.hpp
     )
 
 set(sources
     src/main.cpp
     src/vpmcore/kernel.cu
     src/wing.cpp
+    src/lean_vtk.cpp
     )
 
 list(SORT headers)
