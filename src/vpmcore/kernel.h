@@ -228,4 +228,3 @@ struct Particle {
     __host__ __device__ void Particle::reset();
     __host__ __device__ void Particle::resetSFS();
 };
-

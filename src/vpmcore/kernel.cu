@@ -262,10 +262,46 @@ __device__ void calcVelJacNaive(int index, ParticleField<R, S, K>* field) {
     calcVelJacNaive(index, field, field, field->kernel);
 }
 
+static void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, int timestep) {
+    const int dim = 3;
+
+    leanvtk::VTUWriter writer;
+
+    std::vector<double> particleX;
+    std::vector<double> particleU;
+    std::vector<double> particleSigma;
+    std::vector<double> particleIdx;
+    particleX.reserve(dim * numParticles);
+    particleU.reserve(dim * numParticles);
+    particleSigma.reserve(numParticles);
+    particleIdx.reserve(numParticles);
+
+    for (int i = 0; i < numParticles; ++i) {
+        Particle& particle = particleBuffer[i];
+
+        particleIdx.push_back(i);
+        particleSigma.push_back(particle.sigma);
+
+        for (int j = 0; j < dim; ++j) {
+            particleU.push_back(particle.U[j]);
+            particleX.push_back(particle.X[j]);
+        }
+    }
+
+    
+
+    writer.add_scalar_field("index", particleIdx);
+    //writer.add_scalar_field("sigma", particleSigma);
+    writer.add_vector_field("position", particleX, dim);
+    writer.add_vector_field("velocity", particleU, dim);
+    writer.write_point_cloud(filename + "_" + std::to_string(timestep) + ".vtu", dim, particleX);
+}
+
 void runVPM() {
     int numParticles{ 1000 };
     int numTimeSteps{ 100 };
     float dt = 0.01f;
+    int fileSaveSteps = 10;
 
     int blockSize{ 128 };
     int fullBlocksPerGrid{ (numParticles + blockSize - 1) / blockSize };
@@ -304,41 +340,16 @@ void runVPM() {
 
     cudaMemcpy(dev_field, &field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>), cudaMemcpyHostToDevice);
 
-    int dim = 3;
-    std::vector<double> particleX;
-    std::vector<double> particleU;
-    std::vector<double> particleSigma;
-    std::vector<double> particleIdx;
-    particleX.reserve(dim * numParticles);
-    particleU.reserve(dim * numParticles);
-    particleSigma.reserve(numParticles);
-    particleIdx.reserve(numParticles);
-
     for (int i = 0; i < numTimeSteps; ++i) {
         rungekutta<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel> << <fullBlocksPerGrid, blockSize >> > (
             numParticles, dev_field, dt, true
-            );
+        );
 
         cudaMemcpy(&field, dev_field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>), cudaMemcpyDeviceToHost);
         cudaMemcpy(particleBuffer, dev_particleBuffer, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
-    }
-    
-    for (int i = 0; i < numParticles; ++i) {
-        Particle& particle = particleBuffer[i];
 
-        particleIdx.push_back(i);
-        particleSigma.push_back(particle.sigma);
-
-        for (int j = 0; j < dim; ++j) {
-            particleU.push_back(particle.U[j]);
-            particleX.push_back(particle.X[j]);
+        if (i % fileSaveSteps == 0) {
+            writeVTK(numParticles, particleBuffer, "test", i / fileSaveSteps);
         }
-    }
-
-    leanvtk::VTUWriter writer;
-
-    writer.add_scalar_field("index", particleIdx);
-    //writer.add_scalar_field("sigma", particleSigma);
-    writer.add_vector_field("position", particleX, dim);
-    writer.write_point_cloud("test.vtu", dim, particleX);
+    } 
 }
