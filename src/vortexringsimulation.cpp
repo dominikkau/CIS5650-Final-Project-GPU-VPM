@@ -4,6 +4,9 @@
 #include <iostream>
 #include <vector>
 #include <math.h>
+#include <Eigen/Dense>
+#include <cmath>
+#include <functional>
 #include "vpmcore/subFilterScale.h"
 #include "vpmcore/relaxation.h"
 #include "vpmcore/kernels.h"
@@ -23,7 +26,7 @@ int numberParticles(int Nphi, int nc, int extra_nc = 0) {
 }
 
 void addVortexRing(ParticleField* pField, float circulation, float R, float AR, float Rcross,
-int Nphi, int ncs, float sigmas, int extra_ncs, vector<float>& ringPosition, 
+int Nphi, int nc, float sigmas, int extra_ncs, vector<float>& ringPosition, 
 vector<float>& ringOrientation){ // missing v_lvl from args
 
     float a = static_cast<float> R * std::sqrt(AR); // Semi-major axis
@@ -39,15 +42,16 @@ vector<float>& ringOrientation){ // missing v_lvl from args
         return fun_S(phi) / Stot;
     };
 
+    // Angle associated to a given non-dimensional arc length
     auto fun_phi = [fun_s, a, b](float s) {
         if (std::abs(s) <= std::numeric_limits<float>::epsilon()) return 0.0f;
         if (std::abs(s - 1) <= std::numeric_limits<float>::epsilon()) return 2 * M_PI;
-        return fzero([fun_s, s](float phi) { return fun_s(phi) - s; }, 0, 2 * M_PI - 1e-16);
+        return fzero([fun_s, s](float phi) { return fun_s(phi) - s; }, 0, 2 * M_PI - 1e-16); // CHECK
     }
 
-    auto fun_length = [fun_S](double r, double tht, double a, double b, double phi1, double phi2) {
-        double S1 = fun_S(phi1 + r * std::cos(tht));
-        double S2 = fun_S(phi2 + r * std::cos(tht));
+    auto fun_length = [fun_S](float r, float tht, float a, float b, float phi1, float phi2) {
+        float S1 = fun_S(phi1 + r * std::cos(tht));
+        float S2 = fun_S(phi2 + r * std::cos(tht));
         return S2 - S1;
     };
 
@@ -56,8 +60,8 @@ vector<float>& ringOrientation){ // missing v_lvl from args
         return r * fun_length(r, tht, a, b, phi1, phi2);
     };
 
-    auto fun_vol = [&fun_dvol](std::function<double(double)> dvol_wrap, double r1, double tht1, double r2, double tht2) {
-        // Implement numerical integration (e.g., Gauss-Legendre quadrature)
+    auto fun_vol = [&fun_dvol](std::function<float(float)> dvol_wrap, float r1, float tht1, float r2, float tht2) {
+        // CHECK - Implement numerical integration (e.g., Gauss-Legendre quadrature)
         return 0.0;
     };
 
@@ -67,7 +71,7 @@ vector<float>& ringOrientation){ // missing v_lvl from args
                                              float sigma, float vol, float circulation) {
         Eigen::Vector3d X_global = ringOrientation * X + O;
         Eigen::Vector3d Gamma_global = ringOrientation * Gamma;
-        add_particle()); // add arguments
+        add_particle()); // CHECK - no add_particle in particleField
     };
 
     float rl = Rcross / (2 * nc + 1);
@@ -75,7 +79,7 @@ vector<float>& ringOrientation){ // missing v_lvl from args
     float ds = dS / Stot;
     float omega = circulation / (M_PI * Rcross * Rcross);
 
-    int org_np = 0; // Replace with pfield.get_np();
+    int org_np = pField.np; // Replace with pfield.get_np();
 
     for (int N = 0; N < Nphi; ++N) {
         float sc1 = ds * N;
@@ -103,9 +107,26 @@ vector<float>& ringOrientation){ // missing v_lvl from args
         for (int n = 0; n <= nc + extra_nc; ++n) {
             if (n == 0) {
                 // Center particle logic
-            } else {
-                // Layers logic
-            }
+            float r1 = 0.0f;              // Lower radius
+            float r2 = rl;                // Upper radius
+            float tht1 = 0.0f;            // Left angle
+            float tht2 = 2 * M_PI;        // Right angle
+
+            // Compute volume
+            float vol = fun_vol(dvol_wrap, r1, tht1, r2, tht2);
+
+            // Position
+            array<float, 3> X = Xc;
+
+            // Vortex strength
+            array<float, 3> Gamma = {omega * vol * T[0], omega * vol * T[1], omega * vol * T[2]};
+
+            // Filament length
+            float length = fun_length(0, 0, a, b, phi1, phi2);
+
+            // Circulation
+            float crcltn = norm(Gamma) / length;
+            } 
         }
     }
 }
@@ -126,7 +147,7 @@ struct VortexRingParams {
     vector<int> ncs;
     vector<int> extra_ncs;
     vector<vector<float>> ringPosition;
-    vector<vector<float>> ringOrientation;
+    vector<array<array<float, 3>, 3>> ringOrientation;
 
     int nref = 1;
     float beta = 0.5f;
@@ -138,19 +159,24 @@ struct VortexRingParams {
         nrings = 1;
         dZ = 0.1f;
         
-        circulations = vector<float>(nrings, 1.0);
-        Rs = vector<float>(nrings, 1.0);
-        ARs = vector<float>(nrings, 1.0);
-        Rcrosss = vector<float>(nrings, 0.15 * Rs[0]);
+        circulations = vector<float>(nrings, 1.0f);
+        Rs = vector<float>(nrings, 1.0f);
+        ARs = vector<float>(nrings, 1.0f);
+        Rcrosss = vector<float>(nrings, 0.15f * Rs[0]);
         sigmas = Rcrosss;
         Nphis = vector<int>(nrings, 100);
         ncs = vector<int>(nrings, 0);
         extra_ncs = vector<int>(nrings, 0);
-
+        
+        array<array<float, 3>, 3> I = {{
+        {1.0, 0.0, 0.0},
+        {0.0, 1.0, 0.0},
+        {0.0, 0.0, 1.0}
+        }};
         // Initialize ring positions and orientations
         for (int ri = 0; ri < nrings; ++ri) {
             ringPosition.push_back({0.0f, 0.0f, dZ * ri});
-            ringOrientation.push_back({1.0f, 0.0f, 0.0f}); 
+            ringOrientation.push_back(I); 
         }
     }
 
