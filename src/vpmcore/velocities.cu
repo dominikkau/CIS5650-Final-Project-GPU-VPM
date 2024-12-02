@@ -3,6 +3,7 @@
 #include "particle.h"
 #include "kernels.h"
 #include "velocities.h"
+#include "vpmUtils.h"
 
 #define EPS 1e-6f
 

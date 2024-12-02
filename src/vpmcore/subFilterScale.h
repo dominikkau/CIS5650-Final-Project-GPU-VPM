@@ -22,5 +22,5 @@ struct DynamicSFS {
     DynamicSFS(float minC = 0, float maxC = 1, float alpha = 0.667, float relaxFactor = 0.005, bool forcePositive = true)
         : minC(minC), maxC(maxC), alpha(alpha), relaxFactor(relaxFactor), forcePositive(forcePositive) {}
 
-    __device__ void operator()(int index, Particle& particle);
+    __device__ void operator()(int index, ParticleField* field, float a = 1.0f, float b = 1.0f);
 };

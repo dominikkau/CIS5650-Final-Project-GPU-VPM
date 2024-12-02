@@ -1,19 +1,22 @@
 #pragma once
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+
 struct Particle;
 
 struct PedrizzettiRelaxation {
     float relaxFactor;
     PedrizzettiRelaxation(float relaxFactor) : relaxFactor(relaxFactor) {}
-    __host__ __device__ void operator()(int index, Particle& particle);
+    __device__ void operator()(Particle& particle);
 };
 
 struct CorrectedPedrizzettiRelaxation {
     float relaxFactor;
     CorrectedPedrizzettiRelaxation(float relaxFactor) : relaxFactor(relaxFactor) {}
-    __host__ __device__ void operator()(int index, Particle& particle);
+    __device__ void operator()(Particle& particle);
 };
 
 struct NoRelaxation {
-    __host__ __device__ void operator()(int index, Particle& particle);
+    __device__ void operator()(Particle& particle);
 };

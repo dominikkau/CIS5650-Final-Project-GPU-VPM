@@ -6,6 +6,14 @@
 
 #define TRANSPOSED
 
+// Constants
+const float PI = 3.14159265358979f;
+const float const1 = pow(1.0f / (2.0f * PI), 1.5f);
+const float const2 = sqrt(2.0f / PI);
+const float const3 = 3.0f / (4.0f * PI);
+const float const4 = 1.0f / (4.0f * PI);
+const float sqrt2 = sqrt(2.0f);
+
 __host__ __device__ inline glm::vec3 xDotNablaY(glm::vec3 x, glm::mat3 jacobianY) {
 #ifdef TRANSPOSED
     return jacobianY * x;

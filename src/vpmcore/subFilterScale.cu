@@ -93,7 +93,7 @@ __device__ void dynamicProcedure(int index, ParticleField* field, float alpha, f
     if (forcePositive) particle.C[0] = fabs(particle.C[0]);
 
     // Clear temporary variable
-    particle.M = 0;
+    particle.M = glm::mat3{ 0.0f };
 }
 
 __device__ void DynamicSFS::operator()(int index, ParticleField* field, float a=1.0f, float b=1.0f) {
