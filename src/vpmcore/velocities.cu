@@ -7,8 +7,8 @@
 
 #define EPS 1e-6f
 
-template <class Kernel>
-__device__ void calcVelJacNaive(int index, ParticleField* source, ParticleField* target, Kernel kernel) {
+template <typename R, typename S, typename K>
+__device__ void calcVelJacNaive(int index, ParticleField<R, S, K>* source, ParticleField<R, S, K>* target, K kernel) {
     Particle& targetParticle = target->particles[index];
 
     for (int i = 0; i < source->np; ++i) {
@@ -53,6 +53,7 @@ __device__ void calcVelJacNaive(int index, ParticleField* source, ParticleField*
     }
 }
 
-__device__ void calcVelJacNaive(int index, ParticleField* field) {
+template <typename R, typename S, typename K>
+__device__ void calcVelJacNaive(int index, ParticleField<R, S, K>* field) {
     calcVelJacNaive(index, field, field, field->kernel);
 }

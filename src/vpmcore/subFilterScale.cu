@@ -6,14 +6,14 @@
 #include "subFilterScale.h"
 #include <cuda.h>
 
-template <class Kernel>
-__device__ void calcEstrNaive(int index, ParticleField* source, ParticleField* target, Kernel kernel) {
+template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
+__device__ void calcEstrNaive(int index, ParticleField<Rs, Ss, Ks>* source, ParticleField<Rt, St, Kt>* target, K kernel) {
     Particle& targetParticle = target->particles[index];
 
     for (int i = 0; i < source->np; ++i) {
         Particle& sourceParticle = source->particles[i];
 
-        glm::vec3 S = xDotNablaY(sourceParticle.Gamma, targetParticle.J - sourceTarget.J);
+        glm::vec3 S = xDotNablaY(sourceParticle.Gamma, targetParticle.J - sourceParticle.J);
 
         glm::vec3 dX = targetParticle.X - sourceParticle.X;
         float r = glm::length(dX);
@@ -22,11 +22,13 @@ __device__ void calcEstrNaive(int index, ParticleField* source, ParticleField* t
     }
 }
 
-__device__ void calcEstrNaive(int index, ParticleField* field) {
+template <typename R, typename S, typename K>
+__device__ void calcEstrNaive(int index, ParticleField<R, S, K>* field) {
     calcEstrNaive(index, field, field, field->kernel);
 }
 
-__device__ void dynamicProcedure(int index, ParticleField* field, float alpha, float relaxFactor,
+template <typename R, typename S, typename K>
+__device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, float alpha, float relaxFactor,
                                  bool forcePositive, float minC, float maxC) {
     Particle& particle = field->particles[index];
 
@@ -52,7 +54,7 @@ __device__ void dynamicProcedure(int index, ParticleField* field, float alpha, f
     particle.reset();
     calcVelJacNaive(index, field);
 
-    particle.resetSFS(field);
+    particle.resetSFS();
     calcEstrNaive(index, field);
 
     // Save temporary variables
@@ -95,7 +97,8 @@ __device__ void dynamicProcedure(int index, ParticleField* field, float alpha, f
     particle.M = glm::mat3{ 0.0f };
 }
 
-__device__ void DynamicSFS::operator()(int index, ParticleField* field, float a=1.0f, float b=1.0f) {
+template <typename R, typename S, typename K>
+__device__ void DynamicSFS::operator()(int index, ParticleField<R, S, K>* field, float a, float b) {
     Particle& particle = field->particles[index];
 
     if (a == 1.0f || a == 0.0f) {

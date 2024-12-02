@@ -1,10 +1,8 @@
+#pragma once
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <glm/glm.hpp>
-
-//CHECK - Initialization of member variables
-#ifndef PARTICLE_H
-#define PARTICLE_H
 
 struct Particle {
     // User-defined variables
@@ -32,5 +30,3 @@ struct Particle {
     __host__ __device__ void Particle::reset();
     __host__ __device__ void Particle::resetSFS();
 };
-
-#endif // PARTICLE_H

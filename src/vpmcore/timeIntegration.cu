@@ -6,8 +6,8 @@
 #include "relaxation.h"
 #include "timeIntegration.h"
 
-template <class Relax, class SFS>
-__global__ void rungekutta(int N, ParticleField* field, float dt, bool relax, Relax relaxation, SFS sfs) {
+template <typename R, typename S, typename K>
+__global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool relax) {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
@@ -33,7 +33,7 @@ __global__ void rungekutta(int N, ParticleField* field, float dt, bool relax, Re
         float b = rungeKuttaCoefs[i][1];
 
         // RUN SFS
-        sfs(field, a, b);
+        field->SFS(field, a, b);
 
         __syncthreads();
 
@@ -44,7 +44,7 @@ __global__ void rungekutta(int N, ParticleField* field, float dt, bool relax, Re
         Z = 0.2f * glm::dot(S, particle.Gamma) / glm::dot(particle.Gamma, particle.Gamma);
 
         particle.M[1] = a * particle.M[1] + dt * (S - 3 * Z * particle.Gamma - 
-                        particle.C[0] * particle.SFS * p.sigma * p.sigma * p.sigma / zeta0);
+                        particle.C[0] * particle.SFS * particle.sigma * particle.sigma * particle.sigma / zeta0);
         particle.M[2][1] = a * particle.M[2][1] - dt * (particle.sigma * Z);
 
         particle.Gamma += b * particle.M[1];
@@ -54,11 +54,9 @@ __global__ void rungekutta(int N, ParticleField* field, float dt, bool relax, Re
     }
 
     if (relax) {
-        // field.resetParticles();
-        _reset_particles(field);
-
+        particle.reset();
         calcVelJacNaive(index, field);
 
-        relaxation(particle);
+        field->relaxation(particle);
     }
 }

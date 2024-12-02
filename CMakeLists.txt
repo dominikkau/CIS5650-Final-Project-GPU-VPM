@@ -51,7 +51,6 @@ find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
-    src/kernel.h
     src/main.hpp
     src/vpmcore/kernels.h
     src/vpmcore/relaxation.h
@@ -65,7 +64,6 @@ set(headers
     )
 
 set(sources
-    src/kernel.cu
     src/main.cpp
     src/vpmcore/relaxation.cu
     src/vpmcore/subFilterScale.cu

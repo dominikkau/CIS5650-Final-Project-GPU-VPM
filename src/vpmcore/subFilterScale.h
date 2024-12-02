@@ -2,14 +2,14 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include "particleField.h"
 
-struct ParticleField;
-//struct Kernel;
-
-template <class Kernel>
-__device__ void calcEstrNaive(int index, ParticleField* source, ParticleField* target, Kernel kernel);
-__device__ void calcEstrNaive(int index, ParticleField* field);
-__device__ void dynamicProcedure(int index, ParticleField* field, float alpha, float relaxFactor,
+template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
+__device__ void calcEstrNaive(int index, ParticleField<Rs, Ss, Ks>* source, ParticleField<Rt, St, Kt>* target, K kernel);
+template <typename R, typename S, typename K>
+__device__ void calcEstrNaive(int index, ParticleField<R, S, K>* field);
+template <typename R, typename S, typename K>
+__device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, float alpha, float relaxFactor,
                                  bool forcePositive, float minC, float maxC);
 
 struct DynamicSFS {
@@ -22,5 +22,6 @@ struct DynamicSFS {
     DynamicSFS(float minC = 0, float maxC = 1, float alpha = 0.667, float relaxFactor = 0.005, bool forcePositive = true)
         : minC(minC), maxC(maxC), alpha(alpha), relaxFactor(relaxFactor), forcePositive(forcePositive) {}
 
-    __device__ void operator()(int index, ParticleField* field, float a = 1.0f, float b = 1.0f);
+    template <typename R, typename S, typename K>
+    __device__ void operator()(int index, ParticleField<R, S, K>* field, float a, float b);
 };
