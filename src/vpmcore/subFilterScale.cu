@@ -33,12 +33,10 @@ __device__ void dynamicProcedure(int index, ParticleField* field, float alpha, f
     // CALCULATIONS WITH TEST FILTER
     particle.sigma *= alpha;
 
-    // field.resetParticles();
-    _reset_particles(field);
+    particle.reset();
     calcVelJacNaive(index, field);
 
-    // field.resetParticlesSFS();
-    _reset_particles_sfs(field);
+    particle.resetSFS();
     calcEstrNaive(index, field);
 
     // Clear temporary variable (really necessary?)
@@ -50,6 +48,7 @@ __device__ void dynamicProcedure(int index, ParticleField* field, float alpha, f
 
     // CALCULATIONS WITH DOMAIN FILTER
     particle.sigma /= alpha;
+
     particle.reset();
     calcVelJacNaive(index, field);
 
