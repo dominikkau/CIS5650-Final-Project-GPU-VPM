@@ -7,8 +7,8 @@
 
 #define EPS 1e-6f
 
-template <typename R, typename S, typename K>
-__device__ void calcVelJacNaive(int index, ParticleField<R, S, K>* source, ParticleField<R, S, K>* target, K kernel) {
+template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
+__device__ void calcVelJacNaive(int index, ParticleField<Rs, Ss, Ks>* source, ParticleField<Rt, St, Kt>* target, K kernel) {
     Particle& targetParticle = target->particles[index];
 
     for (int i = 0; i < source->np; ++i) {
@@ -28,7 +28,7 @@ __device__ void calcVelJacNaive(int index, ParticleField<R, S, K>* source, Parti
         float dg_sgmdr = kernel.dgdr(r / sourceParticle.sigma);
 
         // Compute velocity
-        glm::vec3 crossProd = (- const4 / r3) * glm::cross(dX, sourceParticle.Gamma);
+        glm::vec3 crossProd = glm::cross(dX, sourceParticle.Gamma) * (-const4 / r3);
         targetParticle.U += g_sgm * crossProd;
 
         // Compute Jacobian

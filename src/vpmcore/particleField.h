@@ -13,6 +13,7 @@ class ParticleField {
 public:
     // User inputs
     int maxParticles;                      // Maximum number of particles
+    Particle* particles;                // Pointer to particle buffer
     // std::vector<void*> bodies;             // CHECK - Placeholder for ExaFMM array of bodies
     // F formulation;                         // VPM formulation
     // V viscous;                             // Viscous scheme

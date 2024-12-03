@@ -4,5 +4,7 @@
 #include <cuda_runtime.h>
 #include "particleField.h"
 
-template <class Relax, class SFS>
-__global__ void rungekutta(int N, ParticleField<>* field, float dt, bool relax, Relax relaxation, SFS sfs);
+template <typename R, typename S, typename K>
+__global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool relax);
+
+void runVPM();
