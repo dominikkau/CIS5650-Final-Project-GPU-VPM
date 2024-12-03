@@ -5,6 +5,7 @@
 #include <memory>
 #include "kernel.h"
 #include "../lean_vtk.hpp"
+#include "../vortexringsimulation.hpp"
 
 // Constructor
 Particle::Particle() 
@@ -401,16 +402,17 @@ void randomSphereInit(Particle* particleBuffer, int N, float sphereRadius, float
 void runSimulation() {
     // Define basic parameters
     int maxParticles{ 1000 };
-    int numTimeSteps{ 500 };
+    int numTimeSteps{ 10 };
     float dt{ 0.01f };
     int numBlocks{ 128 };
-    int numStepsVTK{ 2 };
+    int numStepsVTK{ 10 };
     glm::vec3 uInf{ 0, 0, 0 };
 
     // Create host particle buffer
     Particle* particleBuffer = new Particle[maxParticles];
     // Initialize particle buffer
-    randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
+    //randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
+    initVortexRings(particleBuffer, maxParticles);
 
     // Run VPM method
     runVPM(

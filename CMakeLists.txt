@@ -55,6 +55,7 @@ set(headers
     src/vpmcore/kernel.h
     src/wing.h
     src/lean_vtk.hpp
+    src/vortexringsimulation.hpp
     )
 
 set(sources
@@ -62,6 +63,7 @@ set(sources
     src/vpmcore/kernel.cu
     src/wing.cpp
     src/lean_vtk.cpp
+    src/vortexringsimulation.cpp
     )
 
 list(SORT headers)

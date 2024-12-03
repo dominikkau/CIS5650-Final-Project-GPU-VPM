@@ -1,9 +1,11 @@
 #include <iostream>
 #include <cmath>
+#include <glm/glm.hpp>
+#include "vortexringsimulation.hpp"
 #include "vpmcore/kernel.h"
 
 // Function to calculate the number of particles
-int numberParticles(int Nphi, int nc, int extra_nc = 0) {
+int numberParticles(int Nphi, int nc, int extra_nc) {
     nc = 0;
     int total_layers = nc + extra_nc;
     int layer_sum = 0;
@@ -13,20 +15,19 @@ int numberParticles(int Nphi, int nc, int extra_nc = 0) {
     return Nphi * (1 + 8 * layer_sum);
 }
 
-int addVortexRing(ParticleField* pField, float circulation, float R, float Rcross,
+int addVortexRing(Particle* particleBuffer, float circulation, float R, float Rcross,
                    int Nphi, int nc, float sigmas, int extra_nc, glm::vec3 ringPosition, 
                    glm::mat3 ringOrientation, int startingIndex, int maxParticles) {
-
     // Lambda function definition
     // Arclength corresponding to phi for circle with radius r
-    auto fun_S = [R](float phi) { return R * phi; };
+    auto fun_S = [](float phi, float r) { return r * phi; };
     // Circle circumference
-    float Stot = fun_S(2 * M_PI);
+    float Stot = fun_S(2 * PI, R);
     // Non-dimensional arc length from 0 to a given value <=1
-    auto fun_s = [fun_S, Stot](float phi) { return fun_S(phi) / Stot; };
+    auto fun_s = [fun_S, Stot](float phi, float r) { return fun_S(phi, r) / Stot; };
 
     // Angle associated to a given non-dimensional arc length
-    auto fun_phi = [R](float s) { return 2 * M_PI * s; }
+    auto fun_phi = [](float s) { return 2 * PI * s; };
 
     auto fun_length = [fun_S, R](float r, float tht, float phi1, float phi2) {
         float S1 = fun_S(phi1, R + r * cos(tht));
@@ -39,20 +40,20 @@ int addVortexRing(ParticleField* pField, float circulation, float R, float Rcros
         float tmp1 = 0.5f * R * (r2 * r2 - r1 * r1) * (tht2 - tht1);
         float tmp2 = (sin(tht2) - sin(tht1)) * (r2 * r2 * r2 - r1 * r1 * r1) / 3.0f;
         return (phi2 - phi1) * (tmp1 + tmp2);
-    };
+        };
 
     auto fun_X_global = [ringPosition, ringOrientation](glm::vec3 x) {
         return ringPosition + ringOrientation * x;
-    }
+        };
 
-    auto fun_Gamma_global = [ringOrientation](glm::vec3 Gamma) {
+        auto fun_Gamma_global = [ringOrientation](glm::vec3 Gamma) {
         return ringOrientation * Gamma;
-    }
+        };
 
     float rl = Rcross / (2 * nc + 1);
     float dS = Stot / Nphi;
     float ds = dS / Stot;
-    float omega = circulation / (M_PI * Rcross * Rcross);
+    float omega = circulation / (PI * Rcross * Rcross);
 
     int idx = startingIndex;
     for (int N = 0; N < Nphi; ++N) {
@@ -74,7 +75,7 @@ int addVortexRing(ParticleField* pField, float circulation, float R, float Rcros
         for (int n = 0; n <= nc + extra_nc; ++n) {
             if (n == 0) {
                 // Compute volume
-                float vol = fun_vol(ph1, phi2, 0.0f, 2.0f * M_PI, 0.0f, rl);
+                float vol = fun_vol(phi1, phi2, 0.0f, 2.0f * PI, 0.0f, rl);
                 // Position
                 glm::vec3 X = Xc;
                 // Vortex strength
@@ -86,9 +87,9 @@ int addVortexRing(ParticleField* pField, float circulation, float R, float Rcros
 
                 if (idx + 1 >= maxParticles) return -1;
 
-                pField->particles[idx].X = fun_X_global(X);
-                pField->particles[idx].Gamma = fun_Gamma_global(Gamma);
-                pField->particles[idx].circulation = crcltn;
+                particleBuffer[idx].X = fun_X_global(X);
+                particleBuffer[idx].Gamma = fun_Gamma_global(Gamma);
+                particleBuffer[idx].circulation = crcltn;
                 ++idx;
             }
             else {
@@ -96,7 +97,7 @@ int addVortexRing(ParticleField* pField, float circulation, float R, float Rcros
                 float r1 = (2 * n - 1) * rl;                // Lower radius
                 float r2 = (2 * n + 1) * rl;                // Upper radius
                 int ncells = 8 * n;                         // Number of cells
-                float deltatheta = 2 * M_PI / ncells;       // Angle of cells
+                float deltatheta = 2 * PI / ncells;       // Angle of cells
 
                 // Discretize layer into cells around the circumference
                 for (int j = 0; j < ncells; ++j) {
@@ -104,12 +105,9 @@ int addVortexRing(ParticleField* pField, float circulation, float R, float Rcros
                     float tht2 = deltatheta * (j + 1);      // Right angle
                     float thtc = (tht1 + tht2) / 2;         // Center angle
 
-                    float vol = fun_vol(ph1, ph2, tht1, tht2, r1, r2); // Volume
+                    float vol = fun_vol(phi1, phi2, tht1, tht2, r1, r2); // Volume
 
                     glm::vec3 X = Xc + Naxis * glm::vec3{ 0, rc*cos(thtc), rc*sin(thtc) };
-
-                    glm::vec3 temp = glm::vec3(0, rc*std::cos(thtc), rc*std::sin(thtc));
-                    pField->particles[idx].X = Xc + Naxis * temp;
 
                     glm::vec3 Gamma = (n <= nc) ? omega * vol * T : EPS * T;
                     // Filament length
@@ -119,9 +117,9 @@ int addVortexRing(ParticleField* pField, float circulation, float R, float Rcros
 
                     if (idx + 1 >= maxParticles) return -1;
 
-                    pField->particles[idx].X = fun_X_global(X);
-                    pField->particles[idx].Gamma = fun_Gamma_global(Gamma);
-                    pField->particles[idx].circulation = crcltn;
+                    particleBuffer[idx].X = fun_X_global(X);
+                    particleBuffer[idx].Gamma = fun_Gamma_global(Gamma);
+                    particleBuffer[idx].circulation = crcltn;
                     ++idx;
                 }   
             }   
@@ -132,7 +130,7 @@ int addVortexRing(ParticleField* pField, float circulation, float R, float Rcros
 }
 
 int initVortexRings(Particle* particleBuffer, int maxParticles) {
-    int nrings{ 2 };
+    const int nrings{ 2 };
     float dZ{ 0.7906f };
     int numParticles{ 0 };
 
@@ -168,7 +166,7 @@ int initVortexRings(Particle* particleBuffer, int maxParticles) {
 
     int startingIndex{ 0 };
     for (int i = 0; i < nrings; ++i) {
-        startingIndex = addVortexRing(particleBuffer, circulations[i], Rs[i], Rcross[i],
+        startingIndex = addVortexRing(particleBuffer, circulations[i], Rs[i], Rcrosss[i],
                       Nphis[i], ncs[i], sigmas[i], extra_ncs[i], ringPositions[i], 
                       ringOrientations[i], startingIndex, maxParticles);
 
