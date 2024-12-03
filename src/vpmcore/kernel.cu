@@ -1,9 +1,10 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <random>
+#include <memory>
 #include "kernel.h"
 #include "../lean_vtk.hpp"
-#include <random>
 
 // Constructor
 Particle::Particle() 
@@ -11,13 +12,13 @@ Particle::Particle()
       U(0.0f), J(0.0f), PSE(0.0f), M(0.0f), C(0.0f), SFS(0.0f) {}
 
 __host__ __device__ void Particle::reset() {
-    U = glm::vec3(0);
-    J = glm::mat3(0);
-    PSE = glm::vec3(0);
+    U = glm::vec3(0.0f);
+    J = glm::mat3(0.0f);
+    PSE = glm::vec3(0.0f);
 }
 
 __host__ __device__ void Particle::resetSFS() {
-    SFS = glm::vec3(0);
+    SFS = glm::vec3(0.0f);
 }
 
 __device__ void PedrizzettiRelaxation::operator()(Particle& particle) {
@@ -35,6 +36,7 @@ __device__ void PedrizzettiRelaxation::operator()(Particle& particle) {
     particle.Gamma /= sqrt(1.0f - 2.0f * (1.0f - relaxFactor) * relaxFactor 
                       * (1.0f - glm::dot(particle.Gamma, omega) / (omegaNorm * gammaNorm)));
 }
+
 __device__ void NoRelaxation::operator()(Particle& particle) {}
 
 template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
@@ -152,7 +154,6 @@ __device__ void NoSFS::operator()(int index, ParticleField<R, S, K>* field, floa
     Particle& particle = field->particles[index];
 
     particle.reset();
-
     calcVelJacNaive(index, field);
 }
 
@@ -169,7 +170,7 @@ __global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool 
     float zeta0 = field->kernel.zeta(0.0f);
 
     // Reset temp variable (necessary?)
-    particle.M = glm::mat3{ 0 };
+    particle.M = glm::mat3{ 0.0f };
 
     float rungeKuttaCoefs[3][2] = {
         {0.0f, 1.0f / 3.0f},
@@ -262,7 +263,7 @@ __device__ void calcVelJacNaive(int index, ParticleField<R, S, K>* field) {
     calcVelJacNaive(index, field, field, field->kernel);
 }
 
-static void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, int timestep) {
+void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, int timestep) {
     const int dim = 3;
 
     leanvtk::VTUWriter writer;
@@ -288,68 +289,144 @@ static void writeVTK(int numParticles, Particle* particleBuffer, std::string fil
         }
     }
 
-    
-
     writer.add_scalar_field("index", particleIdx);
-    //writer.add_scalar_field("sigma", particleSigma);
+    writer.add_scalar_field("sigma", particleSigma);
     writer.add_vector_field("position", particleX, dim);
     writer.add_vector_field("velocity", particleU, dim);
-    writer.write_point_cloud(filename + "_" + std::to_string(timestep) + ".vtu", dim, particleX);
+    writer.write_point_cloud("../output/" + filename + "_" + std::to_string(timestep) + ".vtu", dim, particleX);
 }
 
-void runVPM() {
-    int numParticles{ 1000 };
-    int numTimeSteps{ 100 };
-    float dt = 0.01f;
-    int fileSaveSteps = 10;
-
-    int blockSize{ 128 };
+template <typename R, typename S, typename K>
+void runVPM(
+    int maxParticles,
+    int numParticles,
+    int numTimeSteps,
+    float dt,
+    int fileSaveSteps,
+    int blockSize,
+    glm::vec3 uInf,
+    Particle* particleBuffer,
+    R relaxation,
+    S sfs,
+    K kernel) {
     int fullBlocksPerGrid{ (numParticles + blockSize - 1) / blockSize };
-
-    // Declare host particle buffer
-    Particle* particleBuffer = new Particle[numParticles];
 
     // Declare device particle buffer
     Particle* dev_particleBuffer;
-    cudaMalloc((void**)&dev_particleBuffer, numParticles * sizeof(Particle));
-
-    // Initialize host Buffer somehow !!
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> pos_dist(-10.0f, 10.0f); // Position range
-    std::uniform_real_distribution<float> vel_dist(-1.0f, 1.0f);   // Velocity range
-
-    for (int i = 0; i < numParticles; ++i) {
-        Particle& particle = particleBuffer[i];
-        particle.U = glm::vec3{ vel_dist(gen), vel_dist(gen), vel_dist(gen) };
-        particle.X = glm::vec3{ pos_dist(gen), pos_dist(gen), pos_dist(gen) };
-    }
+    cudaMalloc((void**)&dev_particleBuffer, maxParticles * sizeof(Particle));
 
     // Copy particle buffer from host to device
     cudaMemcpy(dev_particleBuffer, particleBuffer, numParticles * sizeof(Particle), cudaMemcpyHostToDevice);
 
-    glm::vec3 Uinf{ 1, 0, 0 };
-    ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel> field{ numParticles };
+    ParticleField<R, S, K> field{
+        maxParticles,
+        dev_particleBuffer,
+        numParticles,
+        0,
+        0.0f,
+        kernel,
+        uInf,
+        sfs,
+        true,
+        relaxation
+    };
 
-    field.particles = dev_particleBuffer;
+    // Declare device particle field and copy host field to device
+    ParticleField<R, S, K>* dev_field;
+    cudaMalloc((void**)&dev_field, sizeof(ParticleField<R, S, K>));
+    cudaMemcpy(dev_field, &field, sizeof(ParticleField<R, S, K>), cudaMemcpyHostToDevice);
 
-
-    // Declare device particle field
-    ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>* dev_field;
-    cudaMalloc((void**)&dev_field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>));
-
-    cudaMemcpy(dev_field, &field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>), cudaMemcpyHostToDevice);
+    std::cout << particleBuffer[0].U.x << std::endl;
 
     for (int i = 0; i < numTimeSteps; ++i) {
-        rungekutta<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel> << <fullBlocksPerGrid, blockSize >> > (
+        rungekutta<R, S, K><<<fullBlocksPerGrid, blockSize>>>(
             numParticles, dev_field, dt, true
         );
 
-        cudaMemcpy(&field, dev_field, sizeof(ParticleField<PedrizzettiRelaxation, DynamicSFS, GaussianErfKernel>), cudaMemcpyDeviceToHost);
+        //cudaMemcpy(&field, dev_field, sizeof(ParticleField<R, S, K>), cudaMemcpyDeviceToHost);
         cudaMemcpy(particleBuffer, dev_particleBuffer, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
 
         if (i % fileSaveSteps == 0) {
             writeVTK(numParticles, particleBuffer, "test", i / fileSaveSteps);
+            std::cout << particleBuffer[0].U.x << std::endl;
         }
-    } 
+    }
+
+    // free device memory
+    cudaFree(dev_particleBuffer);
+    cudaFree(dev_field);
+}
+
+void randomCubeInit(Particle* particleBuffer, int N, float cubeSize, float maxCirculation, float maxSigma) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> uniform(-1, 1);
+    std::uniform_real_distribution<float> uniformPos(0, 1);
+
+    for (int i = 0; i < N; ++i) {
+        Particle& particle = particleBuffer[i];
+
+        particle.sigma = maxSigma * uniformPos(gen);
+        particle.Gamma = maxCirculation * uniform(gen) * glm::normalize(glm::vec3{ uniform(gen), uniform(gen), uniform(gen) });
+        particle.circulation = glm::length(particle.Gamma);
+
+        particle.X = cubeSize * uniform(gen) * glm::normalize(glm::vec3{ uniform(gen), uniform(gen), uniform(gen) });
+    }
+}
+
+void randomSphereInit(Particle* particleBuffer, int N, float sphereRadius, float maxCirculation, float maxSigma) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> uniform(-1, 1);
+    std::uniform_real_distribution<float> uniformPos(0, 1);
+
+    for (int i = 0; i < N; ++i) {
+        Particle& particle = particleBuffer[i];
+
+        particle.sigma = maxSigma * uniformPos(gen);
+        particle.Gamma = maxCirculation * uniform(gen) * glm::normalize(glm::vec3{ uniform(gen), uniform(gen), uniform(gen) });
+        particle.circulation = glm::length(particle.Gamma);
+
+        float theta = 2 * PI * uniformPos(gen);
+        float phi = PI * uniformPos(gen);
+        float radius = std::cbrt(uniformPos(gen)) * sphereRadius;
+
+        float x = radius * sin(phi) * cos(theta);
+        float y = radius * sin(phi) * sin(theta);
+        float z = radius * cos(phi);
+        particle.X = glm::vec3{ x, y, z };
+    }
+}
+
+void runSimulation() {
+    // Define basic parameters
+    int maxParticles{ 1000 };
+    int numTimeSteps{ 100 };
+    float dt{ 0.01f };
+    int numBlocks{ 128 };
+    int numStepsVTK{ 1 };
+    glm::vec3 uInf{ 0, 0, 0 };
+
+    // Create host particle buffer
+    Particle* particleBuffer = new Particle[maxParticles];
+    // Initialize particle buffer
+    randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
+
+    // Run VPM method
+    runVPM(
+        maxParticles,
+        maxParticles,
+        numTimeSteps,
+        dt,
+        numStepsVTK,
+        numBlocks,
+        uInf,
+        particleBuffer,
+        PedrizzettiRelaxation(0.005f),
+        DynamicSFS(),
+        GaussianErfKernel()
+    );
+
+    // Free host particle buffer
+    delete[] particleBuffer;
 }

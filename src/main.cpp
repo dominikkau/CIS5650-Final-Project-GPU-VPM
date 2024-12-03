@@ -1,8 +1,9 @@
 #include "main.hpp"
-#include "vpmcore/timeIntegration.h"
+#include "vpmcore/kernel.h"
 
 int main(int argc, char* argv[]) {
-    runVPM();
+
+    runSimulation();
 
     return 0;
 }

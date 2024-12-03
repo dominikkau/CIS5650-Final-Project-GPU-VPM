@@ -100,8 +100,6 @@ __device__ void calcVelJacNaive(int index, ParticleField<R, S, K>* field);
 template <typename R, typename S, typename K>
 __global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool relax);
 
-void runVPM();
-
 template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
 __device__ void calcEstrNaive(int index, ParticleField<Rs, Ss, Ks>* source, ParticleField<Rt, St, Kt>* target, K kernel);
 template <typename R, typename S, typename K>
@@ -146,7 +144,7 @@ struct NoRelaxation {
 };
 
 // ParticleField definition
-template <typename R=PedrizzettiRelaxation, typename S=DynamicSFS, typename K=GaussianErfKernel>
+template <typename R=PedrizzettiRelaxation, typename S=NoSFS, typename K=GaussianErfKernel>
 class ParticleField {
 public:
     // User inputs
@@ -177,13 +175,14 @@ public:
     ParticleField(
         int maxparticles,
         // std::vector<void*> bodies,
+        Particle* particles,
         int np = 0,
         int nt = 0,
         float t = 0.0f,
         K kernel = GaussianErfKernel(),
         // std::function<void()> UJ=UJ_fmm,
         glm::vec3 Uinf = glm::vec3(0, 0, 0),
-        S SFS = DynamicSFS(),
+        S SFS = NoSFS(),
         bool transposed = true,
         R relaxation = PedrizzettiRelaxation(0.005))
         :
@@ -192,6 +191,7 @@ public:
         //   formulation(formulation),
         //   viscous(viscous),
         maxParticles(maxparticles),
+        particles(particles),
         np(np),
         nt(nt),
         t(t),
@@ -228,3 +228,22 @@ struct Particle {
     __host__ __device__ void Particle::reset();
     __host__ __device__ void Particle::resetSFS();
 };
+
+void randomCubeInit(Particle* particleBuffer, int N, float cubeSize = 10.0f, float maxCirculation = 1.0f, float maxSigma = 1.0f);
+void randomSphereInit(Particle* particleBuffer, int N, float sphereRadius = 10.0f, float maxCirculation = 1.0f, float maxSigma = 1.0f);
+void runSimulation();
+
+template <typename R, typename S, typename K>
+void runVPM(
+    int maxParticles,
+    int numParticles,
+    int numTimeSteps,
+    float dt,
+    int fileSaveSteps,
+    int blockSize,
+    glm::vec3 uInf,
+    Particle* particleBuffer,
+    R relaxation,
+    S sfs,
+    K kernel
+);
