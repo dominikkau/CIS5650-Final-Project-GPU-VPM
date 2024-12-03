@@ -271,10 +271,12 @@ void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, 
 
     std::vector<double> particleX;
     std::vector<double> particleU;
+    std::vector<double> particleGamma;
     std::vector<double> particleSigma;
     std::vector<double> particleIdx;
     particleX.reserve(dim * numParticles);
     particleU.reserve(dim * numParticles);
+    particleGamma.reserve(dim * numParticles);
     particleSigma.reserve(numParticles);
     particleIdx.reserve(numParticles);
 
@@ -287,6 +289,7 @@ void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, 
         for (int j = 0; j < dim; ++j) {
             particleU.push_back(particle.U[j]);
             particleX.push_back(particle.X[j]);
+            particleGamma.push_back(particle.Gamma[j]);
         }
     }
 
@@ -294,6 +297,7 @@ void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, 
     writer.add_scalar_field("sigma", particleSigma);
     writer.add_vector_field("position", particleX, dim);
     writer.add_vector_field("velocity", particleU, dim);
+    writer.add_vector_field("circulation", particleGamma, dim);
     writer.write_point_cloud("../output/" + filename + "_" + std::to_string(timestep) + ".vtu", dim, particleX);
 }
 
@@ -340,17 +344,23 @@ void runVPM(
     std::cout << particleBuffer[0].U.x << std::endl;
 
     for (int i = 0; i < numTimeSteps; ++i) {
+        if (i % fileSaveSteps == 0) {
+            writeVTK(numParticles, particleBuffer, "test", i / fileSaveSteps);
+            std::cout << particleBuffer[0].U.x << std::endl;
+        }
+
         rungekutta<R, S, K><<<fullBlocksPerGrid, blockSize>>>(
             numParticles, dev_field, dt, true
         );
 
         //cudaMemcpy(&field, dev_field, sizeof(ParticleField<R, S, K>), cudaMemcpyDeviceToHost);
         cudaMemcpy(particleBuffer, dev_particleBuffer, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
+        std::cout << particleBuffer[0].U.x << std::endl;
 
-        if (i % fileSaveSteps == 0) {
+        /*if (i % fileSaveSteps == 0) {
             writeVTK(numParticles, particleBuffer, "test", i / fileSaveSteps);
             std::cout << particleBuffer[0].U.x << std::endl;
-        }
+        }*/
     }
 
     // free device memory
@@ -401,8 +411,8 @@ void randomSphereInit(Particle* particleBuffer, int N, float sphereRadius, float
 
 void runSimulation() {
     // Define basic parameters
-    int maxParticles{ 1000 };
-    int numTimeSteps{ 10 };
+    int maxParticles{ 2000 };
+    int numTimeSteps{ 1000 };
     float dt{ 0.01f };
     int numBlocks{ 128 };
     int numStepsVTK{ 10 };
@@ -412,12 +422,12 @@ void runSimulation() {
     Particle* particleBuffer = new Particle[maxParticles];
     // Initialize particle buffer
     //randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
-    initVortexRings(particleBuffer, maxParticles);
+    int numParticles = initVortexRings(particleBuffer, maxParticles);
 
     // Run VPM method
     runVPM(
         maxParticles,
-        maxParticles,
+        numParticles,
         numTimeSteps,
         dt,
         numStepsVTK,
@@ -425,7 +435,7 @@ void runSimulation() {
         uInf,
         particleBuffer,
         PedrizzettiRelaxation(0.005f),
-        DynamicSFS(),
+        NoSFS(),
         GaussianErfKernel()
     );
 

@@ -6,17 +6,11 @@
 
 // Function to calculate the number of particles
 int numberParticles(int Nphi, int nc, int extra_nc) {
-    nc = 0;
-    int total_layers = nc + extra_nc;
-    int layer_sum = 0;
-    for (int i = 1; i <= total_layers; ++i) {
-        layer_sum += i;
-    }
-    return Nphi * (1 + 8 * layer_sum);
+    return Nphi * (1 + 4 * (nc + extra_nc) * (nc + extra_nc + 1));
 }
 
 int addVortexRing(Particle* particleBuffer, float circulation, float R, float Rcross,
-                   int Nphi, int nc, float sigmas, int extra_nc, glm::vec3 ringPosition, 
+                   int Nphi, int nc, float sigma, int extra_nc, glm::vec3 ringPosition, 
                    glm::mat3 ringOrientation, int startingIndex, int maxParticles) {
     // Lambda function definition
     // Arclength corresponding to phi for circle with radius r
@@ -85,11 +79,13 @@ int addVortexRing(Particle* particleBuffer, float circulation, float R, float Rc
                 // Circulation
                 float crcltn = glm::length(Gamma) / length;
 
-                if (idx + 1 >= maxParticles) return -1;
+                if (idx >= maxParticles - 1) return -1;
 
                 particleBuffer[idx].X = fun_X_global(X);
                 particleBuffer[idx].Gamma = fun_Gamma_global(Gamma);
                 particleBuffer[idx].circulation = crcltn;
+                particleBuffer[idx].sigma = sigma;
+                particleBuffer[idx].vol = vol;
                 ++idx;
             }
             else {
@@ -115,11 +111,13 @@ int addVortexRing(Particle* particleBuffer, float circulation, float R, float Rc
                     // Circulation
                     float crcltn = glm::length(Gamma) / length;
 
-                    if (idx + 1 >= maxParticles) return -1;
+                    if (idx >= maxParticles - 1) return -1;
 
                     particleBuffer[idx].X = fun_X_global(X);
                     particleBuffer[idx].Gamma = fun_Gamma_global(Gamma);
                     particleBuffer[idx].circulation = crcltn;
+                    particleBuffer[idx].sigma = sigma;
+                    particleBuffer[idx].vol = vol;
                     ++idx;
                 }   
             }   
