@@ -563,3 +563,4 @@ xcuserdata
 *.moved-aside
 *.xcuserstate
 *.vscode
+output/
