@@ -401,10 +401,10 @@ void randomSphereInit(Particle* particleBuffer, int N, float sphereRadius, float
 void runSimulation() {
     // Define basic parameters
     int maxParticles{ 1000 };
-    int numTimeSteps{ 100 };
+    int numTimeSteps{ 500 };
     float dt{ 0.01f };
     int numBlocks{ 128 };
-    int numStepsVTK{ 1 };
+    int numStepsVTK{ 2 };
     glm::vec3 uInf{ 0, 0, 0 };
 
     // Create host particle buffer
