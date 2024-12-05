@@ -8,7 +8,7 @@
 #define TRANSPOSED
 //#define SHARED_MEMORY
 #define DOUBLE_PRECISION
-
+#define BLOCK_SIZE 128
 
 #define PI 3.14159265358979f
 #define const1 0.06349363593424097f
@@ -147,17 +147,20 @@ struct NoSFS {
 struct PedrizzettiRelaxation {
     vpmfloat relaxFactor;
     PedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
-    __device__ void operator()(Particle& particle);
+    template <typename R, typename S, typename K>
+    __global__ void operator()(int N, ParticleField<R, S, K>* field);
 };
 
 struct CorrectedPedrizzettiRelaxation {
     vpmfloat relaxFactor;
     CorrectedPedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
-    __device__ void operator()(Particle& particle);
+    template <typename R, typename S, typename K>
+    __global__ void operator()(int N, ParticleField<R, S, K>* field);
 };
 
 struct NoRelaxation {
-    __device__ void operator()(Particle& particle);
+    template <typename R, typename S, typename K>
+    __global__ void operator()(int N, ParticleField<R, S, K>* field);
 };
 
 // ParticleField definition
