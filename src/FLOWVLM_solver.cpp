@@ -4,7 +4,10 @@
 #include <glm/glm.hpp>  // Include GLM for glm::vec3
 #include "constants.h"
 #include "FLOWVLM_solver.h"
+#include <functional>
+#include <Eigen/Dense>
 
+using namespace VLMSolver;
 using namespace std;
 
 // ------------ PARAMETERS ------------------------------------------------------
@@ -126,6 +129,63 @@ glm::vec3 V_Ainf_in(const vector<double>& A, const vector<double>& infD, const v
     return V_Ainf_out(A, infD, C, Gamma, ign_col) * -1.0f;
 }
 
+std::vector<double> solve(
+    const std::vector<std::vector<Horseshoe>>& HSs,
+    const std::vector<glm::vec3>& Vinfs,
+    double t = 0.0,
+    std::function<Eigen::Vector3d(const std::vector<double>&, double)> vortexsheet = nullptr,
+    std::function<Eigen::Vector3d(size_t, double)> extraVinf = nullptr,
+    std::vector<double> extraVinfArgs = {}
+) {
+    size_t n = HSs.size();
+    Eigen::MatrixXd G = Eigen::MatrixXd::Zero(n, n);
+    Eigen::VectorXd Vn = Eigen::VectorXd::Zero(n);
+
+    // Build matrices G and Vn
+    for (size_t i = 0; i < n; ++i) {
+        const std::vector<Horseshoe>& hs_group = HSs[i];
+        const Horseshoe& hsi = hs_group[0]; // Assuming first horseshoe in the group for CPi
+
+        // Calculate normal vector
+        glm::vec3 nhat_vec = glm::normalize(glm::cross(
+            glm::vec3(hsi.CP[0] - hsi.A[0], hsi.CP[1] - hsi.A[1], hsi.CP[2] - hsi.A[2]),
+            glm::vec3(hsi.B[0] - hsi.A[0], hsi.B[1] - hsi.A[1], hsi.B[2] - hsi.A[2])));
+        Eigen::Vector3d nhat(nhat_vec.x, nhat_vec.y, nhat_vec.z);
+
+        for (size_t j = 0; j < n; ++j) {
+            const std::vector<Horseshoe>& hs_group_j = HSs[j];
+            Horseshoe& hs = const_cast<Horseshoe&>(hs_group_j[0]); // Ensures mutability for V function
+
+            std::vector<double> GeomFac = V(hs, hsi.CP);
+            Eigen::Vector3d Gij(GeomFac[0], GeomFac[1], GeomFac[2]);
+            G(i, j) = Gij.dot(nhat);
+        }
+
+        // Freestream velocity normal component
+        const glm::vec3& Vinfs_i = Vinfs[i];
+        Eigen::Vector3d Vinfs_i_eigen(Vinfs_i.x, Vinfs_i.y, Vinfs_i.z);
+        Vn(i) = -Vinfs_i_eigen.dot(nhat);
+
+        // Vortex sheet contribution (if applicable)
+        if (vortexsheet) {
+            Eigen::Vector3d this_Vinfvrtx = vortexsheet(hsi.CP, t);
+            Vn(i) += -this_Vinfvrtx.dot(nhat);
+        }
+
+        // Extra freestream contribution (if applicable)
+        if (extraVinf) {
+            Eigen::Vector3d this_extraVinf = extraVinf(i, t);
+            Vn(i) += -this_extraVinf.dot(nhat);
+        }
+    }
+
+    // Solve for Gamma
+    Eigen::VectorXd Gamma = G.colPivHouseholderQr().solve(Vn);
+
+    // Convert Eigen::VectorXd to std::vector<double>
+    return std::vector<double>(&Gamma[0], &Gamma[0] + Gamma.size());
+}
+
 vector<double> V(VLMSolver::Horseshoe& HS, const vector<double>& C, bool ign_col = false, bool ign_infvortex = false, bool only_infvortex = false) {
     vector<double> result(3, 0.0);
 
@@ -159,3 +219,4 @@ vector<double> V(VLMSolver::Horseshoe& HS, const vector<double>& C, bool ign_col
 
     return result;
 }
+

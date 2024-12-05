@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <unordered_map>
+#include <glm/glm.hpp>  // Include GLM for glm::vec3
 
 // Namespace for VLM Solver
 namespace VLMSolver {
@@ -36,4 +37,8 @@ namespace VLMSolver {
         std::vector<double> Ap, A, B, Bp, CP, infDA, infDB;
         double Gamma;
     };
+
+    glm::vec3 V_Ainf_out(const vector<double>& A, const vector<double>& infD, const vector<double>& C, double Gamma, bool ign_col);
+    glm::vec3 V_Ainf_in(const vector<double>& A, const vector<double>& infD, const vector<double>& C, double Gamma, bool ign_col);
+    vector<double> V(VLMSolver::Horseshoe& HS, const vector<double>& C, bool ign_col = false, bool ign_infvortex = false, bool only_infvortex = false);
 }
