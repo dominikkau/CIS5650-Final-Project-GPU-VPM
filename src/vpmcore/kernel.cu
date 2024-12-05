@@ -7,7 +7,7 @@
 #include "../lean_vtk.hpp"
 #include "../vortexringsimulation.hpp"
 
-__constant__ float rungeKuttaCoefs[3][2] = {
+__constant__ vpmfloat rungeKuttaCoefs[3][2] = {
     {0.0f, 1.0f / 3.0f},
     {-5.0f / 9.0f, 15.0f / 16.0f},
     {-153.0f / 128.0f, 8.0f / 15.0f}
@@ -23,25 +23,25 @@ Particle::Particle()
       U(0.0f), J(0.0f), PSE(0.0f), M(0.0f), C(0.0f), SFS(0.0f) {}
 
 __host__ __device__ void Particle::reset() {
-    U = glm::vec3(0.0f);
-    J = glm::mat3(0.0f);
-    PSE = glm::vec3(0.0f);
+    U = vpmvec3(0.0f);
+    J = vpmmat3(0.0f);
+    PSE = vpmvec3(0.0f);
 }
 
 __host__ __device__ void Particle::resetSFS() {
-    SFS = glm::vec3(0.0f);
+    SFS = vpmvec3(0.0f);
 }
 
 __device__ void PedrizzettiRelaxation::operator()(Particle& particle) {
-    glm::vec3 omega = nablaCrossX(particle.J);
+    vpmvec3 omega = nablaCrossX(particle.J);
     particle.Gamma = (1.0f - relaxFactor) * particle.Gamma
                      + relaxFactor * glm::length(particle.Gamma) / glm::length(omega) * omega;
 }
 
  __device__ void CorrectedPedrizzettiRelaxation::operator()(Particle& particle) {
-    glm::vec3 omega = nablaCrossX(particle.J);
-    float omegaNorm = glm::length(omega);
-    float gammaNorm = glm::length(particle.Gamma);
+    const vpmvec3 omega = nablaCrossX(particle.J);
+    const vpmfloat omegaNorm = glm::length(omega);
+    const vpmfloat gammaNorm = glm::length(particle.Gamma);
     particle.Gamma = (1.0f - relaxFactor) * particle.Gamma
                      + relaxFactor * gammaNorm / omegaNorm * omega;
     particle.Gamma /= sqrt(1.0f - 2.0f * (1.0f - relaxFactor) * relaxFactor 
@@ -60,14 +60,11 @@ __device__ void calcEstrNaive(int index, ParticleField<Rs, Ss, Ks>* source, Part
 
     for (int i = 0; i < source->np; ++i) {
         Particle& sourceParticle = source->particles[i];
-        float sourceSigma = sourceParticle.sigma;
+        const vpmfloat sourceSigma = sourceParticle.sigma;
 
-        glm::vec3 S = xDotNablaY(sourceParticle.Gamma, targetParticle.J - sourceParticle.J);
-
-        glm::vec3 dX = targetParticle.X - sourceParticle.X;
-        float r = glm::length(dX);
-
-        targetParticle.SFS += kernel.zeta(r / sourceSigma) / (sourceSigma * sourceSigma * sourceSigma) * S;
+        targetParticle.SFS += kernel.zeta(glm::length(targetParticle.X - sourceParticle.X) / sourceSigma)
+            / (sourceSigma * sourceSigma * sourceSigma)
+            * xDotNablaY(sourceParticle.Gamma, targetParticle.J - sourceParticle.J);
     }
 }
 
@@ -77,15 +74,15 @@ __device__ void calcEstrNaive(int index, ParticleField<R, S, K>* field) {
 }
 
 template <typename R, typename S, typename K>
-__device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, float alpha, float relaxFactor,
-                                 bool forcePositive, float minC, float maxC) {
+__device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, vpmfloat alpha, vpmfloat relaxFactor,
+                                 bool forcePositive, vpmfloat minC, vpmfloat maxC) {
 #ifdef SHARED_MEMORY
     Particle& particle = s_particleBuffer[threadIdx.x];
 #else
     Particle& particle = field->particles[index];
 #endif
 
-    const float zeta0 = field->kernel.zeta(0);
+    const vpmfloat zeta0 = field->kernel.zeta(0);
 
     // CALCULATIONS WITH TEST FILTER
     field->particles[index].sigma *= alpha;
@@ -99,7 +96,7 @@ __device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, float
     calcEstrNaive(index, field);
 
     // Clear temporary variable (not necessary?)
-    // particle.M = glm::mat3{ 0.0f };
+    // particle.M = vpmmat3{ 0.0f };
 
     // temporary variables
     particle.M[0] = xDotNablaY(particle.Gamma, particle.J);
@@ -121,10 +118,10 @@ __device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, float
     particle.M[1] -= particle.SFS;
 
     // CALCULATE COEFFICIENT
-    float numerator = glm::dot(particle.M[0], particle.Gamma);
+    vpmfloat numerator = glm::dot(particle.M[0], particle.Gamma);
     numerator *= 3.0f * alpha - 2.0f;
 
-    float denominator = glm::dot(particle.M[1], particle.Gamma);
+    vpmfloat denominator = glm::dot(particle.M[1], particle.Gamma);
     denominator *= particle.sigma * particle.sigma * particle.sigma / zeta0;
 
     // Don't initialize denominator to 0
@@ -153,11 +150,11 @@ __device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, float
     if (forcePositive) particle.C[0] = fabs(particle.C[0]);
 
     // Clear temporary variable (not necessary?)
-    // particle.M = glm::mat3{ 0.0f };
+    // particle.M = vpmmat3{ 0.0f };
 }
 
 template <typename R, typename S, typename K>
-__device__ void DynamicSFS::operator()(int index, ParticleField<R, S, K>* field, float a, float b) {
+__device__ void DynamicSFS::operator()(int index, ParticleField<R, S, K>* field, vpmfloat a, vpmfloat b) {
 #ifdef SHARED_MEMORY
     Particle& particle = s_particleBuffer[threadIdx.x];
 #else
@@ -180,7 +177,7 @@ __device__ void DynamicSFS::operator()(int index, ParticleField<R, S, K>* field,
 }
 
 template <typename R, typename S, typename K>
-__device__ void NoSFS::operator()(int index, ParticleField<R, S, K>* field, float a, float b) {
+__device__ void NoSFS::operator()(int index, ParticleField<R, S, K>* field, vpmfloat a, vpmfloat b) {
 #ifdef SHARED_MEMORY
     Particle& particle = s_particleBuffer[threadIdx.x];
 #else
@@ -204,27 +201,27 @@ __device__ void calcVelJacNaive(int index, ParticleField<Rs, Ss, Ks>* source, Pa
         if (i == index) continue;
 
         Particle& sourceParticle = source->particles[i];
-        float invSourceSigma = 1 / sourceParticle.sigma;
-        glm::vec3 sourceGamma = sourceParticle.Gamma;
+        vpmfloat invSourceSigma = 1 / sourceParticle.sigma;
+        vpmvec3 sourceGamma = sourceParticle.Gamma;
 
-        glm::vec3 dX = targetParticle.X - sourceParticle.X;
-        float r = glm::length(dX);
-        float r3 = r*r*r;
+        vpmvec3 dX = targetParticle.X - sourceParticle.X;
+        vpmfloat r = glm::length(dX);
+        vpmfloat r3 = r*r*r;
 
         // is this needed?
         if (r < EPS) continue;
 
         // Kernel evaluation
-        float g_sgm = kernel.g(r * invSourceSigma);
-        float dg_sgmdr = kernel.dgdr(r * invSourceSigma);
+        vpmfloat g_sgm = kernel.g(r * invSourceSigma);
+        vpmfloat dg_sgmdr = kernel.dgdr(r * invSourceSigma);
 
         // Compute velocity
-        glm::vec3 crossProd = glm::cross(dX, sourceGamma) * (-const4 / r3);
+        vpmvec3 crossProd = glm::cross(dX, sourceGamma) * (-const4 / r3);
         targetParticle.U += g_sgm * crossProd;
 
         // Compute Jacobian
-        float tmp = dg_sgmdr * invSourceSigma / r - 3.0f * g_sgm / (r*r);
-        glm::vec3 dX_norm = dX / r;
+        vpmfloat tmp = dg_sgmdr * invSourceSigma / r - 3.0f * g_sgm / (r*r);
+        vpmvec3 dX_norm = dX / r;
 
         for (int l = 0; l < 3; ++l) {
             for (int k = 0; k < 3; ++k) {
@@ -256,7 +253,7 @@ __device__ void calcVelJacNaive(int index, ParticleField<R, S, K>* field) {
 }
 
 template <typename R, typename S, typename K>
-__global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool useRelax) {
+__global__ void rungekutta(int N, ParticleField<R, S, K>* field, vpmfloat dt, bool useRelax) {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
@@ -267,19 +264,19 @@ __global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool 
     Particle& particle = field->particles[index];
 #endif
 
-    glm::vec3 S;
-    float Z;
-    float zeta0 = field->kernel.zeta(0.0f);
-    glm::vec3 Uinf = field->Uinf;
+    vpmvec3 S;
+    vpmfloat Z;
+    vpmfloat zeta0 = field->kernel.zeta(0.0f);
+    vpmvec3 Uinf = field->Uinf;
     R relax = field->relaxation;
 
     // Reset temp variable
-    particle.M = glm::mat3{ 0.0f };
+    particle.M = vpmmat3{ 0.0f };
 
     // Loop over the pairs
     for (int i = 0; i < 3; ++i) {
-        float a = rungeKuttaCoefs[i][0];
-        float b = rungeKuttaCoefs[i][1];
+        vpmfloat a = rungeKuttaCoefs[i][0];
+        vpmfloat b = rungeKuttaCoefs[i][1];
 
         // RUN SFS
         field->SFS(index, field, a, b);
@@ -340,7 +337,7 @@ void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, 
     particleSigma.reserve(numParticles);
     particleIdx.reserve(numParticles);
 
-    glm::vec3 omega;
+    vpmvec3 omega;
 
     for (int i = 0; i < numParticles; ++i) {
         Particle& particle = particleBuffer[i];
@@ -372,10 +369,10 @@ void runVPM(
     int maxParticles,
     int numParticles,
     int numTimeSteps,
-    float dt,
+    vpmfloat dt,
     int fileSaveSteps,
     int blockSize,
-    glm::vec3 uInf,
+    vpmvec3 uInf,
     Particle* particleBuffer,
     R relaxation,
     S sfs,
@@ -425,7 +422,7 @@ void runVPM(
 
         if (i % fileSaveSteps == 0) {
             cudaMemcpy(particleBuffer, dev_particleBuffer, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
-            writeVTK(numParticles, particleBuffer, filename, i / fileSaveSteps);
+            //writeVTK(numParticles, particleBuffer, filename, i / fileSaveSteps);
             std::cout << particleBuffer[0].U.x << std::endl;
         }
     }
@@ -435,55 +432,55 @@ void runVPM(
     cudaFree(dev_field);
 }
 
-void randomCubeInit(Particle* particleBuffer, int N, float cubeSize, float maxCirculation, float maxSigma) {
+void randomCubeInit(Particle* particleBuffer, int N, vpmfloat cubeSize, vpmfloat maxCirculation, vpmfloat maxSigma) {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> uniform(-1, 1);
-    std::uniform_real_distribution<float> uniformPos(0, 1);
+    std::uniform_real_distribution<vpmfloat> uniform(-1, 1);
+    std::uniform_real_distribution<vpmfloat> uniformPos(0, 1);
 
     for (int i = 0; i < N; ++i) {
         Particle& particle = particleBuffer[i];
 
         particle.sigma = maxSigma * uniformPos(gen);
-        particle.Gamma = maxCirculation * uniform(gen) * glm::normalize(glm::vec3{ uniform(gen), uniform(gen), uniform(gen) });
+        particle.Gamma = maxCirculation * uniform(gen) * glm::normalize(vpmvec3{ uniform(gen), uniform(gen), uniform(gen) });
         particle.circulation = glm::length(particle.Gamma);
 
-        particle.X = cubeSize * uniform(gen) * glm::normalize(glm::vec3{ uniform(gen), uniform(gen), uniform(gen) });
+        particle.X = cubeSize * uniform(gen) * glm::normalize(vpmvec3{ uniform(gen), uniform(gen), uniform(gen) });
     }
 }
 
-void randomSphereInit(Particle* particleBuffer, int N, float sphereRadius, float maxCirculation, float maxSigma) {
+void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius, vpmfloat maxCirculation, vpmfloat maxSigma) {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> uniform(-1, 1);
-    std::uniform_real_distribution<float> uniformPos(0, 1);
+    std::uniform_real_distribution<vpmfloat> uniform(-1, 1);
+    std::uniform_real_distribution<vpmfloat> uniformPos(0, 1);
 
     for (int i = 0; i < N; ++i) {
         Particle& particle = particleBuffer[i];
 
         particle.sigma = maxSigma * uniformPos(gen);
-        particle.Gamma = maxCirculation * uniform(gen) * glm::normalize(glm::vec3{ uniform(gen), uniform(gen), uniform(gen) });
+        particle.Gamma = maxCirculation * uniform(gen) * glm::normalize(vpmvec3{ uniform(gen), uniform(gen), uniform(gen) });
         particle.circulation = glm::length(particle.Gamma);
 
-        float theta = 2 * PI * uniformPos(gen);
-        float phi = PI * uniformPos(gen);
-        float radius = std::cbrt(uniformPos(gen)) * sphereRadius;
+        vpmfloat theta = 2 * PI * uniformPos(gen);
+        vpmfloat phi = PI * uniformPos(gen);
+        vpmfloat radius = std::cbrt(uniformPos(gen)) * sphereRadius;
 
-        float x = radius * sin(phi) * cos(theta);
-        float y = radius * sin(phi) * sin(theta);
-        float z = radius * cos(phi);
-        particle.X = glm::vec3{ x, y, z };
+        vpmfloat x = radius * sin(phi) * cos(theta);
+        vpmfloat y = radius * sin(phi) * sin(theta);
+        vpmfloat z = radius * cos(phi);
+        particle.X = vpmvec3{ x, y, z };
     }
 }
 
 void runSimulation() {
     // Define basic parameters
     int maxParticles{ 6000 };
-    int numTimeSteps{ 2000 };
-    float dt{ 0.01f };
+    int numTimeSteps{ 10 };
+    vpmfloat dt{ 0.01f };
     int numBlocks{ 128 };
-    int numStepsVTK{ 5 };
-    glm::vec3 uInf{ 0, 0, 0 };
+    int numStepsVTK{ 1 };
+    vpmvec3 uInf{ 0, 0, 0 };
 
     // Create host particle buffer
     Particle* particleBuffer = new Particle[maxParticles];
@@ -501,8 +498,7 @@ void runSimulation() {
         numBlocks,
         uInf,
         particleBuffer,
-        //CorrectedPedrizzettiRelaxation(0.3f),
-        NoRelaxation(),
+        CorrectedPedrizzettiRelaxation(0.3f),
         NoSFS(),
         GaussianErfKernel(),
         "test"

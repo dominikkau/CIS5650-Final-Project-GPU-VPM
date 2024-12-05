@@ -9,75 +9,75 @@ int numberParticles(int Nphi, int nc, int extra_nc) {
     return Nphi * (1 + 4 * (nc + extra_nc) * (nc + extra_nc + 1));
 }
 
-int addVortexRing(Particle* particleBuffer, float circulation, float R, float Rcross,
-                   int Nphi, int nc, float sigma, int extra_nc, glm::vec3 ringPosition, 
-                   glm::mat3 ringOrientation, int startingIndex, int maxParticles) {
+int addVortexRing(Particle* particleBuffer, vpmfloat circulation, vpmfloat R, vpmfloat Rcross,
+                   int Nphi, int nc, vpmfloat sigma, int extra_nc, vpmvec3 ringPosition, 
+                   vpmmat3 ringOrientation, int startingIndex, int maxParticles) {
     // Lambda function definition
     // Arclength corresponding to phi for circle with radius r
-    auto fun_S = [](float phi, float r) { return r * phi; };
+    auto fun_S = [](vpmfloat phi, vpmfloat r) { return r * phi; };
     // Circle circumference
-    float Stot = fun_S(2 * PI, R);
+    vpmfloat Stot = fun_S(2 * PI, R);
     // Non-dimensional arc length from 0 to a given value <=1
-    auto fun_s = [fun_S, Stot](float phi, float r) { return fun_S(phi, r) / Stot; };
+    auto fun_s = [fun_S, Stot](vpmfloat phi, vpmfloat r) { return fun_S(phi, r) / Stot; };
 
     // Angle associated to a given non-dimensional arc length
-    auto fun_phi = [](float s) { return 2 * PI * s; };
+    auto fun_phi = [](vpmfloat s) { return 2 * PI * s; };
 
-    auto fun_length = [fun_S, R](float r, float tht, float phi1, float phi2) {
-        float S1 = fun_S(phi1, R + r * cos(tht));
-        float S2 = fun_S(phi2, R + r * cos(tht));
+    auto fun_length = [fun_S, R](vpmfloat r, vpmfloat tht, vpmfloat phi1, vpmfloat phi2) {
+        vpmfloat S1 = fun_S(phi1, R + r * cos(tht));
+        vpmfloat S2 = fun_S(phi2, R + r * cos(tht));
         return S2 - S1;
     };
 
     // Volume of a cell in the torus
-    auto fun_vol = [R](float phi1, float phi2, float tht1, float tht2, float r1, float r2) {
-        float tmp1 = 0.5f * R * (r2 * r2 - r1 * r1) * (tht2 - tht1);
-        float tmp2 = (sin(tht2) - sin(tht1)) * (r2 * r2 * r2 - r1 * r1 * r1) / 3.0f;
+    auto fun_vol = [R](vpmfloat phi1, vpmfloat phi2, vpmfloat tht1, vpmfloat tht2, vpmfloat r1, vpmfloat r2) {
+        vpmfloat tmp1 = 0.5f * R * (r2 * r2 - r1 * r1) * (tht2 - tht1);
+        vpmfloat tmp2 = (sin(tht2) - sin(tht1)) * (r2 * r2 * r2 - r1 * r1 * r1) / 3.0f;
         return (phi2 - phi1) * (tmp1 + tmp2);
         };
 
-    auto fun_X_global = [ringPosition, ringOrientation](glm::vec3 x) {
+    auto fun_X_global = [ringPosition, ringOrientation](vpmvec3 x) {
         return ringPosition + ringOrientation * x;
         };
 
-        auto fun_Gamma_global = [ringOrientation](glm::vec3 Gamma) {
+        auto fun_Gamma_global = [ringOrientation](vpmvec3 Gamma) {
         return ringOrientation * Gamma;
         };
 
-    float rl = Rcross / (2 * nc + 1);
-    float dS = Stot / Nphi;
-    float ds = dS / Stot;
-    float omega = circulation / (PI * Rcross * Rcross);
+    vpmfloat rl = Rcross / (2 * nc + 1);
+    vpmfloat dS = Stot / Nphi;
+    vpmfloat ds = dS / Stot;
+    vpmfloat omega = circulation / (PI * Rcross * Rcross);
 
     int idx = startingIndex;
     for (int N = 0; N < Nphi; ++N) {
-        float sc1 = ds * N;
-        float sc2 = ds * (N + 1);
-        float sc = (sc1 + sc2) / 2;
+        vpmfloat sc1 = ds * N;
+        vpmfloat sc2 = ds * (N + 1);
+        vpmfloat sc = (sc1 + sc2) / 2;
 
-        float phi1 = fun_phi(sc1);
-        float phi2 = fun_phi(sc2);
-        float phic = fun_phi(sc);
+        vpmfloat phi1 = fun_phi(sc1);
+        vpmfloat phi2 = fun_phi(sc2);
+        vpmfloat phic = fun_phi(sc);
 
-        glm::vec3 Xc{ R * sin(phic), R * cos(phic), 0 }; // Center of the cross section
-        glm::vec3 T{ -cos(phic), sin(phic), 0 }; // Unitary tangent of the cross section
-        glm::mat3 Naxis;
+        vpmvec3 Xc{ R * sin(phic), R * cos(phic), 0 }; // Center of the cross section
+        vpmvec3 T{ -cos(phic), sin(phic), 0 }; // Unitary tangent of the cross section
+        vpmmat3 Naxis;
         Naxis[0] = T;
-        Naxis[1] = glm::cross(glm::vec3(0, 0, 1), T);
-        Naxis[2] = glm::vec3(0, 0, 1);
+        Naxis[1] = glm::cross(vpmvec3(0, 0, 1), T);
+        Naxis[2] = vpmvec3(0, 0, 1);
 
         for (int n = 0; n <= nc + extra_nc; ++n) {
             if (n == 0) {
                 // Compute volume
-                float vol = fun_vol(phi1, phi2, 0.0f, 2.0f * PI, 0.0f, rl);
+                vpmfloat vol = fun_vol(phi1, phi2, 0.0f, 2.0f * PI, 0.0f, rl);
                 // Position
-                glm::vec3 X = Xc;
+                vpmvec3 X = Xc;
                 // Vortex strength
-                glm::vec3 Gamma = omega * vol * T;
+                vpmvec3 Gamma = omega * vol * T;
                 // Filament length
-                float length = fun_length(0, R, phi1, phi2);
+                vpmfloat length = fun_length(0, R, phi1, phi2);
                 // Circulation
-                float crcltn = glm::length(Gamma) / length;
+                vpmfloat crcltn = glm::length(Gamma) / length;
 
                 if (idx >= maxParticles - 1) return -1;
 
@@ -89,27 +89,27 @@ int addVortexRing(Particle* particleBuffer, float circulation, float R, float Rc
                 ++idx;
             }
             else {
-                float rc = (1 + 12 * n * n) / (6 * n) * rl;  // Center radius
-                float r1 = (2 * n - 1) * rl;                // Lower radius
-                float r2 = (2 * n + 1) * rl;                // Upper radius
+                vpmfloat rc = (1 + 12 * n * n) / (6 * n) * rl;  // Center radius
+                vpmfloat r1 = (2 * n - 1) * rl;                // Lower radius
+                vpmfloat r2 = (2 * n + 1) * rl;                // Upper radius
                 int ncells = 8 * n;                         // Number of cells
-                float deltatheta = 2 * PI / ncells;       // Angle of cells
+                vpmfloat deltatheta = 2 * PI / ncells;       // Angle of cells
 
                 // Discretize layer into cells around the circumference
                 for (int j = 0; j < ncells; ++j) {
-                    float tht1 = deltatheta * j;            // Left angle
-                    float tht2 = deltatheta * (j + 1);      // Right angle
-                    float thtc = (tht1 + tht2) / 2;         // Center angle
+                    vpmfloat tht1 = deltatheta * j;            // Left angle
+                    vpmfloat tht2 = deltatheta * (j + 1);      // Right angle
+                    vpmfloat thtc = (tht1 + tht2) / 2;         // Center angle
 
-                    float vol = fun_vol(phi1, phi2, tht1, tht2, r1, r2); // Volume
+                    vpmfloat vol = fun_vol(phi1, phi2, tht1, tht2, r1, r2); // Volume
 
-                    glm::vec3 X = Xc + Naxis * glm::vec3{ 0, rc*cos(thtc), rc*sin(thtc) };
+                    vpmvec3 X = Xc + Naxis * vpmvec3{ 0, rc*cos(thtc), rc*sin(thtc) };
 
-                    glm::vec3 Gamma = (n <= nc) ? omega * vol * T : EPS * T;
+                    vpmvec3 Gamma = (n <= nc) ? omega * vol * T : EPS * T;
                     // Filament length
-                    float length = fun_length(0, R, phi1, phi2);
+                    vpmfloat length = fun_length(0, R, phi1, phi2);
                     // Circulation
-                    float crcltn = glm::length(Gamma) / length;
+                    vpmfloat crcltn = glm::length(Gamma) / length;
 
                     if (idx >= maxParticles - 1) return -1;
 
@@ -131,18 +131,18 @@ int initVortexRings(Particle* particleBuffer, int maxParticles) {
     // Number of rings
     const int nrings{ 2 };
     // Offset of rings
-    float dZ{ 0.7906f };
+    vpmfloat dZ{ 0.7906f };
 
     int numParticles{ 0 };
-    float circulations[nrings];
-    float Rs[nrings];
-    float Rcrosss[nrings];
-    float sigmas[nrings];
+    vpmfloat circulations[nrings];
+    vpmfloat Rs[nrings];
+    vpmfloat Rcrosss[nrings];
+    vpmfloat sigmas[nrings];
     int Nphis[nrings];
     int ncs[nrings];
     int extra_ncs[nrings];
-    glm::vec3 ringPositions[nrings];
-    glm::mat3 ringOrientations[nrings];
+    vpmvec3 ringPositions[nrings];
+    vpmmat3 ringOrientations[nrings];
 
     for (int i = 0; i < nrings; ++i) {
         circulations[i] = 1.0f;
@@ -152,8 +152,8 @@ int initVortexRings(Particle* particleBuffer, int maxParticles) {
         Nphis[i] = 100;
         ncs[i] = 2;
         extra_ncs[i] = 0;
-        ringPositions[i] = glm::vec3{ 0, 0, dZ * i };
-        ringOrientations[i] = glm::mat3{ 1.0f };
+        ringPositions[i] = vpmvec3{ 0, 0, dZ * i };
+        ringOrientations[i] = vpmmat3{ 1.0f };
 
         numParticles += numberParticles(Nphis[i], ncs[i], extra_ncs[i]);
     }
