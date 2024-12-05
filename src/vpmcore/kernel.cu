@@ -187,6 +187,7 @@ __device__ void NoSFS::operator()(int index, ParticleField<R, S, K>* field, floa
     Particle& particle = field->particles[index];
 #endif
 
+    particle.resetSFS();
     particle.reset();
     calcVelJacNaive(index, field);
 }
@@ -241,6 +242,7 @@ __device__ void calcVelJacNaive(int index, ParticleField<Rs, Ss, Ks>* source, Pa
         targetParticle.J[2][0] -= tmp * sourceGamma[1];
         targetParticle.J[2][1] += tmp * sourceGamma[0];
     }
+
 #ifdef SHARED_MEMORY
     // Copy variables back to global memory
     target->particles[index].U = targetParticle.U;
@@ -281,6 +283,7 @@ __global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool 
 
         // RUN SFS
         field->SFS(index, field, a, b);
+        __syncthreads();
 
         particle.M[0] = a * particle.M[0] + dt * (particle.U + Uinf);
         particle.X += b * particle.M[0];
@@ -307,6 +310,8 @@ __global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool 
     if (useRelax) {
         particle.reset();
         calcVelJacNaive(index, field);
+
+        __syncthreads(); // useRelax is the same for all threads
 
         relax(particle);
 
@@ -496,7 +501,8 @@ void runSimulation() {
         numBlocks,
         uInf,
         particleBuffer,
-        CorrectedPedrizzettiRelaxation(0.3f),
+        //CorrectedPedrizzettiRelaxation(0.3f),
+        NoRelaxation(),
         NoSFS(),
         GaussianErfKernel(),
         "test"

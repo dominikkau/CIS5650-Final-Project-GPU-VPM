@@ -6,7 +6,7 @@
 #include <string>
 
 #define TRANSPOSED
-#define SHARED_MEMORY
+//#define SHARED_MEMORY
 
 #define EPS 1e-6f
 #define PI 3.14159265358979f
