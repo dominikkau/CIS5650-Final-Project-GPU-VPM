@@ -3,8 +3,10 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <glm/glm.hpp>
+#include <string>
 
 #define TRANSPOSED
+#define SHARED_MEMORY
 
 #define EPS 1e-6f
 #define PI 3.14159265358979f
@@ -223,10 +225,9 @@ struct Particle {
 
     // Constructor
     Particle();
-
-    // Reset particle Jacobian, PSE and SFS
-    __host__ __device__ void Particle::reset();
-    __host__ __device__ void Particle::resetSFS();
+ 
+    __host__ __device__ void Particle::reset(); // Reset particle U, J and PSE
+    __host__ __device__ void Particle::resetSFS(); // Reset particle SFS
 };
 
 void randomCubeInit(Particle* particleBuffer, int N, float cubeSize = 10.0f, float maxCirculation = 1.0f, float maxSigma = 1.0f);
@@ -245,5 +246,6 @@ void runVPM(
     Particle* particleBuffer,
     R relaxation,
     S sfs,
-    K kernel
+    K kernel,
+    std::string filename
 );

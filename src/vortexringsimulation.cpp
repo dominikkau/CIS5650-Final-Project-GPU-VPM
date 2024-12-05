@@ -128,10 +128,12 @@ int addVortexRing(Particle* particleBuffer, float circulation, float R, float Rc
 }
 
 int initVortexRings(Particle* particleBuffer, int maxParticles) {
+    // Number of rings
     const int nrings{ 2 };
+    // Offset of rings
     float dZ{ 0.7906f };
-    int numParticles{ 0 };
 
+    int numParticles{ 0 };
     float circulations[nrings];
     float Rs[nrings];
     float Rcrosss[nrings];
@@ -148,7 +150,7 @@ int initVortexRings(Particle* particleBuffer, int maxParticles) {
         Rcrosss[i] = 0.07906f;
         sigmas[i] = 0.07906f;
         Nphis[i] = 100;
-        ncs[i] = 1;
+        ncs[i] = 2;
         extra_ncs[i] = 0;
         ringPositions[i] = glm::vec3{ 0, 0, dZ * i };
         ringOrientations[i] = glm::mat3{ 1.0f };

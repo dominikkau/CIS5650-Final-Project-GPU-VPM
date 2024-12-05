@@ -7,6 +7,16 @@
 #include "../lean_vtk.hpp"
 #include "../vortexringsimulation.hpp"
 
+__constant__ float rungeKuttaCoefs[3][2] = {
+    {0.0f, 1.0f / 3.0f},
+    {-5.0f / 9.0f, 15.0f / 16.0f},
+    {-153.0f / 128.0f, 8.0f / 15.0f}
+};
+
+#ifdef SHARED_MEMORY
+extern __shared__ Particle s_particleBuffer[];
+#endif
+
 // Constructor
 Particle::Particle() 
     : X(0.0f), Gamma(0.0f), sigma(0.0f), vol(0.0f), circulation(0.0f), isStatic(false),
@@ -42,17 +52,22 @@ __device__ void NoRelaxation::operator()(Particle& particle) {}
 
 template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
 __device__ void calcEstrNaive(int index, ParticleField<Rs, Ss, Ks>* source, ParticleField<Rt, St, Kt>* target, K kernel) {
+#ifdef SHARED_MEMORY
+    Particle& targetParticle = s_particleBuffer[threadIdx.x];
+#else
     Particle& targetParticle = target->particles[index];
+#endif
 
     for (int i = 0; i < source->np; ++i) {
         Particle& sourceParticle = source->particles[i];
+        float sourceSigma = sourceParticle.sigma;
 
         glm::vec3 S = xDotNablaY(sourceParticle.Gamma, targetParticle.J - sourceParticle.J);
 
         glm::vec3 dX = targetParticle.X - sourceParticle.X;
         float r = glm::length(dX);
 
-        targetParticle.SFS += kernel.zeta(r / sourceParticle.sigma) / powf(sourceParticle.sigma, 3.0f) * S;
+        targetParticle.SFS += kernel.zeta(r / sourceSigma) / (sourceSigma * sourceSigma * sourceSigma) * S;
     }
 }
 
@@ -64,29 +79,39 @@ __device__ void calcEstrNaive(int index, ParticleField<R, S, K>* field) {
 template <typename R, typename S, typename K>
 __device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, float alpha, float relaxFactor,
                                  bool forcePositive, float minC, float maxC) {
+#ifdef SHARED_MEMORY
+    Particle& particle = s_particleBuffer[threadIdx.x];
+#else
     Particle& particle = field->particles[index];
+#endif
+
+    const float zeta0 = field->kernel.zeta(0);
 
     // CALCULATIONS WITH TEST FILTER
-    particle.sigma *= alpha;
+    field->particles[index].sigma *= alpha;
+    __syncthreads();
 
     particle.reset();
     calcVelJacNaive(index, field);
+    __syncthreads();
 
     particle.resetSFS();
     calcEstrNaive(index, field);
 
-    // Clear temporary variable (really necessary?)
-    particle.M = glm::mat3{ 0.0f };
+    // Clear temporary variable (not necessary?)
+    // particle.M = glm::mat3{ 0.0f };
 
     // temporary variables
     particle.M[0] = xDotNablaY(particle.Gamma, particle.J);
     particle.M[1] = particle.SFS;
 
     // CALCULATIONS WITH DOMAIN FILTER
-    particle.sigma /= alpha;
+    field->particles[index].sigma /= alpha;
+    __syncthreads();
 
     particle.reset();
     calcVelJacNaive(index, field);
+    __syncthreads();
 
     particle.resetSFS();
     calcEstrNaive(index, field);
@@ -100,7 +125,7 @@ __device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, float
     numerator *= 3.0f * alpha - 2.0f;
 
     float denominator = glm::dot(particle.M[1], particle.Gamma);
-    denominator *= particle.sigma * particle.sigma * particle.sigma / field->kernel.zeta(0);
+    denominator *= particle.sigma * particle.sigma * particle.sigma / zeta0;
 
     // Don't initialize denominator to 0
     if (particle.C[2] == 0) particle.C[2] = denominator;
@@ -127,13 +152,17 @@ __device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, float
     // Force the coefficient to be positive
     if (forcePositive) particle.C[0] = fabs(particle.C[0]);
 
-    // Clear temporary variable
-    particle.M = glm::mat3{ 0.0f };
+    // Clear temporary variable (not necessary?)
+    // particle.M = glm::mat3{ 0.0f };
 }
 
 template <typename R, typename S, typename K>
 __device__ void DynamicSFS::operator()(int index, ParticleField<R, S, K>* field, float a, float b) {
+#ifdef SHARED_MEMORY
+    Particle& particle = s_particleBuffer[threadIdx.x];
+#else
     Particle& particle = field->particles[index];
+#endif
 
     if (a == 1.0f || a == 0.0f) {
         dynamicProcedure(index, field, alpha, relaxFactor, forcePositive, minC, maxC);
@@ -143,84 +172,39 @@ __device__ void DynamicSFS::operator()(int index, ParticleField<R, S, K>* field,
     else {
         particle.reset();
         calcVelJacNaive(index, field);
+        __syncthreads();
 
         particle.resetSFS();
         calcEstrNaive(index, field);
     }
 }
 
-
 template <typename R, typename S, typename K>
 __device__ void NoSFS::operator()(int index, ParticleField<R, S, K>* field, float a, float b) {
+#ifdef SHARED_MEMORY
+    Particle& particle = s_particleBuffer[threadIdx.x];
+#else
     Particle& particle = field->particles[index];
+#endif
 
     particle.reset();
     calcVelJacNaive(index, field);
 }
 
-template <typename R, typename S, typename K>
-__global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool relax) {
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    if (index >= N) return;
-
-    glm::vec3 S;
-    float Z;
-
-    Particle& particle = field->particles[index];
-
-    float zeta0 = field->kernel.zeta(0.0f);
-
-    // Reset temp variable (necessary?)
-    particle.M = glm::mat3{ 0.0f };
-
-    float rungeKuttaCoefs[3][2] = {
-        {0.0f, 1.0f / 3.0f},
-        {-5.0f / 9.0f, 15.0f / 16.0f},
-        {-153.0f / 128.0f, 8.0f / 15.0f}
-    };
-
-    // Loop over the pairs
-    for (int i = 0; i < 3; ++i) {
-        float a = rungeKuttaCoefs[i][0];
-        float b = rungeKuttaCoefs[i][1];
-
-        // RUN SFS
-        field->SFS(index, field, a, b);
-
-        __syncthreads();
-
-        particle.M[0] = a * particle.M[0] + dt * (particle.U + field->Uinf);
-        particle.X += b * particle.M[0];
-
-        S = xDotNablaY(particle.Gamma, particle.J);
-        Z = 0.2f * glm::dot(S, particle.Gamma) / glm::dot(particle.Gamma, particle.Gamma);
-
-        particle.M[1] = a * particle.M[1] + dt * (S - 3 * Z * particle.Gamma - 
-                        particle.C[0] * particle.SFS * particle.sigma * particle.sigma * particle.sigma / zeta0);
-        particle.M[2][1] = a * particle.M[2][1] - dt * (particle.sigma * Z);
-
-        particle.Gamma += b * particle.M[1];
-        particle.sigma += b * particle.M[2][1];
-
-        __syncthreads();
-    }
-
-    if (relax) {
-        particle.reset();
-        calcVelJacNaive(index, field);
-
-        field->relaxation(particle);
-    }
-}
-
 template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
 __device__ void calcVelJacNaive(int index, ParticleField<Rs, Ss, Ks>* source, ParticleField<Rt, St, Kt>* target, K kernel) {
+#ifdef SHARED_MEMORY
+    Particle& targetParticle = s_particleBuffer[threadIdx.x];
+#else
     Particle& targetParticle = target->particles[index];
+#endif
 
     for (int i = 0; i < source->np; ++i) {
         if (i == index) continue;
 
         Particle& sourceParticle = source->particles[i];
+        float invSourceSigma = 1 / sourceParticle.sigma;
+        glm::vec3 sourceGamma = sourceParticle.Gamma;
 
         glm::vec3 dX = targetParticle.X - sourceParticle.X;
         float r = glm::length(dX);
@@ -230,15 +214,15 @@ __device__ void calcVelJacNaive(int index, ParticleField<Rs, Ss, Ks>* source, Pa
         if (r < EPS) continue;
 
         // Kernel evaluation
-        float g_sgm = kernel.g(r / sourceParticle.sigma);
-        float dg_sgmdr = kernel.dgdr(r / sourceParticle.sigma);
+        float g_sgm = kernel.g(r * invSourceSigma);
+        float dg_sgmdr = kernel.dgdr(r * invSourceSigma);
 
         // Compute velocity
-        glm::vec3 crossProd = glm::cross(dX, sourceParticle.Gamma) * (-const4 / r3);
+        glm::vec3 crossProd = glm::cross(dX, sourceGamma) * (-const4 / r3);
         targetParticle.U += g_sgm * crossProd;
 
         // Compute Jacobian
-        float tmp = dg_sgmdr / (sourceParticle.sigma * r) - 3.0f * g_sgm / (r*r);
+        float tmp = dg_sgmdr * invSourceSigma / r - 3.0f * g_sgm / (r*r);
         glm::vec3 dX_norm = dX / r;
 
         for (int l = 0; l < 3; ++l) {
@@ -250,18 +234,87 @@ __device__ void calcVelJacNaive(int index, ParticleField<Rs, Ss, Ks>* source, Pa
         tmp = - const4 * g_sgm / r3;
 
         // Account for kronecker delta term
-        targetParticle.J[0][1] -= tmp * sourceParticle.Gamma[2];
-        targetParticle.J[0][2] += tmp * sourceParticle.Gamma[1];
-        targetParticle.J[1][0] += tmp * sourceParticle.Gamma[2];
-        targetParticle.J[1][2] -= tmp * sourceParticle.Gamma[0];
-        targetParticle.J[2][0] -= tmp * sourceParticle.Gamma[1];
-        targetParticle.J[2][1] += tmp * sourceParticle.Gamma[0];
+        targetParticle.J[0][1] -= tmp * sourceGamma[2];
+        targetParticle.J[0][2] += tmp * sourceGamma[1];
+        targetParticle.J[1][0] += tmp * sourceGamma[2];
+        targetParticle.J[1][2] -= tmp * sourceGamma[0];
+        targetParticle.J[2][0] -= tmp * sourceGamma[1];
+        targetParticle.J[2][1] += tmp * sourceGamma[0];
     }
+#ifdef SHARED_MEMORY
+    // Copy variables back to global memory
+    target->particles[index].U = targetParticle.U;
+    target->particles[index].J = targetParticle.J;
+#endif
 }
 
 template <typename R, typename S, typename K>
 __device__ void calcVelJacNaive(int index, ParticleField<R, S, K>* field) {
     calcVelJacNaive(index, field, field, field->kernel);
+}
+
+template <typename R, typename S, typename K>
+__global__ void rungekutta(int N, ParticleField<R, S, K>* field, float dt, bool useRelax) {
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+    if (index >= N) return;
+
+#ifdef SHARED_MEMORY
+    s_particleBuffer[threadIdx.x] = field->particles[index];
+    Particle& particle = s_particleBuffer[threadIdx.x];
+#else
+    Particle& particle = field->particles[index];
+#endif
+
+    glm::vec3 S;
+    float Z;
+    float zeta0 = field->kernel.zeta(0.0f);
+    glm::vec3 Uinf = field->Uinf;
+    R relax = field->relaxation;
+
+    // Reset temp variable
+    particle.M = glm::mat3{ 0.0f };
+
+    // Loop over the pairs
+    for (int i = 0; i < 3; ++i) {
+        float a = rungeKuttaCoefs[i][0];
+        float b = rungeKuttaCoefs[i][1];
+
+        // RUN SFS
+        field->SFS(index, field, a, b);
+
+        particle.M[0] = a * particle.M[0] + dt * (particle.U + Uinf);
+        particle.X += b * particle.M[0];
+
+        S = xDotNablaY(particle.Gamma, particle.J);
+        Z = 0.2f * glm::dot(S, particle.Gamma) / glm::dot(particle.Gamma, particle.Gamma);
+
+        particle.M[1] = a * particle.M[1] + dt * (S - 3 * Z * particle.Gamma -
+            particle.C[0] * particle.SFS * particle.sigma * particle.sigma * particle.sigma / zeta0);
+        particle.M[2][1] = a * particle.M[2][1] - dt * (particle.sigma * Z);
+
+        particle.Gamma += b * particle.M[1];
+        particle.sigma += b * particle.M[2][1];
+
+#ifdef SHARED_MEMORY
+        // Copy variables back to global memory
+        field->particles[index].Gamma = particle.Gamma;
+        field->particles[index].sigma = particle.sigma;
+        field->particles[index].X     = particle.X;
+#endif
+        __syncthreads();
+    }
+
+    if (useRelax) {
+        particle.reset();
+        calcVelJacNaive(index, field);
+
+        relax(particle);
+
+#ifdef SHARED_MEMORY
+        // Copy variables back to global memory
+        field->particles[index].Gamma = particle.Gamma;
+#endif
+    }
 }
 
 void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, int timestep) {
@@ -272,13 +325,17 @@ void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, 
     std::vector<double> particleX;
     std::vector<double> particleU;
     std::vector<double> particleGamma;
+    std::vector<double> particleOmega;
     std::vector<double> particleSigma;
     std::vector<double> particleIdx;
     particleX.reserve(dim * numParticles);
     particleU.reserve(dim * numParticles);
     particleGamma.reserve(dim * numParticles);
+    particleOmega.reserve(dim * numParticles);
     particleSigma.reserve(numParticles);
     particleIdx.reserve(numParticles);
+
+    glm::vec3 omega;
 
     for (int i = 0; i < numParticles; ++i) {
         Particle& particle = particleBuffer[i];
@@ -286,10 +343,13 @@ void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, 
         particleIdx.push_back(i);
         particleSigma.push_back(particle.sigma);
 
+        omega = nablaCrossX(particle.J);
+
         for (int j = 0; j < dim; ++j) {
             particleU.push_back(particle.U[j]);
             particleX.push_back(particle.X[j]);
             particleGamma.push_back(particle.Gamma[j]);
+            particleOmega.push_back(omega[j]);
         }
     }
 
@@ -298,6 +358,7 @@ void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, 
     writer.add_vector_field("position", particleX, dim);
     writer.add_vector_field("velocity", particleU, dim);
     writer.add_vector_field("circulation", particleGamma, dim);
+    writer.add_vector_field("vorticity", particleOmega, dim);
     writer.write_point_cloud("../output/" + filename + "_" + std::to_string(timestep) + ".vtu", dim, particleX);
 }
 
@@ -313,7 +374,8 @@ void runVPM(
     Particle* particleBuffer,
     R relaxation,
     S sfs,
-    K kernel) {
+    K kernel,
+    std::string filename) {
     int fullBlocksPerGrid{ (numParticles + blockSize - 1) / blockSize };
 
     // Declare device particle buffer
@@ -343,24 +405,24 @@ void runVPM(
 
     std::cout << particleBuffer[0].U.x << std::endl;
 
-    for (int i = 0; i < numTimeSteps; ++i) {
-        if (i % fileSaveSteps == 0) {
-            writeVTK(numParticles, particleBuffer, "test", i / fileSaveSteps);
-            std::cout << particleBuffer[0].U.x << std::endl;
-        }
+    writeVTK(numParticles, particleBuffer, filename, 0);
 
+    for (int i = 1; i <= numTimeSteps; ++i) {
+#ifdef SHARED_MEMORY
+        rungekutta<R, S, K><<<fullBlocksPerGrid, blockSize, blockSize * sizeof(Particle)>>>(
+            numParticles, dev_field, dt, true
+        );
+#else
         rungekutta<R, S, K><<<fullBlocksPerGrid, blockSize>>>(
             numParticles, dev_field, dt, true
         );
+#endif
 
-        //cudaMemcpy(&field, dev_field, sizeof(ParticleField<R, S, K>), cudaMemcpyDeviceToHost);
-        cudaMemcpy(particleBuffer, dev_particleBuffer, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
-        std::cout << particleBuffer[0].U.x << std::endl;
-
-        /*if (i % fileSaveSteps == 0) {
-            writeVTK(numParticles, particleBuffer, "test", i / fileSaveSteps);
+        if (i % fileSaveSteps == 0) {
+            cudaMemcpy(particleBuffer, dev_particleBuffer, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
+            writeVTK(numParticles, particleBuffer, filename, i / fileSaveSteps);
             std::cout << particleBuffer[0].U.x << std::endl;
-        }*/
+        }
     }
 
     // free device memory
@@ -411,11 +473,11 @@ void randomSphereInit(Particle* particleBuffer, int N, float sphereRadius, float
 
 void runSimulation() {
     // Define basic parameters
-    int maxParticles{ 2000 };
-    int numTimeSteps{ 1000 };
+    int maxParticles{ 6000 };
+    int numTimeSteps{ 2000 };
     float dt{ 0.01f };
     int numBlocks{ 128 };
-    int numStepsVTK{ 10 };
+    int numStepsVTK{ 5 };
     glm::vec3 uInf{ 0, 0, 0 };
 
     // Create host particle buffer
@@ -434,9 +496,10 @@ void runSimulation() {
         numBlocks,
         uInf,
         particleBuffer,
-        PedrizzettiRelaxation(0.005f),
+        CorrectedPedrizzettiRelaxation(0.3f),
         NoSFS(),
-        GaussianErfKernel()
+        GaussianErfKernel(),
+        "test"
     );
 
     // Free host particle buffer
