@@ -2,26 +2,18 @@
 #include <vector>
 #include <unordered_map>
 #include <glm/glm.hpp>  // Include GLM for glm::vec3
+#include <functional>
+#include <Eigen/Dense>
 
 // Namespace for VLM Solver
 namespace VLMSolver {
 
     // ------------ STRUCTURE TO REPRESENT HORSESHOES ------------------------------
-    //# HORSESHOE
-    //# A horseshoe is defined as a 5 - segments vortex by the array
-    //# HS = [Ap, A, B, Bp, CP, infDA, infDB, Gamma], with
-    //#
-    //#   * `Ap::Array{Float64,1}`    : A-side trailing edge.
-    //#   * `A::Array{Float64,1}`     : A-side of the bound vortex.
-    //#   * `B::Array{Float64,1}`     : B-side of the bound vortex.
-    //#   * `Bp::Array{Float64,1}`    : B-side trailing edge.
-    //#   * `CP::Array{Float64,1}`    : Control point of the lattice associated to the HS.
-    //#   * `infDA::Array{Float64,1}` : Direction of A-side semi-infinite vortex.
-    //#   * `infDB::Array{Float64,1}` : Direction of B-side semi-infinite vortex.
-    //#   * `Gamma::Float64 or nothing`: Circulation of the horseshoe.
-    //#
-    //# infDA and infDB must be unitary vectors pointing from the trailing edge in
-    //# the direction of infinite.
+    struct Horseshoe {
+        std::vector<double> Ap, A, B, Bp, CP, infDA, infDB;
+        double Gamma;
+    };
+
     std::unordered_map<std::string, std::string> HS_hash = {
     {"Ap", "1"},
     {"A", "2"},
@@ -33,12 +25,29 @@ namespace VLMSolver {
     {"Gamma", "8"}
     };
 
-    struct Horseshoe {
-        std::vector<double> Ap, A, B, Bp, CP, infDA, infDB;
-        double Gamma;
-    };
+    // Function declarations
+    void _mute_warning(bool booln);
+    void _regularize(bool booln);
+    void _blobify(bool booln);
+    void _smoothing_rad(double val);
+    double gw(double r, double sgm);
+    bool check_collinear(double magsqr, double col_crit, bool ign_col);
+    glm::vec3 vec3FromDoubleVec(const std::vector<double>& vec);
 
-    glm::vec3 V_Ainf_out(const vector<double>& A, const vector<double>& infD, const vector<double>& C, double Gamma, bool ign_col);
-    glm::vec3 V_Ainf_in(const vector<double>& A, const vector<double>& infD, const vector<double>& C, double Gamma, bool ign_col);
-    vector<double> V(VLMSolver::Horseshoe& HS, const vector<double>& C, bool ign_col = false, bool ign_infvortex = false, bool only_infvortex = false);
+    glm::vec3 V_AB(const std::vector<double>& A, const std::vector<double>& B, const std::vector<double>& C, double Gamma, bool ign_col);
+    glm::vec3 V_Ainf_out(const std::vector<double>& A, const std::vector<double>& infD, const std::vector<double>& C, double Gamma, bool ign_col);
+    glm::vec3 V_Ainf_in(const std::vector<double>& A, const std::vector<double>& infD, const std::vector<double>& C, double Gamma, bool ign_col);
+
+    // Main solver function
+    std::vector<double> solve(
+        const std::vector<std::vector<Horseshoe>>& HSs,
+        const std::vector<glm::vec3>& Vinfs,
+        double t = 0.0,
+        std::function<Eigen::Vector3d(const std::vector<double>&, double)> vortexsheet = nullptr,
+        std::function<Eigen::Vector3d(size_t, double)> extraVinf = nullptr,
+        std::vector<double> extraVinfArgs = {}
+    );
+
+    // Helper function for velocity calculation
+    std::vector<double> V(Horseshoe& HS, const std::vector<double>& C, bool ign_col = false, bool ign_infvortex = false, bool only_infvortex = false);
 }

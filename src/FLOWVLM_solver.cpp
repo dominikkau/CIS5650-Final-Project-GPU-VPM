@@ -3,11 +3,10 @@
 #include <cmath>
 #include <glm/glm.hpp>  // Include GLM for glm::vec3
 #include "constants.h"
-#include "FLOWVLM_solver.h"
 #include <functional>
 #include <Eigen/Dense>
+#include "FLOWVLM_solver.h"
 
-using namespace VLMSolver;
 using namespace std;
 
 // ------------ PARAMETERS ------------------------------------------------------
@@ -21,30 +20,30 @@ bool regularize = false;
 bool blobify = false;
 double smoothing_rad = 1e-9;
 
-void _mute_warning(bool booln) {
+void VLMSolver::_mute_warning(bool booln) {
     mute_warning = booln;
 }
 
-void _regularize(bool booln) {
+void VLMSolver::_regularize(bool booln) {
     regularize = booln;
 }
 
-void _blobify(bool booln) {
+void VLMSolver::_blobify(bool booln) {
     blobify = booln;
 }
 
-void _smoothing_rad(double val) {
+void VLMSolver::_smoothing_rad(double val) {
     smoothing_rad = val;
 }
 
 // Wincklman's regularizing function
-double gw(double r, double sgm) {
+double VLMSolver::gw(double r, double sgm) {
     double ratio = r / sgm;
     return std::pow(ratio, 3) * (std::pow(ratio, 2) + 2.5) / std::pow((std::pow(ratio, 2) + 1), 2.5);
 }
 
 // ------------ HELPER FUNCTIONS -----------------------------------------------
-bool check_collinear(double magsqr, double col_crit, bool ign_col) {
+bool VLMSolver::check_collinear(double magsqr, double col_crit, bool ign_col) {
     if (magsqr < col_crit || std::isnan(magsqr)) {
         if (!ign_col) {
             if (n_col == 0 && !mute_warning) {
@@ -57,7 +56,7 @@ bool check_collinear(double magsqr, double col_crit, bool ign_col) {
 }
 
 // Helper function to convert std::vector<double> to glm::vec3
-glm::vec3 vec3FromDoubleVec(const std::vector<double>& vec) {
+glm::vec3 VLMSolver::vec3FromDoubleVec(const std::vector<double>& vec) {
     if (vec.size() >= 3) {
         return glm::vec3(static_cast<float>(vec[0]), static_cast<float>(vec[1]), static_cast<float>(vec[2]));
     }
@@ -65,7 +64,7 @@ glm::vec3 vec3FromDoubleVec(const std::vector<double>& vec) {
 }
 
 // ------------ VORTEX FUNCTIONS ----------------------------------------------
-glm::vec3 V_AB(const std::vector<double>& A, const std::vector<double>& B, const std::vector<double>& C, double Gamma, bool ign_col) {
+glm::vec3 VLMSolver::V_AB(const std::vector<double>& A, const std::vector<double>& B, const std::vector<double>& C, double Gamma, bool ign_col) {
     glm::vec3 r0 = vec3FromDoubleVec(B) - vec3FromDoubleVec(A);
     glm::vec3 r1 = vec3FromDoubleVec(C) - vec3FromDoubleVec(A);
     glm::vec3 r2 = vec3FromDoubleVec(C) - vec3FromDoubleVec(B);
@@ -93,7 +92,7 @@ glm::vec3 V_AB(const std::vector<double>& A, const std::vector<double>& B, const
     }
 }
 
-glm::vec3 V_Ainf_out(const vector<double>& A, const vector<double>& infD, const vector<double>& C, double Gamma, bool ign_col) {
+glm::vec3 VLMSolver::V_Ainf_out(const vector<double>& A, const vector<double>& infD, const vector<double>& C, double Gamma, bool ign_col) {
     glm::vec3 AC(C[0] - A[0], C[1] - A[1], C[2] - A[2]);
     glm::vec3 unitinfD = glm::normalize(glm::vec3(infD[0], infD[1], infD[2]));
     glm::vec3 AAp = unitinfD * glm::dot(unitinfD, AC);
@@ -125,12 +124,12 @@ glm::vec3 V_Ainf_out(const vector<double>& A, const vector<double>& infD, const 
     }
 }
 
-glm::vec3 V_Ainf_in(const vector<double>& A, const vector<double>& infD, const vector<double>& C, double Gamma, bool ign_col) {
+glm::vec3 VLMSolver::V_Ainf_in(const vector<double>& A, const vector<double>& infD, const vector<double>& C, double Gamma, bool ign_col) {
     return V_Ainf_out(A, infD, C, Gamma, ign_col) * -1.0f;
 }
 
-std::vector<double> solve(
-    const std::vector<std::vector<Horseshoe>>& HSs,
+std::vector<double> VLMSolver::solve(
+    const std::vector<std::vector<VLMSolver::Horseshoe>>& HSs,
     const std::vector<glm::vec3>& Vinfs,
     double t = 0.0,
     std::function<Eigen::Vector3d(const std::vector<double>&, double)> vortexsheet = nullptr,
@@ -143,8 +142,8 @@ std::vector<double> solve(
 
     // Build matrices G and Vn
     for (size_t i = 0; i < n; ++i) {
-        const std::vector<Horseshoe>& hs_group = HSs[i];
-        const Horseshoe& hsi = hs_group[0]; // Assuming first horseshoe in the group for CPi
+        const std::vector<VLMSolver::Horseshoe>& hs_group = HSs[i];
+        const VLMSolver::Horseshoe& hsi = hs_group[0]; // Assuming first horseshoe in the group for CPi
 
         // Calculate normal vector
         glm::vec3 nhat_vec = glm::normalize(glm::cross(
@@ -153,8 +152,8 @@ std::vector<double> solve(
         Eigen::Vector3d nhat(nhat_vec.x, nhat_vec.y, nhat_vec.z);
 
         for (size_t j = 0; j < n; ++j) {
-            const std::vector<Horseshoe>& hs_group_j = HSs[j];
-            Horseshoe& hs = const_cast<Horseshoe&>(hs_group_j[0]); // Ensures mutability for V function
+            const std::vector<VLMSolver::Horseshoe>& hs_group_j = HSs[j];
+            VLMSolver::Horseshoe& hs = const_cast<VLMSolver::Horseshoe&>(hs_group_j[0]); // Ensures mutability for V function
 
             std::vector<double> GeomFac = V(hs, hsi.CP);
             Eigen::Vector3d Gij(GeomFac[0], GeomFac[1], GeomFac[2]);
@@ -186,7 +185,7 @@ std::vector<double> solve(
     return std::vector<double>(&Gamma[0], &Gamma[0] + Gamma.size());
 }
 
-vector<double> V(VLMSolver::Horseshoe& HS, const vector<double>& C, bool ign_col = false, bool ign_infvortex = false, bool only_infvortex = false) {
+vector<double> VLMSolver::V(VLMSolver::Horseshoe& HS, const vector<double>& C, bool ign_col = false, bool ign_infvortex = false, bool only_infvortex = false) {
     vector<double> result(3, 0.0);
 
     // Decompose HS
