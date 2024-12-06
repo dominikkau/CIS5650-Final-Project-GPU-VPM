@@ -150,7 +150,7 @@ int initVortexRings(Particle* particleBuffer, int maxParticles) {
         Rcrosss[i] = 0.07906f;
         sigmas[i] = 0.07906f;
         Nphis[i] = 100;
-        ncs[i] = 4;
+        ncs[i] = 1;
         extra_ncs[i] = 0;
         ringPositions[i] = vpmvec3{ 0, 0, dZ * i };
         ringOrientations[i] = vpmmat3{ 1.0f };
@@ -159,9 +159,9 @@ int initVortexRings(Particle* particleBuffer, int maxParticles) {
     }
 
     if (numParticles > maxParticles) {
-        numParticles = maxParticles;
         std::cout << "Number of particles (" << numParticles;
         std::cout << ") exceeds particleBuffer size (" << maxParticles << ")!" << std::endl;
+        numParticles = maxParticles;
     }
 
     int startingIndex{ 0 };

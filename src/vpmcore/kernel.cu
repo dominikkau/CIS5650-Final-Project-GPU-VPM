@@ -39,6 +39,17 @@ __host__ __device__ void Particle::resetSFS() {
     SFS = vpmvec3(0.0f);
 }
 
+template <typename R, typename S, typename K>
+void ParticleField<R, S, K>::addParticle(Particle& particle) {
+    if (np == maxParticles) return;
+
+    cudaMemcpy(particles[np], &particle, sizeof(Particle), cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMemcpy of single particle failed!");
+
+    ++np;
+}
+
 // *************************************************************
 // *                      RELAXATION                           *
 // *************************************************************
@@ -53,11 +64,11 @@ __global__ void pedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFacto
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
-    const vpmvec3 omega = nablaCrossX(particles[index].J);
+    const vpmvec3 omega    = nablaCrossX(particles[index].J);
     const vpmvec3 oldGamma = particles[index].Gamma;
 
     particles[index].Gamma = (1.0f - relaxFactor) * oldGamma
-                     + relaxFactor * glm::length(oldGamma) / glm::length(omega) * omega;
+        + relaxFactor * glm::length(oldGamma) / glm::length(omega) * omega;
 }
 
 inline void CorrectedPedrizzettiRelaxation::operator()(int N, Particle* particles, int numBlocks, int blockSize) {
@@ -70,8 +81,8 @@ __global__ void correctedPedrizzettiRelax(int N, Particle* particles, vpmfloat r
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
-    const vpmvec3  omega = nablaCrossX(particles[index].J);
-    const vpmvec3  oldGamma = particles[index].Gamma;
+    const vpmvec3 omega      = nablaCrossX(particles[index].J);
+    const vpmvec3 oldGamma   = particles[index].Gamma;
     const vpmfloat omegaNorm = glm::length(omega);
     const vpmfloat gammaNorm = glm::length(oldGamma);
 
@@ -108,9 +119,9 @@ __global__ void calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
-    const vpmvec3 particleGamma = particles[index].Gamma;
-    const vpmvec3 particleSFS = particles[index].SFS;
-    const vpmmat3 particleM = particles[index].M;
+    const vpmvec3 particleGamma  = particles[index].Gamma;
+    const vpmvec3 particleSFS    = particles[index].SFS;
+    const vpmmat3 particleM      = particles[index].M;
     const vpmfloat particleSigma = particles[index].sigma;
 
     vpmvec3 particleC = particles[index].C;
@@ -151,7 +162,6 @@ __global__ void calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
 
     // Copy result to global memory
     particles[index].C = particleC;
-    particles[index].M = vpmmat3{ 0.0 };
 }
 
 template <typename R, typename S, typename K>
@@ -210,7 +220,7 @@ void NoSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, in
     cudaDeviceSynchronize();
     checkCUDAError("resetParticlesSFS (NoSFS) failed!");
 
-    calcVelJacNaive<<<numBlocks, blockSize >>>(field.np, field.np, field.particles, field.particles, field.kernel, true);
+    calcVelJacNaive<<<numBlocks, blockSize>>>(field.np, field.np, field.particles, field.particles, field.kernel, true);
     cudaDeviceSynchronize();
     checkCUDAError("calcVelJacNaive (NoSFS) failed!");
 }
@@ -251,10 +261,10 @@ __global__ void calcEstrNaive(int targetN, int sourceN, Particle* targetParticle
 
     for (int i = 0; i < sourceN; ++i) {
         Particle& sourceParticle = sourceParticles[i];
-        const vpmfloat sourceSigma = sourceParticle.sigma;
+        const vpmfloat invSourceSigma = 1 / (sourceParticle.sigma * testFilterFactor);
 
-        targetSFS += kernel.zeta(glm::length(targetX - sourceParticle.X) / sourceSigma)
-            / (sourceSigma * sourceSigma * sourceSigma)
+        targetSFS += kernel.zeta(glm::length(targetX - sourceParticle.X) * invSourceSigma)
+            * invSourceSigma * invSourceSigma * invSourceSigma
             * xDotNablaY(sourceParticle.Gamma, targetJ - sourceParticle.J);
     }
 
@@ -284,8 +294,6 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
     }
     
     for (int i = 0; i < sourceN; ++i) {
-        if (i == index) continue;
-
         Particle& sourceParticle = sourceParticles[i];
         const vpmfloat invSourceSigma = 1 / (sourceParticle.sigma * testFilterFactor);
         const vpmvec3 sourceGamma = sourceParticle.Gamma;
@@ -294,27 +302,26 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
         const vpmfloat r = glm::length(dX);
 
         // is this needed?
-        if (r < EPS) continue;
+        if (r == 0.0) continue;
 
         // Kernel evaluation
         const vpmfloat g_sgm = kernel.g(r * invSourceSigma);
         const vpmfloat dg_sgmdr = kernel.dgdr(r * invSourceSigma);
 
         // Compute velocity
-        const vpmvec3 crossProd = glm::cross(dX, sourceGamma) * (-const4 / (r*r*r));
+        const vpmvec3 crossProd = -const4 / (r * r * r) * glm::cross(dX, sourceGamma);
         targetU += g_sgm * crossProd;
 
         // Compute Jacobian
-        vpmfloat tmp = dg_sgmdr * invSourceSigma / r - 3.0 * g_sgm / (r*r);
-        const vpmvec3 dX_norm = dX / r;
+        vpmfloat tmp = dg_sgmdr * invSourceSigma / r - 3.0 * g_sgm / (r * r);
 
         for (int l = 0; l < 3; ++l) {
             for (int k = 0; k < 3; ++k) {
-                targetJ[l][k] += tmp * crossProd[k] * dX_norm[l];
+                targetJ[l][k] += tmp * crossProd[k] * dX[l];
             }
         }
 
-        tmp = - const4 * g_sgm / (r*r*r);
+        tmp = - const4 * g_sgm / (r * r * r);
 
         // Account for kronecker delta term
         targetJ[0][1] -= tmp * sourceGamma[2];
@@ -334,15 +341,15 @@ __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat 
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
-    const vpmfloat particleC = particles[index].C[0];
-    const vpmvec3 particleU = particles[index].U;
-    const vpmvec3 particleSFS = particles[index].SFS;
-    const vpmmat3 particleJ = particles[index].J;
+    const vpmfloat particleC   = particles[index].C[0];
+    const vpmvec3  particleU   = particles[index].U;
+    const vpmvec3  particleSFS = particles[index].SFS;
+    const vpmmat3  particleJ   = particles[index].J;
     
     vpmfloat particleSigma = particles[index].sigma;
-    vpmvec3 particleGamma = particles[index].Gamma;
-    vpmvec3 particleX = particles[index].X;
-    vpmmat3 particleM;
+    vpmvec3  particleGamma = particles[index].Gamma;
+    vpmvec3  particleX     = particles[index].X;
+    vpmmat3  particleM;
     if (a == 1.0 || a == 0.0) {
         particleM = vpmmat3{ 0.0 };
     }
@@ -356,18 +363,18 @@ __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat 
     vpmvec3 S = xDotNablaY(particleGamma, particleJ);
     vpmfloat Z = 0.2 * glm::dot(S, particleGamma) / glm::dot(particleGamma, particleGamma);
 
-    particleM[1] = a * particleM[1] + dt * (S - 3 * Z * particleGamma -
-        particleC * particleSFS * particleSigma * particleSigma * particleSigma / zeta0);
-    particleM[2][1] = a * particleM[2][1] - dt * (particleSigma * Z);
+    particleM[1] = a * particleM[1] + dt * (S - 3 * Z * particleGamma
+        - particleC * particleSFS * particleSigma * particleSigma * particleSigma / zeta0);
+    particleM[2][1] = a * particleM[2][1] - dt * particleSigma * Z;
 
     particleGamma += b * particleM[1];
     particleSigma += b * particleM[2][1];
 
     // Copy variables back to global memory
-    particles[index].X = particleX;
+    particles[index].X     = particleX;
     particles[index].Gamma = particleGamma;
     particles[index].sigma = particleSigma;
-    particles[index].M = particleM;
+    particles[index].M     = particleM;
 }
 
 template <typename R, typename S, typename K>
@@ -380,7 +387,6 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
     };
 
     K kernel = field.kernel;
-    R relax = field.relaxation;
 
     // Loop over the pairs
     for (int i = 0; i < 3; ++i) {
@@ -400,7 +406,7 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
         cudaDeviceSynchronize();
         checkCUDAError("calcVelJacNaive (rungeKutta: Relaxation) failed!");
 
-        relax(field.np, field.particles, numBlocks, blockSize);
+        field.relaxation(field.np, field.particles, numBlocks, blockSize);
     }
 }
 
@@ -469,9 +475,13 @@ void runVPM(
     // Declare device particle buffer
     Particle* dev_particleBuffer;
     cudaMalloc((void**)&dev_particleBuffer, maxParticles * sizeof(Particle));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particleBuffer failed!");
 
     // Copy particle buffer from host to device
     cudaMemcpy(dev_particleBuffer, particleBuffer, numParticles * sizeof(Particle), cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMemcpy particleBuffer->dev_particleBuffer failed!");
 
     ParticleField<R, S, K> field{
         maxParticles,
@@ -488,15 +498,17 @@ void runVPM(
 
     std::cout << particleBuffer[0].U.x << std::endl;
 
-    writeVTK(numParticles, particleBuffer, filename, 0);
+    writeVTK(field.np, particleBuffer, filename, 0);
 
     for (int i = 1; i <= numTimeSteps; ++i) {
         rungeKutta(field, dt, true, numBlocks, blockSize);
 
         if (i % fileSaveSteps == 0) {
-            cudaMemcpy(particleBuffer, dev_particleBuffer, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
+            cudaMemcpy(particleBuffer, dev_particleBuffer, field.np * sizeof(Particle), cudaMemcpyDeviceToHost);
+            cudaDeviceSynchronize();
+            checkCUDAError("cudaMemcpy dev_particleBuffer->particleBuffer failed!");
             
-            writeVTK(numParticles, particleBuffer, filename, i / fileSaveSteps);
+            writeVTK(field.np, particleBuffer, filename, i / fileSaveSteps);
             std::cout << particleBuffer[0].U.x << std::endl;
         }
     }
@@ -548,10 +560,10 @@ void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius, vp
 
 void runSimulation() {
     // Define basic parameters
-    int maxParticles{ 50000 };
+    int maxParticles{ 2000 };
     int numTimeSteps{ 2000 };
     vpmfloat dt{ 0.01f };
-    int numStepsVTK{ 1 };
+    int numStepsVTK{ 5 };
     vpmvec3 uInf{ 0, 0, 0 };
     int blockSize{ 128 };
 
@@ -559,6 +571,7 @@ void runSimulation() {
     Particle* particleBuffer = new Particle[maxParticles];
     // Initialize particle buffer
     //randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
+    //int numParticles = maxParticles;
     int numParticles = initVortexRings(particleBuffer, maxParticles);
 
     // Run VPM method
@@ -570,7 +583,7 @@ void runSimulation() {
         numStepsVTK,
         uInf,
         particleBuffer,
-        PedrizzettiRelaxation(0.3),
+        CorrectedPedrizzettiRelaxation(0.3),
         NoSFS(),
         WinckelmansKernel(),
         blockSize,
