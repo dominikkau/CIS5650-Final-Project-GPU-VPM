@@ -6,7 +6,7 @@
 #include "kernel.h"
 #include "../lean_vtk.hpp"
 #include "../vortexringsimulation.hpp"
-#include <device_launch_parameters.h>"
+#include <device_launch_parameters.h>
 
 // Constructor
 Particle::Particle() 
@@ -14,8 +14,8 @@ Particle::Particle()
       U(0.0f), J(0.0f), PSE(0.0f), M(0.0f), C(0.0f), SFS(0.0f) {}
 
 __host__ __device__ void Particle::reset() {
-    U = vpmvec3(0.0f);
-    J = vpmmat3(0.0f);
+    U   = vpmvec3(0.0f);
+    J   = vpmmat3(0.0f);
     PSE = vpmvec3(0.0f);
 }
 
@@ -23,26 +23,31 @@ __host__ __device__ void Particle::resetSFS() {
     SFS = vpmvec3(0.0f);
 }
 
+// *************************************************************
+// *                      RELAXATION                           *
+// *************************************************************
+
+
 inline void PedrizzettiRelaxation::operator()(int N, Particle* particles, int numBlocks, int blockSize) {
-    computeRelax<<<numBlocks, blockSize>>>(N, particles, relaxFactor);
+    pedrizzettiRelax<<<numBlocks, blockSize>>>(N, particles, relaxFactor);
 }
 
-__global__ void PedrizzettiRelaxation::computeRelax(int N, Particle* particles, vpmfloat relaxFactor) {
+__global__ void pedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor) {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
     const vpmvec3 omega = nablaCrossX(particles[index].J);
     const vpmvec3 oldGamma = particles[index].Gamma;
 
-    particles[index].Gamma = (1.0 - relaxFactor) * oldGamma
+    particles[index].Gamma = (1.0f - relaxFactor) * oldGamma
                      + relaxFactor * glm::length(oldGamma) / glm::length(omega) * omega;
 }
 
 inline void CorrectedPedrizzettiRelaxation::operator()(int N, Particle* particles, int numBlocks, int blockSize) {
-    computeRelax<<<numBlocks, blockSize>>>(N, particles, relaxFactor);
+    correctedPedrizzettiRelax<<<numBlocks, blockSize>>>(N, particles, relaxFactor);
 }
 
-__global__ void CorrectedPedrizzettiRelaxation::computeRelax(int N, Particle* particles, vpmfloat relaxFactor) {
+__global__ void correctedPedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor) {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
@@ -54,11 +59,15 @@ __global__ void CorrectedPedrizzettiRelaxation::computeRelax(int N, Particle* pa
     const vpmfloat tmp = sqrt(1.0 - 2.0 * (1.0 - relaxFactor) * relaxFactor
         * (1.0 - glm::dot(oldGamma, omega) / (omegaNorm * gammaNorm)));
 
-    particles[index].Gamma = ((1.0 - relaxFactor) * oldGamma
+    particles[index].Gamma = ((1.0f - relaxFactor) * oldGamma
         + relaxFactor * gammaNorm / omegaNorm * omega) / tmp;
 }
 
-__global__ void DynamicSFS::calculateTemporary(int N, Particle* particles, bool testFilter) {
+// *************************************************************
+// *                     SFS modeling                          *
+// *************************************************************
+
+__global__ void calculateTemporary(int N, Particle* particles, bool testFilter) {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
@@ -74,7 +83,7 @@ __global__ void DynamicSFS::calculateTemporary(int N, Particle* particles, bool 
     }
 }
 
-__global__ void DynamicSFS::calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
+__global__ void calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
     vpmfloat alpha, vpmfloat relaxFactor, bool forcePositive, vpmfloat minC, vpmfloat maxC) {
 
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -126,10 +135,11 @@ __global__ void DynamicSFS::calculateCoefficient(int N, Particle* particles, vpm
 }
 
 template <typename R, typename S, typename K>
-void DynamicSFS::operator()(ParticleField<R, S, K>* field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize) {
+void DynamicSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize) {
     if (a == 1.0 || a == 0.0) {
-        K& kernel = field->kernel;
-        Particle* particles = field->particles;
+        K& kernel = field.kernel;
+        Particle* particles = field.particles;
+        int N = field.np;
 
         // CALCULATIONS WITH TEST FILTER
         calcVelJacNaive << <numBlocks, blockSize >> > (N, N, particles, particles, kernel, true, alpha);
@@ -150,15 +160,15 @@ void DynamicSFS::operator()(ParticleField<R, S, K>* field, vpmfloat a, vpmfloat 
             relaxFactor, forcePositive, minC, maxC);
     }
     else {
-        calcVelJacNaive<<<numBlocks, blockSize>>>(field, field, field->kernel, true);
-        calcEstrNaive<<<numBlocks, blockSize>>>(field, field, field->kernel, true);
+        calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true);
+        calcEstrNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true);
     }
 }
 
 template <typename R, typename S, typename K>
-void NoSFS::operator()(ParticleField<R, S, K>* field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize) {
-    resetParticlesSFS<<<numBlocks, blockSize>>>(field);
-    calcVelJacNaive<<<numBlocks, blockSize >>>(field, field, field->kernel, true);
+void NoSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize) {
+    resetParticlesSFS<<<numBlocks, blockSize>>>(field.np, field.particles);
+    calcVelJacNaive<<<numBlocks, blockSize >>>(field.np, field.np, field.particles, field.particles, field.kernel, true);
 }
 
 __global__ void resetParticles(int N, Particle* particles) {
@@ -316,20 +326,16 @@ __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat 
 }
 
 template <typename R, typename S, typename K>
-void rungeKutta(int N, ParticleField<R, S, K>* field, vpmfloat dt, bool useRelax) {
+void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int numBlocks, int blockSize) {
 
-    vpmfloat rungeKuttaCoefs[3][2] = {
+    const vpmfloat rungeKuttaCoefs[3][2] = {
         {0.0, 1.0 / 3.0},
         {-5.0 / 9.0, 15.0 / 16.0},
         {-153.0 / 128.0, 8.0 / 15.0}
     };
 
-    vpmfloat zeta0 = field->kernel.zeta(0.0);
-    vpmvec3 Uinf = field->Uinf;
-    R relax = field->relaxation;
-
-    // Reset temp variable
-    particle.M = vpmmat3{ 0.0 };
+    K kernel = field.kernel;
+    R relax = field.relaxation;
 
     // Loop over the pairs
     for (int i = 0; i < 3; ++i) {
@@ -337,23 +343,16 @@ void rungeKutta(int N, ParticleField<R, S, K>* field, vpmfloat dt, bool useRelax
         vpmfloat b = rungeKuttaCoefs[i][1];
 
         // RUN SFS
-        field->SFS(index, field, a, b);
+        field.SFS(field, a, b, numBlocks, blockSize);
 
-        rungeKuttaStep<<<numBlocks, blockSize>>>(field->np, field->particles, a, b, dt, field->kernel.zeta(0.0), field->Uinf);
+        rungeKuttaStep<<<numBlocks, blockSize>>>(field.np, field.particles, a, b, dt, kernel.zeta(0.0), field.Uinf);
+        cudaDeviceSynchronize();
     }
 
     if (useRelax) {
-        particle.reset();
-        calcVelJacNaive(index, field);
+        calcVelJacNaive<<<numBlocks, blockSize>>>(field.np, field.np, field.particles, field.particles, kernel, true);
 
-        __syncthreads(); // useRelax is the same for all threads
-
-        relax(particle);
-
-#ifdef SHARED_MEMORY
-        // Copy variables back to global memory
-        field->particles[index].Gamma = particle.Gamma;
-#endif
+        relax(field.np, field.particles, numBlocks, blockSize);
     }
 }
 
@@ -414,8 +413,10 @@ void runVPM(
     R relaxation,
     S sfs,
     K kernel,
+    int blockSize,
     std::string filename) {
-    int fullBlocksPerGrid{ (numParticles + BLOCK_SIZE - 1) / BLOCK_SIZE };
+
+    int numBlocks{ (numParticles + blockSize - 1) / blockSize };
 
     // Declare device particle buffer
     Particle* dev_particleBuffer;
@@ -437,30 +438,23 @@ void runVPM(
         relaxation
     };
 
-    // Declare device particle field and copy host field to device
-    ParticleField<R, S, K>* dev_field;
-    cudaMalloc((void**)&dev_field, sizeof(ParticleField<R, S, K>));
-    cudaMemcpy(dev_field, &field, sizeof(ParticleField<R, S, K>), cudaMemcpyHostToDevice);
-
     std::cout << particleBuffer[0].U.x << std::endl;
 
     writeVTK(numParticles, particleBuffer, filename, 0);
 
     for (int i = 1; i <= numTimeSteps; ++i) {
-        rungekutta<R, S, K><<<fullBlocksPerGrid, blockSize>>>(
-            numParticles, dev_field, dt, true
-        );
+        rungeKutta(field, dt, true, numBlocks, blockSize);
 
         if (i % fileSaveSteps == 0) {
             cudaMemcpy(particleBuffer, dev_particleBuffer, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
-            //writeVTK(numParticles, particleBuffer, filename, i / fileSaveSteps);
+            
+            writeVTK(numParticles, particleBuffer, filename, i / fileSaveSteps);
             std::cout << particleBuffer[0].U.x << std::endl;
         }
     }
 
     // free device memory
     cudaFree(dev_particleBuffer);
-    cudaFree(dev_field);
 }
 
 void randomCubeInit(Particle* particleBuffer, int N, vpmfloat cubeSize, vpmfloat maxCirculation, vpmfloat maxSigma) {
@@ -507,10 +501,11 @@ void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius, vp
 void runSimulation() {
     // Define basic parameters
     int maxParticles{ 6000 };
-    int numTimeSteps{ 10 };
+    int numTimeSteps{ 2000 };
     vpmfloat dt{ 0.01f };
-    int numStepsVTK{ 1 };
+    int numStepsVTK{ 5 };
     vpmvec3 uInf{ 0, 0, 0 };
+    int blockSize{ 128 };
 
     // Create host particle buffer
     Particle* particleBuffer = new Particle[maxParticles];
@@ -530,6 +525,7 @@ void runSimulation() {
         CorrectedPedrizzettiRelaxation(0.3f),
         NoSFS(),
         GaussianErfKernel(),
+        blockSize,
         "test"
     );
 

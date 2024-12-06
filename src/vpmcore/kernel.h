@@ -6,16 +6,15 @@
 #include <string>
 
 #define TRANSPOSED
-//#define SHARED_MEMORY
-#define DOUBLE_PRECISION
+//#define DOUBLE_PRECISION
 #define BLOCK_SIZE 128
 
-#define PI 3.14159265358979f
-#define const1 0.06349363593424097f
-#define const2 0.7978845608028654f
-#define const3 0.238732414637843f
-#define const4 0.07957747154594767f
-#define sqrt2 1.4142135623730951f
+#define PI (vpmfloat)3.14159265358979
+#define const1 (vpmfloat)0.06349363593424097
+#define const2 (vpmfloat)0.7978845608028654
+#define const3 (vpmfloat)0.238732414637843
+#define const4 (vpmfloat)0.07957747154594767
+#define sqrt2 (vpmfloat)1.4142135623730951
 
 #ifdef DOUBLE_PRECISION
 #define EPS 1e-9
@@ -108,34 +107,28 @@ struct ParticleField;
 
 struct Particle;
 
-
-
-template <typename R, typename S, typename K>
-__device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, vpmfloat alpha, vpmfloat relaxFactor,
-                                 bool forcePositive, vpmfloat minC, vpmfloat maxC);
-
 struct DynamicSFS {
     vpmfloat minC;
     vpmfloat maxC;
     vpmfloat alpha;
-    vpmfloat relaxFactor;
+    vpmfloat relaxFactor; // relaxation factor for Lagrangian average
     bool forcePositive;
 
     DynamicSFS(vpmfloat minC = 0, vpmfloat maxC = 1, vpmfloat alpha = 0.667, vpmfloat relaxFactor = 0.005, bool forcePositive = true)
         : minC(minC), maxC(maxC), alpha(alpha), relaxFactor(relaxFactor), forcePositive(forcePositive) {}
 
     template <typename R, typename S, typename K>
-    void operator()(ParticleField<R, S, K>* field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize);
-
-    __global__ void calculateTemporary(int N, Particle* particles, bool testFilter);
-
-    __global__ void DynamicSFS::calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
-        vpmfloat alpha, vpmfloat relaxFactor, bool forcePositive, vpmfloat minC, vpmfloat maxC);
+    void operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize);
 };
+
+__global__ void calculateTemporary(int N, Particle* particles, bool testFilter);
+
+__global__ void calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
+    vpmfloat alpha, vpmfloat relaxFactor, bool forcePositive, vpmfloat minC, vpmfloat maxC);
 
 struct NoSFS {
     template <typename R, typename S, typename K>
-    void operator()(ParticleField<R, S, K>* field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize);
+    void operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize);
 };
 
 struct PedrizzettiRelaxation {
@@ -143,16 +136,18 @@ struct PedrizzettiRelaxation {
     PedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
 
     inline void operator()(int N, Particle* particles, int numBlocks, int blockSize);
-    __global__ void computeRelax(int N, Particle* particles, vpmfloat relaxFactor);
 };
+
+__global__ void pedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor);
 
 struct CorrectedPedrizzettiRelaxation {
     vpmfloat relaxFactor;
     CorrectedPedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
 
     inline void operator()(int N, Particle* particles, int numBlocks, int blockSize);
-    __global__ void computeRelax(int N, Particle* particles, vpmfloat relaxFactor);
 };
+
+__global__ void correctedPedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor);
 
 struct NoRelaxation {
     inline void operator()(int N, Particle* particles, int numBlocks, int blockSize) {}
@@ -160,8 +155,7 @@ struct NoRelaxation {
 
 // ParticleField definition
 template <typename R=PedrizzettiRelaxation, typename S=NoSFS, typename K=GaussianErfKernel>
-class ParticleField {
-public:
+struct ParticleField {
     // User inputs
     int maxParticles;                      // Maximum number of particles
     Particle* particles;                // Pointer to particle buffer
@@ -221,10 +215,10 @@ struct Particle {
     // User-defined variables
     vpmvec3 X;               // Position
     vpmvec3 Gamma;           // Vectorial circulation
-    vpmfloat sigma;               // Smoothing radius
-    vpmfloat vol;                 // Volume
-    vpmfloat circulation;         // Scalar circulation
-    bool isStatic;             // Indicates if particle is static
+    vpmfloat sigma;          // Smoothing radius
+    vpmfloat vol;            // Volume
+    vpmfloat circulation;    // Scalar circulation
+    bool isStatic;           // Indicates if particle is static
 
     // Properties
     vpmvec3 U;               // Velocity at particle
@@ -239,7 +233,7 @@ struct Particle {
     // Constructor
     Particle();
  
-    __host__ __device__ void Particle::reset(); // Reset particle U, J and PSE
+    __host__ __device__ void Particle::reset();    // Reset particle U, J and PSE
     __host__ __device__ void Particle::resetSFS(); // Reset particle SFS
 };
 
@@ -257,7 +251,7 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
 __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat b, vpmfloat dt, vpmfloat zeta0, vpmvec3 Uinf);
 
 template <typename R, typename S, typename K>
-void rungeKutta(int N, ParticleField<R, S, K>* field, vpmfloat dt, bool relax);
+void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int numBlocks, int blockSize);
 
 void randomCubeInit(Particle* particleBuffer, int N, vpmfloat cubeSize = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
 void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
@@ -270,11 +264,11 @@ void runVPM(
     int numTimeSteps,
     vpmfloat dt,
     int fileSaveSteps,
-    int blockSize,
     vpmvec3 uInf,
     Particle* particleBuffer,
     R relaxation,
     S sfs,
     K kernel,
+    int blockSize,
     std::string filename
 );
