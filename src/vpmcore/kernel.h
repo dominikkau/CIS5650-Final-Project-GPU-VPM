@@ -108,19 +108,8 @@ struct ParticleField;
 
 struct Particle;
 
-template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
-__device__ void calcVelJacNaive(int index, ParticleField<Rs, Ss, Ks>* source, ParticleField<Rt, St, Kt>* target, K kernel);
 
-template <typename R, typename S, typename K>
-__device__ void calcVelJacNaive(int index, ParticleField<R, S, K>* field);
 
-template <typename R, typename S, typename K>
-__global__ void rungekutta(int N, ParticleField<R, S, K>* field, vpmfloat dt, bool relax);
-
-template <typename Rs, typename Ss, typename Ks, typename Rt, typename St, typename Kt, typename K>
-__device__ void calcEstrNaive(int index, ParticleField<Rs, Ss, Ks>* source, ParticleField<Rt, St, Kt>* target, K kernel);
-template <typename R, typename S, typename K>
-__device__ void calcEstrNaive(int index, ParticleField<R, S, K>* field);
 template <typename R, typename S, typename K>
 __device__ void dynamicProcedure(int index, ParticleField<R, S, K>* field, vpmfloat alpha, vpmfloat relaxFactor,
                                  bool forcePositive, vpmfloat minC, vpmfloat maxC);
@@ -136,31 +125,37 @@ struct DynamicSFS {
         : minC(minC), maxC(maxC), alpha(alpha), relaxFactor(relaxFactor), forcePositive(forcePositive) {}
 
     template <typename R, typename S, typename K>
-    __device__ void operator()(int index, ParticleField<R, S, K>* field, vpmfloat a, vpmfloat b);
+    void operator()(ParticleField<R, S, K>* field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize);
+
+    __global__ void calculateTemporary(int N, Particle* particles, bool testFilter);
+
+    __global__ void DynamicSFS::calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
+        vpmfloat alpha, vpmfloat relaxFactor, bool forcePositive, vpmfloat minC, vpmfloat maxC);
 };
 
 struct NoSFS {
     template <typename R, typename S, typename K>
-    __device__ void operator()(int index, ParticleField<R, S, K>* field, vpmfloat a, vpmfloat b);
+    void operator()(ParticleField<R, S, K>* field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize);
 };
 
 struct PedrizzettiRelaxation {
     vpmfloat relaxFactor;
     PedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
-    template <typename R, typename S, typename K>
-    __global__ void operator()(int N, ParticleField<R, S, K>* field);
+
+    inline void operator()(int N, Particle* particles, int numBlocks, int blockSize);
+    __global__ void computeRelax(int N, Particle* particles, vpmfloat relaxFactor);
 };
 
 struct CorrectedPedrizzettiRelaxation {
     vpmfloat relaxFactor;
     CorrectedPedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
-    template <typename R, typename S, typename K>
-    __global__ void operator()(int N, ParticleField<R, S, K>* field);
+
+    inline void operator()(int N, Particle* particles, int numBlocks, int blockSize);
+    __global__ void computeRelax(int N, Particle* particles, vpmfloat relaxFactor);
 };
 
 struct NoRelaxation {
-    template <typename R, typename S, typename K>
-    __global__ void operator()(int N, ParticleField<R, S, K>* field);
+    inline void operator()(int N, Particle* particles, int numBlocks, int blockSize) {}
 };
 
 // ParticleField definition
@@ -247,6 +242,22 @@ struct Particle {
     __host__ __device__ void Particle::reset(); // Reset particle U, J and PSE
     __host__ __device__ void Particle::resetSFS(); // Reset particle SFS
 };
+
+__global__ void resetParticles(int N, Particle* particles);
+__global__ void resetParticlesSFS(int N, Particle* particles);
+
+template <typename K>
+__global__ void calcEstrNaive(int targetN, int sourceN, Particle* targetParticles,
+    Particle* sourceParticles, K kernel, bool reset=false, vpmfloat testFilterFactor=1.0);
+
+template <typename K>
+__global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetParticles,
+    Particle* sourceParticles, K kernel, bool reset=false, vpmfloat testFilterFactor=1.0);
+
+__global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat b, vpmfloat dt, vpmfloat zeta0, vpmvec3 Uinf);
+
+template <typename R, typename S, typename K>
+void rungeKutta(int N, ParticleField<R, S, K>* field, vpmfloat dt, bool relax);
 
 void randomCubeInit(Particle* particleBuffer, int N, vpmfloat cubeSize = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
 void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
