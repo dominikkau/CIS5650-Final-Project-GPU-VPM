@@ -8,6 +8,22 @@
 #include "../vortexringsimulation.hpp"
 #include <device_launch_parameters.h>
 
+void checkCUDAErrorFn(const char* msg, const char* file, int line) {
+#ifdef ENABLE_CUDA_ERROR
+    cudaError_t err = cudaGetLastError();
+    if (cudaSuccess == err) {
+        return;
+    }
+
+    fprintf(stderr, "CUDA error");
+    if (file) {
+        fprintf(stderr, " (%s:%d)", file, line);
+    }
+    fprintf(stderr, ": %s: %s\n", msg, cudaGetErrorString(err));
+    exit(EXIT_FAILURE);
+#endif
+}
+
 // Constructor
 Particle::Particle() 
     : X(0.0f), Gamma(0.0f), sigma(0.0f), vol(0.0f), circulation(0.0f), isStatic(false),
@@ -27,9 +43,10 @@ __host__ __device__ void Particle::resetSFS() {
 // *                      RELAXATION                           *
 // *************************************************************
 
-
 inline void PedrizzettiRelaxation::operator()(int N, Particle* particles, int numBlocks, int blockSize) {
     pedrizzettiRelax<<<numBlocks, blockSize>>>(N, particles, relaxFactor);
+    cudaDeviceSynchronize();
+    checkCUDAError("pedrizzettiRelax failed!");
 }
 
 __global__ void pedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor) {
@@ -45,6 +62,8 @@ __global__ void pedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFacto
 
 inline void CorrectedPedrizzettiRelaxation::operator()(int N, Particle* particles, int numBlocks, int blockSize) {
     correctedPedrizzettiRelax<<<numBlocks, blockSize>>>(N, particles, relaxFactor);
+    cudaDeviceSynchronize();
+    checkCUDAError("correctedPedrizzettiRelax failed!");
 }
 
 __global__ void correctedPedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor) {
@@ -97,7 +116,7 @@ __global__ void calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
     vpmvec3 particleC = particles[index].C;
 
     vpmfloat numerator = glm::dot(particleM[0], particleGamma);
-    numerator *= 3.0f * alpha - 2.0f;
+    numerator *= 3.0 * alpha - 2.0;
 
     vpmfloat denominator = glm::dot(particleM[1], particleGamma);
     denominator *= particleSigma * particleSigma * particleSigma / zeta0;
@@ -132,6 +151,7 @@ __global__ void calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
 
     // Copy result to global memory
     particles[index].C = particleC;
+    particles[index].M = vpmmat3{ 0.0 };
 }
 
 template <typename R, typename S, typename K>
@@ -142,33 +162,57 @@ void DynamicSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat 
         int N = field.np;
 
         // CALCULATIONS WITH TEST FILTER
-        calcVelJacNaive << <numBlocks, blockSize >> > (N, N, particles, particles, kernel, true, alpha);
+        calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true, alpha);
+        cudaDeviceSynchronize();
+        checkCUDAError("calcVelJacNaive (DynamicsSFS: test filter) failed!");
 
-        calcEstrNaive << <numBlocks, blockSize >> > (N, N, particles, particles, kernel, true, alpha);
+        calcEstrNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true, alpha);
+        cudaDeviceSynchronize();
+        checkCUDAError("calcEstrNaive (DynamicsSFS: test filter) failed!");
 
-        calculateTemporary << <numBlocks, blockSize >> > (N, particles, true);
+        calculateTemporary<<<numBlocks, blockSize>>>(N, particles, true);
+        cudaDeviceSynchronize();
+        checkCUDAError("calculateTemporary (DynamicsSFS: test filter) failed!");
 
         // CALCULATIONS WITH DOMAIN FILTER
-        calcVelJacNaive << <numBlocks, blockSize >> > (N, N, particles, particles, kernel, true);
+        calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true);
+        cudaDeviceSynchronize();
+        checkCUDAError("calcVelJacNaive (DynamicsSFS: domain filter) failed!");
 
-        calcEstrNaive << <numBlocks, blockSize >> > (N, N, particles, particles, kernel, true);
+        calcEstrNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true);
+        cudaDeviceSynchronize();
+        checkCUDAError("calcEstrNaive (DynamicsSFS: domain filter) failed!");
 
-        calculateTemporary << <numBlocks, blockSize >> > (N, particles, false);
+        calculateTemporary<<<numBlocks, blockSize>>>(N, particles, false);
+        cudaDeviceSynchronize();
+        checkCUDAError("calculateTemporary (DynamicsSFS: domain filter) failed!");
 
         // CALCULATE COEFFICIENT
-        calculateCoefficient << <numBlocks, blockSize >> > (N, particles, kernel.zeta(0.0), alpha,
+        calculateCoefficient<<<numBlocks, blockSize>>>(N, particles, kernel.zeta(0.0), alpha,
             relaxFactor, forcePositive, minC, maxC);
+        cudaDeviceSynchronize();
+        checkCUDAError("calculateCoefficient failed!");
     }
     else {
         calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true);
+        cudaDeviceSynchronize();
+        checkCUDAError("calcVelJacNaive (DynamicsSFS: 2nd step) failed!");
+
         calcEstrNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true);
+        cudaDeviceSynchronize();
+        checkCUDAError("calcEstrNaive (DynamicsSFS: 2nd step) failed!");
     }
 }
 
 template <typename R, typename S, typename K>
 void NoSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize) {
     resetParticlesSFS<<<numBlocks, blockSize>>>(field.np, field.particles);
+    cudaDeviceSynchronize();
+    checkCUDAError("resetParticlesSFS (NoSFS) failed!");
+
     calcVelJacNaive<<<numBlocks, blockSize >>>(field.np, field.np, field.particles, field.particles, field.kernel, true);
+    cudaDeviceSynchronize();
+    checkCUDAError("calcVelJacNaive (NoSFS) failed!");
 }
 
 __global__ void resetParticles(int N, Particle* particles) {
@@ -290,8 +334,8 @@ __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat 
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
+    const vpmfloat particleC = particles[index].C[0];
     const vpmvec3 particleU = particles[index].U;
-    const vpmvec3 particleC = particles[index].C;
     const vpmvec3 particleSFS = particles[index].SFS;
     const vpmmat3 particleJ = particles[index].J;
     
@@ -310,16 +354,17 @@ __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat 
     particleX += b * particleM[0];
 
     vpmvec3 S = xDotNablaY(particleGamma, particleJ);
-    vpmfloat Z = 0.2f * glm::dot(S, particleGamma) / glm::dot(particleGamma, particleGamma);
+    vpmfloat Z = 0.2 * glm::dot(S, particleGamma) / glm::dot(particleGamma, particleGamma);
 
     particleM[1] = a * particleM[1] + dt * (S - 3 * Z * particleGamma -
-        particleC[0] * particleSFS * particleSigma * particleSigma * particleSigma / zeta0);
+        particleC * particleSFS * particleSigma * particleSigma * particleSigma / zeta0);
     particleM[2][1] = a * particleM[2][1] - dt * (particleSigma * Z);
 
     particleGamma += b * particleM[1];
     particleSigma += b * particleM[2][1];
 
     // Copy variables back to global memory
+    particles[index].X = particleX;
     particles[index].Gamma = particleGamma;
     particles[index].sigma = particleSigma;
     particles[index].M = particleM;
@@ -347,10 +392,13 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
 
         rungeKuttaStep<<<numBlocks, blockSize>>>(field.np, field.particles, a, b, dt, kernel.zeta(0.0), field.Uinf);
         cudaDeviceSynchronize();
+        checkCUDAError("rungeKuttaStep failed!");
     }
 
     if (useRelax) {
         calcVelJacNaive<<<numBlocks, blockSize>>>(field.np, field.np, field.particles, field.particles, kernel, true);
+        cudaDeviceSynchronize();
+        checkCUDAError("calcVelJacNaive (rungeKutta: Relaxation) failed!");
 
         relax(field.np, field.particles, numBlocks, blockSize);
     }
@@ -500,10 +548,10 @@ void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius, vp
 
 void runSimulation() {
     // Define basic parameters
-    int maxParticles{ 6000 };
+    int maxParticles{ 50000 };
     int numTimeSteps{ 2000 };
     vpmfloat dt{ 0.01f };
-    int numStepsVTK{ 5 };
+    int numStepsVTK{ 1 };
     vpmvec3 uInf{ 0, 0, 0 };
     int blockSize{ 128 };
 
@@ -522,9 +570,9 @@ void runSimulation() {
         numStepsVTK,
         uInf,
         particleBuffer,
-        CorrectedPedrizzettiRelaxation(0.3f),
+        PedrizzettiRelaxation(0.3),
         NoSFS(),
-        GaussianErfKernel(),
+        WinckelmansKernel(),
         blockSize,
         "test"
     );

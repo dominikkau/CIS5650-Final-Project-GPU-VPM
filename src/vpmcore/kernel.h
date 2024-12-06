@@ -5,9 +5,9 @@
 #include <glm/glm.hpp>
 #include <string>
 
+#define ENABLE_CUDA_ERROR
 #define TRANSPOSED
 //#define DOUBLE_PRECISION
-#define BLOCK_SIZE 128
 
 #define PI (vpmfloat)3.14159265358979
 #define const1 (vpmfloat)0.06349363593424097
@@ -29,6 +29,9 @@ typedef glm::fvec2 vpmvec2;
 typedef glm::fmat3 vpmmat3;
 typedef float      vpmfloat;
 #endif
+
+#define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
 
 __host__ __device__ inline vpmvec3 xDotNablaY(vpmvec3 x, vpmmat3 jacobianY) {
 #ifdef TRANSPOSED
