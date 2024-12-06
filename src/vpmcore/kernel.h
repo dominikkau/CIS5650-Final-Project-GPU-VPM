@@ -10,12 +10,12 @@
 #define DOUBLE_PRECISION
 #define CLASSIC_VPM
 
-#define PI (vpmfloat)3.14159265358979
+#define PI     (vpmfloat)3.14159265358979
 #define const1 (vpmfloat)0.06349363593424097
 #define const2 (vpmfloat)0.7978845608028654
 #define const3 (vpmfloat)0.238732414637843
 #define const4 (vpmfloat)0.07957747154594767
-#define sqrt2 (vpmfloat)1.4142135623730951
+#define sqrt2  (vpmfloat)1.4142135623730951
 
 #ifdef DOUBLE_PRECISION
 #define EPS 1e-9
@@ -54,7 +54,7 @@ struct SingularKernel {
     __host__ __device__ inline vpmfloat zeta(vpmfloat r) { return (r == 0.0f) ? 1.0f : 0.0f; }
     __host__ __device__ inline vpmfloat g(vpmfloat r) { return 1.0f; }
     __host__ __device__ inline vpmfloat dgdr(vpmfloat r) { return 0.0f; }
-    __host__ __device__ inline vpmvec2 g_dgdr(vpmfloat r) { return vpmvec2{ 1.0f, 0.0f }; }
+    __host__ __device__ inline vpmvec2  g_dgdr(vpmfloat r) { return vpmvec2{ 1.0f, 0.0f }; }
 };
 
 struct GaussianKernel {
@@ -83,7 +83,7 @@ struct GaussianErfKernel {
     __host__ __device__ inline vpmfloat dgdr(vpmfloat r) {
         return const2 * r * r * exp(-r * r / 2.0f);
     }
-    __host__ __device__ inline vpmvec2 g_dgdr(vpmfloat r) {
+    __host__ __device__ inline vpmvec2  g_dgdr(vpmfloat r) {
         vpmfloat tmp = const2 * r * exp(-r * r / 2.0f);
         return vpmvec2{ erf(r / sqrt2) - tmp, r * tmp };
     }
@@ -99,7 +99,7 @@ struct WinckelmansKernel {
     __host__ __device__ inline vpmfloat dgdr(vpmfloat r) {
         return 7.5f * r * r / pow(r * r + 1.0f, 3.5f);
     }
-    __host__ __device__ inline vpmvec2 g_dgdr(vpmfloat r) {
+    __host__ __device__ inline vpmvec2  g_dgdr(vpmfloat r) {
         vpmfloat tmp = pow(r * r + 1.0f, 2.5f);
         return vpmvec2{ r * r * r * (r * r + 2.5f) / tmp,
                           7.5f * r * r / (tmp * (r * r + 1.0f)) };
@@ -213,6 +213,8 @@ struct ParticleField {
         SFS(SFS),
         transposed(transposed),
         relaxation(relaxation) {};
+
+    void addParticle(Particle& particle);
 };
 
 struct Particle {

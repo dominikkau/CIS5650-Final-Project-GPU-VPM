@@ -159,9 +159,9 @@ int initVortexRings(Particle* particleBuffer, int maxParticles) {
     }
 
     if (numParticles > maxParticles) {
-        numParticles = maxParticles;
         std::cout << "Number of particles (" << numParticles;
         std::cout << ") exceeds particleBuffer size (" << maxParticles << ")!" << std::endl;
+        numParticles = maxParticles;
     }
 
     int startingIndex{ 0 };
