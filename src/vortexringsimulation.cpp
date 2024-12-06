@@ -86,6 +86,7 @@ int addVortexRing(Particle* particleBuffer, vpmfloat circulation, vpmfloat R, vp
                 particleBuffer[idx].circulation = crcltn;
                 particleBuffer[idx].sigma = sigma;
                 particleBuffer[idx].vol = vol;
+                particleBuffer[idx].index = idx;
                 ++idx;
             }
             else {
@@ -118,6 +119,7 @@ int addVortexRing(Particle* particleBuffer, vpmfloat circulation, vpmfloat R, vp
                     particleBuffer[idx].circulation = crcltn;
                     particleBuffer[idx].sigma = sigma;
                     particleBuffer[idx].vol = vol;
+                    particleBuffer[idx].index = idx;
                     ++idx;
                 }   
             }   

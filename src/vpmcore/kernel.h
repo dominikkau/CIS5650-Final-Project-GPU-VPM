@@ -215,6 +215,7 @@ struct ParticleField {
         relaxation(relaxation) {};
 
     void addParticle(Particle& particle);
+    void removeParticle(int index);
 };
 
 struct Particle {
@@ -225,6 +226,7 @@ struct Particle {
     vpmfloat vol;            // Volume
     vpmfloat circulation;    // Scalar circulation
     bool isStatic;           // Indicates if particle is static
+    int index;
 
     // Properties
     vpmvec3 U;               // Velocity at particle
@@ -234,7 +236,7 @@ struct Particle {
     // Internal variables
     vpmmat3 M;               // Auxiliary memory
     vpmvec3 C;               // SFS coefficient, numerator, denominator
-    vpmvec3 SFS;               
+    vpmvec3 SFS;
 
     // Constructor
     Particle();

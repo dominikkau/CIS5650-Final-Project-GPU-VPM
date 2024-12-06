@@ -45,9 +45,21 @@ void ParticleField<R, S, K>::addParticle(Particle& particle) {
 
     cudaMemcpy(particles[np], &particle, sizeof(Particle), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
-    checkCUDAError("cudaMemcpy of single particle failed!");
+    checkCUDAError("cudaMemcpy (addParticle) failed!");
 
     ++np;
+}
+
+template <typename R, typename S, typename K>
+void ParticleField<R, S, K>::removeParticle(int index) {
+    // not the last particle
+    if (index != np - 1) {
+        cudaMemcpy(particles[index], particles[np], sizeof(Particle), cudaMemcpyDeviceToDevice);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy (removeParticle) failed!");
+    }
+
+    --np;
 }
 
 // *************************************************************
@@ -442,7 +454,7 @@ void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, 
     for (int i = 0; i < numParticles; ++i) {
         Particle& particle = particleBuffer[i];
 
-        particleIdx.push_back(i);
+        particleIdx.push_back(particle.index);
         particleSigma.push_back(particle.sigma);
 
         omega = nablaCrossX(particle.J);
@@ -535,10 +547,11 @@ void randomCubeInit(Particle* particleBuffer, int N, vpmfloat cubeSize, vpmfloat
     for (int i = 0; i < N; ++i) {
         Particle& particle = particleBuffer[i];
 
+        particle.index = i;
         particle.sigma = maxSigma * uniformPos(gen);
         particle.Gamma = maxCirculation * uniform(gen) * glm::normalize(vpmvec3{ uniform(gen), uniform(gen), uniform(gen) });
         particle.circulation = glm::length(particle.Gamma);
-
+        
         particle.X = cubeSize * uniform(gen) * glm::normalize(vpmvec3{ uniform(gen), uniform(gen), uniform(gen) });
     }
 }
@@ -552,6 +565,7 @@ void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius, vp
     for (int i = 0; i < N; ++i) {
         Particle& particle = particleBuffer[i];
 
+        particle.index = i;
         particle.sigma = maxSigma * uniformPos(gen);
         particle.Gamma = maxCirculation * uniform(gen) * glm::normalize(vpmvec3{ uniform(gen), uniform(gen), uniform(gen) });
         particle.circulation = glm::length(particle.Gamma);
