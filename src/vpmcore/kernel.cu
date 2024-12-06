@@ -39,27 +39,78 @@ __host__ __device__ void Particle::resetSFS() {
     SFS = vpmvec3(0.0f);
 }
 
+// *************************************************************
+// *            PARTICLE FIELD IMPLEMENTATION                  *
+// *************************************************************
+
 template <typename R, typename S, typename K>
 void ParticleField<R, S, K>::addParticle(Particle& particle) {
-    if (np == maxParticles) return;
+    if (numParticles == maxParticles) return;
 
-    cudaMemcpy(particles[np], &particle, sizeof(Particle), cudaMemcpyHostToDevice);
+    cudaMemcpy(particles[numParticles], &particle, sizeof(Particle), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     checkCUDAError("cudaMemcpy (addParticle) failed!");
 
-    ++np;
+    ++numParticles;
 }
 
 template <typename R, typename S, typename K>
 void ParticleField<R, S, K>::removeParticle(int index) {
     // not the last particle
-    if (index != np - 1) {
-        cudaMemcpy(particles[index], particles[np], sizeof(Particle), cudaMemcpyDeviceToDevice);
+    if (index != numParticles - 1) {
+        cudaMemcpy(particles[index], particles[numParticles], sizeof(Particle), cudaMemcpyDeviceToDevice);
         cudaDeviceSynchronize();
         checkCUDAError("cudaMemcpy (removeParticle) failed!");
     }
 
-    --np;
+    --numParticles;
+}
+
+template <typename R, typename S, typename K>
+ParticleField<R, S, K>::ParticleField(
+    int maxParticles,
+    Particle* particles,
+    int numParticles,
+    int timeSteps,
+    K kernel,
+    vpmvec3 uInf,
+    S sfs,
+    R relaxation)
+    :
+    maxParticles(maxParticles),
+    particles(particles),
+    numParticles(numParticles),
+    timeStep(timeStep),
+    kernel(kernel),
+    uInf(uInf),
+    sfs(sfs),
+    relaxation(relaxation) {
+
+    // Declare device particle buffer
+    
+    cudaMalloc((void**)&dev_particles, maxParticles * sizeof(Particle));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particleBuffer failed!");
+
+    // Copy particle buffer from host to device
+    cudaMemcpy(dev_particles, particles, numParticles * sizeof(Particle), cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMemcpy particleBuffer->dev_particleBuffer failed!");
+};
+
+template <typename R, typename S, typename K>
+ParticleField<R, S, K>::~ParticleField() {
+    // free device memory
+    cudaFree(dev_particles);
+}
+
+template <typename R, typename S, typename K>
+Particle* ParticleField<R, S, K>::getParticles() {
+    cudaMemcpy(particles, dev_particles, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMemcpy dev_particleBuffer->particleBuffer failed!");
+
+    return particles;
 }
 
 // *************************************************************
@@ -178,11 +229,11 @@ __global__ void calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
 
 template <typename R, typename S, typename K>
 void DynamicSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize) {
-    if (a == 1.0 || a == 0.0) {
-        K& kernel = field.kernel;
-        Particle* particles = field.particles;
-        int N = field.np;
+    K& kernel = field.kernel;
+    Particle* particles = field.dev_particles;
+    const int N = field.numParticles;
 
+    if (a == 1.0 || a == 0.0) {
         // CALCULATIONS WITH TEST FILTER
         calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true, alpha);
         cudaDeviceSynchronize();
@@ -228,11 +279,13 @@ void DynamicSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat 
 
 template <typename R, typename S, typename K>
 void NoSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize) {
-    resetParticlesSFS<<<numBlocks, blockSize>>>(field.np, field.particles);
+    const int N = field.numParticles;
+
+    resetParticlesSFS<<<numBlocks, blockSize>>>(N, field.dev_particles);
     cudaDeviceSynchronize();
     checkCUDAError("resetParticlesSFS (NoSFS) failed!");
 
-    calcVelJacNaive<<<numBlocks, blockSize>>>(field.np, field.np, field.particles, field.particles, field.kernel, true);
+    calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     cudaDeviceSynchronize();
     checkCUDAError("calcVelJacNaive (NoSFS) failed!");
 }
@@ -408,6 +461,7 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
     };
 
     K kernel = field.kernel;
+    const int N = field.numParticles;
 
     // Loop over the pairs
     for (int i = 0; i < 3; ++i) {
@@ -415,24 +469,29 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
         vpmfloat b = rungeKuttaCoefs[i][1];
 
         // RUN SFS
-        field.SFS(field, a, b, numBlocks, blockSize);
+        field.sfs(field, a, b, numBlocks, blockSize);
 
-        rungeKuttaStep<<<numBlocks, blockSize>>>(field.np, field.particles, a, b, dt, kernel.zeta(0.0), field.Uinf);
+        rungeKuttaStep<<<numBlocks, blockSize>>>(N, field.dev_particles, a, b, dt, kernel.zeta(0.0), field.uInf);
         cudaDeviceSynchronize();
         checkCUDAError("rungeKuttaStep failed!");
     }
 
     if (useRelax) {
-        calcVelJacNaive<<<numBlocks, blockSize>>>(field.np, field.np, field.particles, field.particles, kernel, true);
+        calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, field.dev_particles, field.dev_particles, kernel, true);
         cudaDeviceSynchronize();
         checkCUDAError("calcVelJacNaive (rungeKutta: Relaxation) failed!");
 
-        field.relaxation(field.np, field.particles, numBlocks, blockSize);
+        field.relaxation(N, field.dev_particles, numBlocks, blockSize);
     }
+
+    ++field.timeStep;
 }
 
-void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, int timestep) {
+template <typename R, typename S, typename K>
+void writeVTK(ParticleField<R, S, K>& field, std::string filename) {
     const int dim = 3;
+    const int numParticles{ field.numParticles };
+    const Particle* particleBuffer = field.getParticles();
 
     leanvtk::VTUWriter writer;
 
@@ -452,7 +511,7 @@ void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, 
     vpmvec3 omega;
 
     for (int i = 0; i < numParticles; ++i) {
-        Particle& particle = particleBuffer[i];
+        const Particle& particle = particleBuffer[i];
 
         particleIdx.push_back(particle.index);
         particleSigma.push_back(particle.sigma);
@@ -473,7 +532,7 @@ void writeVTK(int numParticles, Particle* particleBuffer, std::string filename, 
     writer.add_vector_field("velocity", particleU, dim);
     writer.add_vector_field("circulation", particleGamma, dim);
     writer.add_vector_field("vorticity", particleOmega, dim);
-    writer.write_point_cloud("../output/" + filename + "_" + std::to_string(timestep) + ".vtu", dim, particleX);
+    writer.write_point_cloud("../output/" + filename + "_" + std::to_string(field.timeStep) + ".vtu", dim, particleX);
 }
 
 template <typename R, typename S, typename K>
@@ -493,49 +552,30 @@ void runVPM(
 
     int numBlocks{ (numParticles + blockSize - 1) / blockSize };
 
-    // Declare device particle buffer
-    Particle* dev_particleBuffer;
-    cudaMalloc((void**)&dev_particleBuffer, maxParticles * sizeof(Particle));
-    cudaDeviceSynchronize();
-    checkCUDAError("cudaMalloc of dev_particleBuffer failed!");
-
-    // Copy particle buffer from host to device
-    cudaMemcpy(dev_particleBuffer, particleBuffer, numParticles * sizeof(Particle), cudaMemcpyHostToDevice);
-    cudaDeviceSynchronize();
-    checkCUDAError("cudaMemcpy particleBuffer->dev_particleBuffer failed!");
-
     ParticleField<R, S, K> field{
         maxParticles,
-        dev_particleBuffer,
+        particleBuffer,
         numParticles,
         0,
-        0.0f,
         kernel,
         uInf,
         sfs,
-        true,
         relaxation
     };
 
-    std::cout << particleBuffer[0].U.x << std::endl;
+    std::cout << field.particles[0].U[0] << std::endl;
 
-    writeVTK(field.np, particleBuffer, filename, 0);
+    writeVTK(field, filename);
 
     for (int i = 1; i <= numTimeSteps; ++i) {
         rungeKutta(field, dt, true, numBlocks, blockSize);
 
         if (i % fileSaveSteps == 0) {
-            cudaMemcpy(particleBuffer, dev_particleBuffer, field.np * sizeof(Particle), cudaMemcpyDeviceToHost);
-            cudaDeviceSynchronize();
-            checkCUDAError("cudaMemcpy dev_particleBuffer->particleBuffer failed!");
-            
-            writeVTK(field.np, particleBuffer, filename, i / fileSaveSteps);
-            std::cout << particleBuffer[0].U.x << std::endl;
+
+            writeVTK(field, filename);
+            std::cout << field.particles[0].U[0] << std::endl;
         }
     }
-
-    // free device memory
-    cudaFree(dev_particleBuffer);
 }
 
 void randomCubeInit(Particle* particleBuffer, int N, vpmfloat cubeSize, vpmfloat maxCirculation, vpmfloat maxSigma) {
@@ -607,7 +647,7 @@ void runSimulation() {
         uInf,
         particleBuffer,
         CorrectedPedrizzettiRelaxation(0.3),
-        NoSFS(),
+        DynamicSFS(),
         WinckelmansKernel(),
         blockSize,
         "test"
