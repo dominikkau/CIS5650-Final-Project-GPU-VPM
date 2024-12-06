@@ -7,7 +7,8 @@
 
 #define ENABLE_CUDA_ERROR
 #define TRANSPOSED
-//#define DOUBLE_PRECISION
+#define DOUBLE_PRECISION
+#define CLASSIC_VPM
 
 #define PI (vpmfloat)3.14159265358979
 #define const1 (vpmfloat)0.06349363593424097
