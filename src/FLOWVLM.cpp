@@ -13,16 +13,10 @@
 #include "FLOWVLM_rotor.h"
 #include "FLOWVLM_tools.h"
 
-class FLOWVLM {
-public:
-    // ------------ CONSTANTS -----------------------------------
-    const double pm = 3.0 / 4.0; // Default chord-position of the control point
-    const double pn = 1.0 / 4.0; // Default chord-position of the bound vortex
+// Define a more manageable type alias for field data
+using FieldType = std::pair<std::vector<std::string>, std::string>;
 
-    // Define a more manageable type alias for field data
-    using FieldType = std::pair<std::vector<std::string>, std::string>;
-
-    const std::unordered_map<std::string, FieldType> FIELDS = {
+static const std::unordered_map<std::string, FieldType> FIELDS = {
         {"Gamma", { {}, "scalar" }},         // Vortex strength
         {"Vinf", { {}, "vector" }},         // Velocity at each CP used for Gamma
         // ################## LIFT AND SIDEWASH ####################
@@ -62,14 +56,22 @@ public:
         {"ftot", { {}, "vector" }},        // Aerodynamic force (D+L+S) per unit span
         {"default-vector", { {}, "vector" }},  // Place holder for a vector field
         {"default-scalar", { {}, "scalar" }}   // Place holder for a scalar field
-    };
+};
+
+class FLOWVLM {
+public:
+    // ------------ CONSTANTS -----------------------------------
+    const double pm = 3.0 / 4.0; // Default chord-position of the control point
+    const double pn = 1.0 / 4.0; // Default chord-position of the bound vortex
 
     // WING AND WINGSYSTEM COMMON FUNCTIONS
 
     // Solves the VLM of the Wing or WingSystem
-    void solve(Wing& wing, const std::vector<double>& Vinf, double t = 0.0,
+    void solve(Wing& wing,
+        std::function<std::vector<double>(const std::vector<double>&, double)> Vinf,
+        double t = 0.0,
         std::function<Eigen::Vector3d(const std::vector<double>&, double)> vortexsheet = nullptr,
-        std::function<void()> extraVinf = nullptr,
+        std::function<std::vector<double>(int, double)> extraVinf = nullptr,
         bool keep_sol = false,
         const std::vector<double>& extraVinfArgs = {}) {
 
@@ -77,22 +79,30 @@ public:
         wing.setVinf(Vinf, keep_sol);
 
         // Obtain horseshoes
-        auto HSs = getHorseshoes(wing, t, extraVinf, extraVinfArgs);
-        auto Vinfs = wing.getVinfs(t, extraVinf, extraVinfArgs);
+        std::vector<VLMSolver::Horseshoe> HSs = getHorseshoes(wing, t, extraVinf, extraVinfArgs);
+        std::vector<std::vector<double>> Vinfs = wing.getVinfs(t, "", extraVinf, extraVinfArgs);
+
+        // Flatten Vinfs (std::vector<std::vector<double>>) into a single std::vector<double>
+        std::vector<double> flattenedVinfs;
+        for (const auto& vec : Vinfs) {
+            flattenedVinfs.insert(flattenedVinfs.end(), vec.begin(), vec.end());
+        }
 
         // Calls the solver
         auto Gammas = VLMSolver::solve(HSs, Vinfs, t, vortexsheet);
 
+        // Add solutions to wing
         wing.addsolution("Gamma", Gammas, t);
-        wing.addsolution("Vinf", Vinfs, t);
+        wing.addsolution("Vinf", flattenedVinfs, t); // Use flattenedVinfs
     }
 
     // Returns all the horseshoes of the Wing or WingSystem
-    std::vector<std::vector<VLMSolver::Horseshoe>> getHorseshoes(Wing& wing, double t = 0.0,
-        std::function<void()> extraVinf = {}, const std::vector<double>& extraVinfArgs = {}) {
+    std::vector<VLMSolver::Horseshoe> getHorseshoes(Wing& wing, double t = 0.0,
+        std::function<std::vector<double>(int, double)> extraVinf = {},
+        const std::vector<double>& extraVinfArgs = {}) {
 
         int m = wing.get_m();
-        std::vector<std::vector<VLMSolver::Horseshoe>> HSs;
+        std::vector<VLMSolver::Horseshoe> HSs;
         for (int i = 1; i <= m; ++i) {
             HSs.push_back(wing.getHorseshoe(i, t, extraVinf));
         }
@@ -117,6 +127,13 @@ public:
     }
 
     std::string get_hash(const std::string& var) {
-        return VLMSolver::HS_hash.at(var);
+        auto it = VLMSolver::HS_hash.find(var);
+        if (it != VLMSolver::HS_hash.end()) {
+            return std::to_string(it->second);
+        }
+        else {
+            return "Key not found";
+        }
     }
+
 };

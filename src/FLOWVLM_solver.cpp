@@ -1,12 +1,21 @@
+#include "constants.h"
+#include <functional>
+#include "FLOWVLM_solver.h"
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include <glm/glm.hpp>  // Include GLM for glm::vec3
-#include "constants.h"
-#include <functional>
 #include <Eigen/Dense>
-#include "FLOWVLM_solver.h"
+#include <optional>
+#include <numeric>
 
+// Forward declaration of the regularize and smoothing functions
+bool regularize = true; // Set to true if regularization is needed
+double core_rad = 1.0; // Core radius for regularization
+double col_crit = 1e-6; // Collinearity threshold
+bool mute_warning = false; // Mute warnings
+bool blobify = false; // Flag for blobification
+
+using namespace VLMSolver;
 using namespace std;
 
 // ------------ PARAMETERS ------------------------------------------------------
@@ -55,119 +64,176 @@ bool VLMSolver::check_collinear(double magsqr, double col_crit, bool ign_col) {
     return false;
 }
 
-// Helper function to convert std::vector<double> to glm::vec3
-glm::vec3 VLMSolver::vec3FromDoubleVec(const std::vector<double>& vec) {
-    if (vec.size() >= 3) {
-        return glm::vec3(static_cast<float>(vec[0]), static_cast<float>(vec[1]), static_cast<float>(vec[2]));
-    }
-    return glm::vec3(0.0f);  // Default in case the vector is too small
-}
-
 // ------------ VORTEX FUNCTIONS ----------------------------------------------
-glm::vec3 VLMSolver::V_AB(const std::vector<double>& A, const std::vector<double>& B, const std::vector<double>& C, double Gamma, bool ign_col) {
-    glm::vec3 r0 = vec3FromDoubleVec(B) - vec3FromDoubleVec(A);
-    glm::vec3 r1 = vec3FromDoubleVec(C) - vec3FromDoubleVec(A);
-    glm::vec3 r2 = vec3FromDoubleVec(C) - vec3FromDoubleVec(B);
-
-    glm::vec3 crss = glm::cross(r1, r2);  // Use glm::cross
-    double magsqr = glm::dot(crss, crss) + (regularize ? smoothing_rad : 0);
-
-    if (check_collinear(magsqr / glm::length(r0), col_crit, ign_col)) {
-        return glm::vec3(0.0f);
-    }
-
-    glm::vec3 F1 = crss / static_cast<float>(magsqr);  // Divide by magsqr (cast to float)
-    glm::vec3 aux = glm::normalize(r1) - glm::normalize(r2);
-    double F2 = glm::dot(r0, aux);
-
-    if (blobify) {
-        F1 *= gw(glm::length(crss) / glm::length(r0), smoothing_rad);
-    }
-
-    if (Gamma == 0) {
-        return F1 * glm::vec3(F2);
-    }
-    else {
-        return glm::vec3(F1.x * F2, F1.y * F2, F1.z * F2) * glm::vec3((Gamma / (4 * M_PI)));
-    }
+// Function to compute the Euclidean norm of a 3D vector
+double norm(const std::vector<double>& v) {
+    return std::sqrt(std::inner_product(v.begin(), v.end(), v.begin(), 0.0));
 }
 
-glm::vec3 VLMSolver::V_Ainf_out(const vector<double>& A, const vector<double>& infD, const vector<double>& C, double Gamma, bool ign_col) {
-    glm::vec3 AC(C[0] - A[0], C[1] - A[1], C[2] - A[2]);
-    glm::vec3 unitinfD = glm::normalize(glm::vec3(infD[0], infD[1], infD[2]));
-    glm::vec3 AAp = unitinfD * glm::dot(unitinfD, AC);
-    AAp += glm::vec3(A[0], A[1], A[2]);
+// Calculates the induced velocity of the bound vortex AB on point C
+std::vector<double> _V_AB(const std::vector<double>& A, const std::vector<double>& B, const std::vector<double>& C,
+    double gamma, bool ign_col = false) {
+    std::vector<double> r0 = { B[0] - A[0], B[1] - A[1], B[2] - A[2] };
+    std::vector<double> r1 = { C[0] - A[0], C[1] - A[1], C[2] - A[2] };
+    std::vector<double> r2 = { C[0] - B[0], C[1] - B[1], C[2] - B[2] };
 
-    std::vector<double> AAp_vec = { AAp.x, AAp.y, AAp.z };
-    glm::vec3 boundAAp = V_AB(A, AAp_vec, C, Gamma, ign_col);
-    glm::vec3 ApC = glm::vec3(C[0] - AAp[0], C[1] - AAp[1], C[2] - AAp[2]);
-    glm::vec3 crss = glm::cross(vec3FromDoubleVec(infD), ApC);
-    double mag = glm::length(crss) + (regularize ? smoothing_rad : 0);
+    std::vector<double> crss = { r1[1] * r2[2] - r1[2] * r2[1],
+                                 r1[2] * r2[0] - r1[0] * r2[2],
+                                 r1[0] * r2[1] - r1[1] * r2[0] };
 
+    double magsqr = std::inner_product(crss.begin(), crss.end(), crss.begin(), 0.0) + (regularize ? core_rad : 0);
+
+    // Checks colinearity
+    if (check_collinear(magsqr / norm(r0), col_crit, ign_col)) {
+        if (!ign_col && n_col == 1 && !mute_warning) {
+            /*std::cout << "\n\t magsqr:" << magsqr << " \n\t A:(" << A[0] << "," << A[1] << "," << A[2] << ")"
+                << " \n\t B:(" << B[0] << "," << B[1] << "," << B[2] << ")"
+                << " \n\t C:(" << C[0] << "," << C[1] << "," << C[2] << ")" << std::endl;*/
+        }
+        return { 0.0, 0.0, 0.0 };
+    }
+
+    std::vector<double> F1 = { crss[0] / magsqr, crss[1] / magsqr, crss[2] / magsqr };
+    std::vector<double> aux = { r1[0] / sqrt(std::inner_product(r1.begin(), r1.end(), r1.begin(), 0.0)) -
+                                r2[0] / sqrt(std::inner_product(r2.begin(), r2.end(), r2.begin(), 0.0)),
+                                r1[1] / sqrt(std::inner_product(r1.begin(), r1.end(), r1.begin(), 0.0)) -
+                                r2[1] / sqrt(std::inner_product(r2.begin(), r2.end(), r2.begin(), 0.0)),
+                                r1[2] / sqrt(std::inner_product(r1.begin(), r1.end(), r1.begin(), 0.0)) -
+                                r2[2] / sqrt(std::inner_product(r2.begin(), r2.end(), r2.begin(), 0.0)) };
+    double F2 = std::inner_product(r0.begin(), r0.end(), aux.begin(), 0.0);
+
+    if (blobify) {
+        // std::cout << "Blobified! " << smoothing_rad << std::endl;
+        F1[0] *= gw(norm(crss) / norm(r0), smoothing_rad);
+        F1[1] *= gw(norm(crss) / norm(r0), smoothing_rad);
+        F1[2] *= gw(norm(crss) / norm(r0), smoothing_rad);
+    }
+
+    if (gamma == 0.0) {
+        return { F1[0] * F2, F1[1] * F2, F1[2] * F2 };
+    }
+    else {
+        return { (gamma / (4 * M_PI)) * F1[0] * F2,
+                (gamma / (4 * M_PI)) * F1[1] * F2,
+                (gamma / (4 * M_PI)) * F1[2] * F2 };
+    }
+}
+// Dot product of two 3D vectors
+double dot(const std::vector<double>& v1, const std::vector<double>& v2) {
+    return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+}
+
+// Magnitude squared of a 3D vector
+double magsqr(const std::vector<double>& v) {
+    return v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+}
+
+std::vector<double> _V_Ainf_out(const std::vector<double>& A, const std::vector<double>& infD,
+    const std::vector<double>& C, double gamma, bool ign_col = false) {
+    std::vector<double> AC = { C[0] - A[0], C[1] - A[1], C[2] - A[2] };
+
+    std::vector<double> unitinfD = { infD[0] / sqrt(std::inner_product(infD.begin(), infD.end(), infD.begin(), 0.0)),
+                                     infD[1] / sqrt(std::inner_product(infD.begin(), infD.end(), infD.begin(), 0.0)),
+                                     infD[2] / sqrt(std::inner_product(infD.begin(), infD.end(), infD.begin(), 0.0)) };
+    std::vector<double> AAp = { dot(unitinfD, AC) * unitinfD[0], dot(unitinfD, AC) * unitinfD[1], dot(unitinfD, AC) * unitinfD[2] };
+
+    std::vector<double> Ap = { AAp[0] + A[0], AAp[1] + A[1], AAp[2] + A[2] };
+
+    std::vector<double> boundAAp = _V_AB(A, Ap, C, gamma, ign_col);
+
+    std::vector<double> ApC = { C[0] - Ap[0], C[1] - Ap[1], C[2] - Ap[2] };
+    std::vector<double> crss = { infD[1] * ApC[2] - infD[2] * ApC[1],
+                                 infD[2] * ApC[0] - infD[0] * ApC[2],
+                                 infD[0] * ApC[1] - infD[1] * ApC[0] };
+    double mag = sqrt(std::inner_product(crss.begin(), crss.end(), crss.begin(), 0.0)) + (regularize ? core_rad : 0);
+
+    // Checks colinearity
     if (check_collinear(mag, col_crit, ign_col)) {
-        return glm::vec3(0.0f, 0.0f, 0.0f);
+        if (!ign_col && n_col == 1 && !mute_warning) {
+            /*std::cout << "\n\t magsqr:" << magsqr << " \n\t A:(" << A[0] << "," << A[1] << "," << A[2] << ")"
+                << " \n\t infD:(" << infD[0] << "," << infD[1] << "," << infD[2] << ")"
+                << " \n\t C:(" << C[0] << "," << C[1] << "," << C[2] << ")" << std::endl;*/
+        }
+        return { 0.0, 0.0, 0.0 };
     }
 
-    double h = mag / glm::length(vec3FromDoubleVec(infD));
-    glm::vec3 n = glm::normalize(crss) / static_cast<float>(h);
-    glm::vec3 F = n;
+    double h = mag / sqrt(std::inner_product(infD.begin(), infD.end(), infD.begin(), 0.0));
+    std::vector<double> n = { crss[0] / mag, crss[1] / mag, crss[2] / mag };
+    std::vector<double> F = { n[0] / h, n[1] / h, n[2] / h };
 
     if (blobify) {
-        F *= gw(h, smoothing_rad);
+        F[0] *= gw(h, smoothing_rad);
+        F[1] *= gw(h, smoothing_rad);
+        F[2] *= gw(h, smoothing_rad);
     }
 
-    if (Gamma == 0) {
-        return F + boundAAp;
+    if (gamma == 0.0) {
+        return { F[0] + boundAAp[0], F[1] + boundAAp[1], F[2] + boundAAp[2] };
     }
     else {
-        return F * glm::vec3(Gamma / (4 * M_PI)) + boundAAp;
+        return { (gamma / (4 * M_PI)) * F[0] + boundAAp[0],
+                (gamma / (4 * M_PI)) * F[1] + boundAAp[1],
+                (gamma / (4 * M_PI)) * F[2] + boundAAp[2] };
     }
 }
 
-glm::vec3 VLMSolver::V_Ainf_in(const vector<double>& A, const vector<double>& infD, const vector<double>& C, double Gamma, bool ign_col) {
-    return V_Ainf_out(A, infD, C, Gamma, ign_col) * -1.0f;
+std::vector<double> _V_Ainf_in(const std::vector<double>& A, const std::vector<double>& infD,
+    const std::vector<double>& C, double gamma, bool ign_col = false) {
+    std::vector<double> aux = _V_Ainf_out(A, infD, C, gamma, ign_col);
+    return { -aux[0], -aux[1], -aux[2] };
 }
 
-std::vector<double> VLMSolver::solve(
-    const std::vector<std::vector<VLMSolver::Horseshoe>>& HSs,
-    const std::vector<glm::vec3>& Vinfs,
+Eigen::VectorXd solve(
+    const std::vector<VLMSolver::Horseshoe>& HSs,
+    const std::vector<Eigen::Vector3d>& Vinfs,
     double t = 0.0,
-    std::function<Eigen::Vector3d(const std::vector<double>&, double)> vortexsheet = nullptr,
-    std::function<Eigen::Vector3d(size_t, double)> extraVinf = nullptr,
-    std::vector<double> extraVinfArgs = {}
+    std::function<Eigen::Vector3d(const Eigen::Vector3d&, double)> vortexsheet = nullptr,
+    std::function<Eigen::Vector3d(int, double)> extraVinf = nullptr
 ) {
-    size_t n = HSs.size();
-    Eigen::MatrixXd G = Eigen::MatrixXd::Zero(n, n);
-    Eigen::VectorXd Vn = Eigen::VectorXd::Zero(n);
+    size_t n = HSs.size();  // Number of horseshoes
+    Eigen::MatrixXd G = Eigen::MatrixXd::Zero(n, n);  // Geometry matrix
+    Eigen::VectorXd Vn = Eigen::VectorXd::Zero(n);    // Normal velocity matrix
 
-    // Build matrices G and Vn
+    // ------------ BUILD MATRICES G AND Vn ------------
+
     for (size_t i = 0; i < n; ++i) {
-        const std::vector<VLMSolver::Horseshoe>& hs_group = HSs[i];
-        const VLMSolver::Horseshoe& hsi = hs_group[0]; // Assuming first horseshoe in the group for CPi
+        const Horseshoe& hsi = HSs[i];
 
-        // Calculate normal vector
-        glm::vec3 nhat_vec = glm::normalize(glm::cross(
-            glm::vec3(hsi.CP[0] - hsi.A[0], hsi.CP[1] - hsi.A[1], hsi.CP[2] - hsi.A[2]),
-            glm::vec3(hsi.B[0] - hsi.A[0], hsi.B[1] - hsi.A[1], hsi.B[2] - hsi.A[2])));
-        Eigen::Vector3d nhat(nhat_vec.x, nhat_vec.y, nhat_vec.z);
+        // Normal of the panel (cross product and normalization)
+        Eigen::Vector3d crss = (Eigen::Map<const Eigen::Vector3d>(hsi.CP.data()) - Eigen::Map<const Eigen::Vector3d>(hsi.A.data()))
+            .cross(Eigen::Map<const Eigen::Vector3d>(hsi.B.data()) - Eigen::Map<const Eigen::Vector3d>(hsi.A.data()));
+        Eigen::Vector3d nhat = crss.normalized();
 
+        // Iterate over horseshoes
         for (size_t j = 0; j < n; ++j) {
-            const std::vector<VLMSolver::Horseshoe>& hs_group_j = HSs[j];
-            VLMSolver::Horseshoe& hs = const_cast<VLMSolver::Horseshoe&>(hs_group_j[0]); // Ensures mutability for V function
+            const Horseshoe& hs = HSs[j];
 
-            std::vector<double> GeomFac = V(hs, hsi.CP);
-            Eigen::Vector3d Gij(GeomFac[0], GeomFac[1], GeomFac[2]);
-            G(i, j) = Gij.dot(nhat);
+            // Convert hsi.CP (std::vector<double>) to Eigen::Vector3d
+            Eigen::Vector3d CP = Eigen::Map<const Eigen::Vector3d>(hsi.CP.data());
+
+            // Convert Eigen::Vector3d to std::vector<double> before passing to V function
+            std::vector<double> CP_vec = { CP[0], CP[1], CP[2] };
+
+            // Call V and get a std::vector<double> result
+            std::vector<double> GeomFacVec = V(hs, CP_vec);
+
+            // Convert std::vector<double> to Eigen::Vector3d
+            Eigen::Vector3d GeomFac(GeomFacVec[0], GeomFacVec[1], GeomFacVec[2]);
+
+            // Calculate Geometry factors (V function)
+            Eigen::Vector3d Gij = (1.0 / (4.0 * M_PI)) * GeomFac;
+            double Gijn = Gij.dot(nhat);
+            G(i, j) = Gijn;
         }
 
-        // Freestream velocity normal component
-        const glm::vec3& Vinfs_i = Vinfs[i];
-        Eigen::Vector3d Vinfs_i_eigen(Vinfs_i.x, Vinfs_i.y, Vinfs_i.z);
-        Vn(i) = -Vinfs_i_eigen.dot(nhat);
+        // Normal component of freestream velocity
+        Eigen::Vector3d this_Vinf = Vinfs[i];
+        double Vinfn = this_Vinf.dot(nhat);
+        Vn(i) = -Vinfn;
 
         // Vortex sheet contribution (if applicable)
         if (vortexsheet) {
-            Eigen::Vector3d this_Vinfvrtx = vortexsheet(hsi.CP, t);
+            Eigen::Vector3d this_Vinfvrtx = vortexsheet(Eigen::Map<const Eigen::Vector3d>(hsi.CP.data()), t);
             Vn(i) += -this_Vinfvrtx.dot(nhat);
         }
 
@@ -178,44 +244,44 @@ std::vector<double> VLMSolver::solve(
         }
     }
 
-    // Solve for Gamma
+    // ------------ SOLVE FOR GAMMA ------------
+
     Eigen::VectorXd Gamma = G.colPivHouseholderQr().solve(Vn);
 
-    // Convert Eigen::VectorXd to std::vector<double>
-    return std::vector<double>(&Gamma[0], &Gamma[0] + Gamma.size());
+    return Gamma;
 }
 
-vector<double> VLMSolver::V(VLMSolver::Horseshoe& HS, const vector<double>& C, bool ign_col = false, bool ign_infvortex = false, bool only_infvortex = false) {
-    vector<double> result(3, 0.0);
-
-    // Decompose HS
-    vector<double>& Ap = HS.Ap;
-    vector<double>& A = HS.A;
-    vector<double>& B = HS.B;
-    vector<double>& Bp = HS.Bp;
-    vector<double>& CP = HS.CP;
-    vector<double>& infDA = HS.infDA;
-    vector<double>& infDB = HS.infDB;
-    double Gamma = HS.Gamma.value_or(0.0);
-
-    glm::vec3 VApA, VAB, VBBp, VApinf, VBpinf;
-
-    if (!only_infvortex) {
-        VApA = V_AB(Ap, A, C, Gamma, ign_col);
-        VAB = V_AB(A, B, C, Gamma, ign_col);
-        VBBp = V_AB(B, Bp, C, Gamma, ign_col);
+std::vector<double> VLMSolver::V(const Horseshoe& horseshoe, const std::vector<double>& controlPoint,
+    bool ignoreCol = false, bool ignoreInfVortex = false, bool onlyInfVortex = false) {
+    if (ignoreInfVortex && onlyInfVortex) {
+        //std::cerr << "Requested only infinite wake while ignoring infinite wake." << std::endl;
     }
 
-    if (!ign_infvortex) {
-        VApinf = V_Ainf_in(Ap, infDA, C, Gamma, ign_col);
-        VBpinf = V_Ainf_out(Bp, infDB, C, Gamma, ign_col);
+    std::vector<double> Ap = horseshoe.Ap;
+    std::vector<double> A = horseshoe.A;
+    std::vector<double> B = horseshoe.B;
+    std::vector<double> Bp = horseshoe.Bp;
+    std::vector<double> CP = horseshoe.CP;
+    std::vector<double> infDA = horseshoe.infDA;
+    std::vector<double> infDB = horseshoe.infDB;
+    double Gamma = horseshoe.Gamma.value_or(0.0);
+
+    std::vector<double> VApA(3, 0.0), VAB(3, 0.0), VBBp(3, 0.0);
+    if (!onlyInfVortex) {
+        VApA = _V_AB(Ap, A, controlPoint, Gamma, ignoreCol);
+        VAB = _V_AB(A, B, controlPoint, Gamma, ignoreCol);
+        VBBp = _V_AB(B, Bp, controlPoint, Gamma, ignoreCol);
     }
 
-    // Accumulate induced velocities
-    result[0] = VApA.x + VAB.x + VBBp.x + VApinf.x + VBpinf.x;
-    result[1] = VApA.y + VAB.y + VBBp.y + VApinf.y + VBpinf.y;
-    result[2] = VApA.z + VAB.z + VBBp.z + VApinf.z + VBpinf.z;
+    std::vector<double> VApinf(3, 0.0), VBpinf(3, 0.0);
+    if (!ignoreInfVortex) {
+        VApinf = _V_Ainf_in(Ap, infDA, controlPoint, Gamma, ignoreCol);
+        VBpinf = _V_Ainf_out(Bp, infDB, controlPoint, Gamma, ignoreCol);
+    }
 
-    return result;
+    std::vector<double> V(3, 0.0);
+    for (int i = 0; i < 3; ++i) {
+        V[i] = VApinf[i] + VApA[i] + VAB[i] + VBBp[i] + VBpinf[i];
+    }
+    return V;
 }
-

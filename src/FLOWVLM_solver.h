@@ -41,8 +41,8 @@ namespace VLMSolver {
 
     // Main solver function
     std::vector<double> solve(
-        const std::vector<std::vector<Horseshoe>>& HSs,
-        const std::vector<glm::vec3>& Vinfs,
+        const std::vector<VLMSolver::Horseshoe>& HSs,
+        std::vector<std::vector<double>>& Vinfs,
         double t = 0.0,
         std::function<Eigen::Vector3d(const std::vector<double>&, double)> vortexsheet = nullptr,
         std::function<Eigen::Vector3d(size_t, double)> extraVinf = nullptr,
@@ -50,5 +50,6 @@ namespace VLMSolver {
     );
 
     // Helper function for velocity calculation
-    std::vector<double> V(Horseshoe& HS, const std::vector<double>& C, bool ign_col = false, bool ign_infvortex = false, bool only_infvortex = false);
+    std::vector<double> V(const Horseshoe& horseshoe, const std::vector<double>& controlPoint,
+        bool ignoreCol = false, bool ignoreInfVortex = false, bool onlyInfVortex = false);
 }
