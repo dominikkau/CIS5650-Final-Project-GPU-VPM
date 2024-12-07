@@ -15,16 +15,7 @@ namespace VLMSolver {
         std::optional<double> Gamma;
     };
 
-    std::unordered_map<std::string, int> HS_hash = {
-    {"Ap", 1},
-    {"A", 2},
-    {"B", 3},
-    {"Bp", 4},
-    {"CP", 5},
-    {"infDA", 6},
-    {"infDB", 7},
-    {"Gamma", 8}
-    };
+    extern std::unordered_map<std::string, int> HS_hash;
 
     // Function declarations
     void _mute_warning(bool booln);

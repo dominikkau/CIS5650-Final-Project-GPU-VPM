@@ -1,5 +1,4 @@
-#ifndef WING_H
-#define WING_H
+#pragma once
 
 #include <array>
 #include <unordered_map>
@@ -14,7 +13,6 @@
 #include "FLOWVLM_dt.h"
 #include "FLOWVLM_solver.h"
 #include <optional>
-#include "FLOWVLM_tools.cpp"
 
     using namespace std;
 
@@ -83,5 +81,3 @@
         std::vector<double> countertransform(const std::vector<double>& vec, const std::vector<std::vector<double>>& matrix, const std::vector<double>& origin);
         std::vector<std::vector<double>> inverse(const std::vector<std::vector<double>>& matrix);
     };
-
-#endif // WING_H

@@ -11,7 +11,8 @@
 #include "FLOWVLM_dt.h"
 #include "FLOWVLM_solver.h"
 #include <optional>
-#include "FLOWVLM_tools.cpp"
+#include "FLOWVLM_tools.h"
+#include <iostream>
 using namespace VLMSolver;
 
 using namespace std;
@@ -236,7 +237,7 @@ public:
 
     void setcoordsystem(const std::vector<double>& O, const std::vector<std::vector<double>>& Oaxis, bool check = true) {
         if (check) {
-            checkCoordSys(Oaxis);
+            checkCoordSys(Oaxis, true);
         }
 
         this->O = O;
@@ -245,14 +246,14 @@ public:
         _reset();
     }
 
-    void setcoordsystem(const std::vector<double>& O, const std::vector<std::vector<double>>& Oaxis, bool check = true) {
+    /*void setcoordsystem(const std::vector<double>& O, const std::vector<std::vector<double>>& Oaxis, bool check) {
         int dims = 3;
         std::vector<std::vector<double>> M(dims, std::vector<double>(dims, 0.0));
         for (int i = 0; i < dims; ++i) {
             M[i] = Oaxis[i];
         }
         setcoordsystem(O, M, check);
-    }
+    }*/
 
     void setVinf(const std::function<std::vector<double>(const std::vector<double>&, double)>& VinfFunc, bool keep_sol = false) {
         _reset(keep_sol);
@@ -396,7 +397,27 @@ private:
         }
     }
 
-    void _calculateHSs(double t = 0.0, 
+    std::vector<double> normalize(const std::vector<double>& v) {
+        double magnitude = 0.0;
+        for (double component : v) {
+            magnitude += component * component;
+        }
+        magnitude = std::sqrt(magnitude);
+
+        if (magnitude == 0.0) {
+            throw std::runtime_error("Cannot normalize a zero-length vector.");
+        }
+
+        std::vector<double> result(v.size());
+        for (size_t i = 0; i < v.size(); ++i) {
+            result[i] = v[i] / magnitude;
+        }
+
+        return result;
+    }
+
+
+    void _calculateHSs(double t = 0.0,
         std::function<std::vector<double>(int, double)> extraVinf = nullptr) {
         std::vector<Horseshoe> HSs;
 
@@ -426,8 +447,8 @@ private:
                 infDB = extraVinf(i, t);
             }
 
-            infDA = glm::normalize(infDA);
-            infDB = glm::normalize(infDB);
+            infDA = normalize(infDA);
+            infDB = normalize(infDB);
 
             // Circulation
             std::optional<double> Gamma = std::nullopt;
@@ -444,9 +465,8 @@ private:
                 }
             }
 
-
             // Create the Horseshoe object
-            Horseshoe hs = { Ap, A, B, Bp, CP, infDA, infDB, Gamma};
+            Horseshoe hs = { Ap, A, B, Bp, CP, infDA, infDB, Gamma };
 
             // Add it to the HSs vector
             HSs.push_back(hs);
@@ -454,6 +474,7 @@ private:
 
         this->HSs = HSs;
     }
+
 
     Wing deepcopy_internal(const Wing& wing) {
         Wing copy = wing;

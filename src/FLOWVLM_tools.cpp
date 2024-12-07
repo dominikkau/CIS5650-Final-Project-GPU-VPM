@@ -4,6 +4,8 @@
 #include <Eigen/Dense>
 #include <vector>
 #include <string>
+#include "FLOWVLM_tools.h"
+
 
 std::vector<std::vector<double>> inverse(const std::vector<std::vector<double>>& matrix) {
     // Convert std::vector to Eigen::Matrix
@@ -57,7 +59,7 @@ std::vector<double> countertransform(
 }
 
 // Countertransform for a collection of vectors
-std::vector<std::vector<double>> countertransform(
+std::vector<std::vector<double>> countertransformCollection(
     const std::vector<std::vector<double>>& Vps,
     const std::vector<std::vector<double>>& invM,
     const std::vector<double>& T) {
@@ -91,7 +93,7 @@ double dotProduct(const std::vector<double>& vec1, const std::vector<double>& ve
 }
 
 // Check that the matrix M defines a coordinate system
-bool checkCoordSys(const std::vector<std::vector<double>>& M, bool raise_error = true) {
+bool checkCoordSys(const std::vector<std::vector<double>>& M, bool raise_error) {
     size_t dims = M.size();
 
     // Check normalization of vectors
@@ -121,22 +123,22 @@ bool checkCoordSys(const std::vector<std::vector<double>>& M, bool raise_error =
     return true;
 }
 
-// Overloaded function for higher abstraction
-bool checkCoordSys(const std::vector<std::vector<std::vector<double>>>& M_array, bool raise_error = true) {
-    size_t dims = 3; // Fixed size for 3D systems
-
-    // Check for automatic differentiation or type consistency
-    for (const auto& M : M_array) {
-        if (M.size() != dims || M[0].size() != dims) {
-            throw std::runtime_error("Invalid matrix dimensions for coordinate system check.");
-        }
-    }
-
-    for (const auto& M : M_array) {
-        if (!checkCoordSys(M, raise_error)) {
-            return false;
-        }
-    }
-
-    return true;
-}
+//// Overloaded function for higher abstraction
+//bool checkCoordSys(const std::vector<std::vector<std::vector<double>>>& M_array, bool raise_error) {
+//    size_t dims = 3; // Fixed size for 3D systems
+//
+//    // Check for automatic differentiation or type consistency
+//    for (const auto& M : M_array) {
+//        if (M.size() != dims || M[0].size() != dims) {
+//            throw std::runtime_error("Invalid matrix dimensions for coordinate system check.");
+//        }
+//    }
+//
+//    for (const auto& M : M_array) {
+//        if (!checkCoordSys(M, raise_error)) {
+//            return false;
+//        }
+//    }
+//
+//    return true;
+//}

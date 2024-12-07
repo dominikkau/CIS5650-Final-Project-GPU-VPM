@@ -96,12 +96,11 @@ add_executable(${CMAKE_PROJECT_NAME} ${sources} ${headers})
 target_link_libraries(${CMAKE_PROJECT_NAME} ${LIBRARIES})
 
 # Add Eigen include directory
-set(EIGEN_DIR "${CMAKE_SOURCE_DIR}/external/include/Eigen")
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${EIGEN_DIR})
+include_directories("${CMAKE_SOURCE_DIR}/external/include/Eigen")
 
 # Add boost include directory
-set(BOOST_DIR "${CMAKE_SOURCE_DIR}/external/include/boost")
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${BOOST_DIR})
+# set(BOOST_DIR "${CMAKE_SOURCE_DIR}/external/include/boost/")
+# target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${BOOST_DIR})
 
 if(CMAKE_VERSION VERSION_LESS "3.23.0")
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES OFF)

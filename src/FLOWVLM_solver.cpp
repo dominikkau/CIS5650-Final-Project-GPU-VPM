@@ -8,13 +8,6 @@
 #include <optional>
 #include <numeric>
 
-// Forward declaration of the regularize and smoothing functions
-bool regularize = true; // Set to true if regularization is needed
-double core_rad = 1.0; // Core radius for regularization
-double col_crit = 1e-6; // Collinearity threshold
-bool mute_warning = false; // Mute warnings
-bool blobify = false; // Flag for blobification
-
 using namespace VLMSolver;
 using namespace std;
 
@@ -22,12 +15,23 @@ using namespace std;
 // Criteria for collinearity
 // NOTE: Anything less than 1 / 10 ^ 15 reaches float precision.
 const double col_crit = 1e-8;
-
+double core_rad = 1.0; // Core radius for regularization
 int n_col = 0;  // Number of colinears found
 bool mute_warning = false;
 bool regularize = false;
 bool blobify = false;
 double smoothing_rad = 1e-9;
+
+std::unordered_map<std::string, int> HS_hash = {
+    {"Ap", 1},
+    {"A", 2},
+    {"B", 3},
+    {"Bp", 4},
+    {"CP", 5},
+    {"infDA", 6},
+    {"infDB", 7},
+    {"Gamma", 8}
+};
 
 void VLMSolver::_mute_warning(bool booln) {
     mute_warning = booln;
@@ -252,7 +256,7 @@ Eigen::VectorXd solve(
 }
 
 std::vector<double> VLMSolver::V(const Horseshoe& horseshoe, const std::vector<double>& controlPoint,
-    bool ignoreCol = false, bool ignoreInfVortex = false, bool onlyInfVortex = false) {
+    bool ignoreCol, bool ignoreInfVortex, bool onlyInfVortex) {
     if (ignoreInfVortex && onlyInfVortex) {
         //std::cerr << "Requested only infinite wake while ignoring infinite wake." << std::endl;
     }
