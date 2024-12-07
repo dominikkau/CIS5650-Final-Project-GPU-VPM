@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>  // Include GLM for glm::vec3
 #include <functional>
 #include <Eigen/Dense>
+#include <optional>
 
 // Namespace for VLM Solver
 namespace VLMSolver {
@@ -11,18 +12,18 @@ namespace VLMSolver {
     // ------------ STRUCTURE TO REPRESENT HORSESHOES ------------------------------
     struct Horseshoe {
         std::vector<double> Ap, A, B, Bp, CP, infDA, infDB;
-        double Gamma;
+        std::optional<double> Gamma;
     };
 
-    std::unordered_map<std::string, std::string> HS_hash = {
-    {"Ap", "1"},
-    {"A", "2"},
-    {"B", "3"},
-    {"Bp", "4"},
-    {"CP", "5"},
-    {"infDA", "6"},
-    {"infDB", "7"},
-    {"Gamma", "8"}
+    std::unordered_map<std::string, int> HS_hash = {
+    {"Ap", 1},
+    {"A", 2},
+    {"B", 3},
+    {"Bp", 4},
+    {"CP", 5},
+    {"infDA", 6},
+    {"infDB", 7},
+    {"Gamma", 8}
     };
 
     // Function declarations

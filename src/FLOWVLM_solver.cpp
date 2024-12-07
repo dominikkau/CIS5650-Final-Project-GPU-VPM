@@ -196,7 +196,7 @@ vector<double> VLMSolver::V(VLMSolver::Horseshoe& HS, const vector<double>& C, b
     vector<double>& CP = HS.CP;
     vector<double>& infDA = HS.infDA;
     vector<double>& infDB = HS.infDB;
-    double Gamma = HS.Gamma;
+    double Gamma = HS.Gamma.value_or(0.0);
 
     glm::vec3 VApA, VAB, VBBp, VApinf, VBpinf;
 
