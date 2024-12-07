@@ -386,7 +386,7 @@ private:
         this->HSs.clear();
     }
 
-    void _addsolution(const std::string& field_name, const std::vector<double>& sol_field, double t = 0.0) {
+    void addsolution(const std::string& field_name, const std::vector<double>& sol_field, double t = 0.0) {
         this->sol[field_name] = sol_field;
         if (field_name == "Gamma") {
             // _calculateHSs(t); // If needed
