@@ -492,7 +492,7 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
 }
 
 template <typename R, typename S, typename K>
-void writeVTK(const ParticleField<R, S, K>& field, const std::string filename) {
+void writeVTK(ParticleField<R, S, K>& field, const std::string filename) {
     const int dim = 3;
     const Particle* particleBuffer = field.getParticles();
 
@@ -641,9 +641,8 @@ void runVPM(
         relaxation
     };
 
-
     for (int i = 0; i < numTimeSteps + 1; ++i) {
-        calcVortexRingMetrics(field, i, "test");
+        //calcVortexRingMetrics(field, i, "test");
 
         if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
             writeVTK(field, filename);
