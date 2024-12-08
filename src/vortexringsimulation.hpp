@@ -8,4 +8,4 @@ int addVortexRing(Particle* particleBuffer, vpmfloat circulation, vpmfloat R, vp
     int Nphi, int nc, vpmfloat sigma, int extra_nc, vpmvec3 ringPosition,
     vpmmat3 ringOrientation, int startingIndex, int maxParticles);
 
-int initVortexRings(Particle* particleBuffer, int maxParticles);
+int initVortexRings(Particle* particleBuffer, int maxParticles, int Nphi, int nc);

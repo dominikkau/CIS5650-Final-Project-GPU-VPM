@@ -696,9 +696,9 @@ void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius, vp
     }
 }
 
-void runSimulation() {
+void runSimulation(int Nphi, int nc) {
     // Define basic parameters
-    int maxParticles{ 2000 };
+    int maxParticles{ 20000 };
     int numTimeSteps{ 2000 };
     vpmfloat dt{ 0.01f };
     int numStepsVTK{ 5 };
@@ -710,7 +710,7 @@ void runSimulation() {
     // Initialize particle buffer
     //randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
     //int numParticles = maxParticles;
-    int numParticles = initVortexRings(particleBuffer, maxParticles);
+    int numParticles = initVortexRings(particleBuffer, maxParticles, Nphi, nc);
 
     // Run VPM method
     runVPM(
