@@ -579,7 +579,7 @@ void calcVortexRingMetrics(ParticleField<R, S, K>& field, int iteration, std::st
     }
 
     // Save results to csv file
-    filename += ".csv";
+    filename = "../output/" + filename + ".csv";
     std::ofstream file;
     if (iteration == 0) {
         // Overwrite file and write header in the first iteration
