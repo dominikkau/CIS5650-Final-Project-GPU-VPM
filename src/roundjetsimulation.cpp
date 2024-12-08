@@ -174,8 +174,9 @@ int initRoundJet(Particle * particleBuffer, int maxParticles){
     
     // -------  SIMULATION SETUP ------- 
     auto Vjet_wrap = [Vjet](vpmvec3 X){ Vjet(X[1])};
-
     // TODO: gradient of Vjet_wrap wrt X
+    // g(X)
+
     vpmfloat sigma;
     int Nphi;
 }
