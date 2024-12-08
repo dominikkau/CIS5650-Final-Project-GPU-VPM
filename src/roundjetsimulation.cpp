@@ -39,8 +39,8 @@ glm::mat3 rotation_matrix2(vpmvec3 U2angle) {
 
 
 int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
-    int Nphi, vpmfloat sigma, vpmfloat area, vpmvec3 ringPosition,
-    vpmmat3 ringOrientation, int startingIndex, int maxParticles){
+    int Nphi, vpmfloat sigma, vpmfloat area, vpmvec3 jetOrigin,
+    vpmmat3 jetOrientation, int startingIndex, int maxParticles){
         
         // Arclength corresponding to phi for circle with radius r
         auto fun_S = [](vpmfloat phi, vpmfloat r) { return r * phi; };
@@ -60,12 +60,12 @@ int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
             return S2 - S1;
         };
         
-        auto fun_X_global = [ringPosition, ringOrientation](vpmvec3 x) {
-        return ringPosition + ringOrientation * x;
+        auto fun_X_global = [jetOrigin, jetOrientation](vpmvec3 x) {
+        return jetOrigin + jetOrientation * x;
         };
 
-        auto fun_Gamma_global = [ringOrientation](vpmvec3 Gamma) {
-        return ringOrientation * Gamma;
+        auto fun_Gamma_global = [jetOrientation](vpmvec3 Gamma) {
+        return jetOrientation * Gamma;
         };
 
         // Perimeter spacing between cross sections
@@ -114,8 +114,8 @@ int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
             particleBuffer[idx].index = idx;
             ++idx;
         }
-
-    }
+        return idx;
+}
 
 
 int initRoundJet(Particle * particleBuffer, int maxParticles){
@@ -130,6 +130,12 @@ int initRoundJet(Particle * particleBuffer, int maxParticles){
     vpmfloat U2; 
     // (deg) Coflow angle from centerline
     vpmvec3 U2angle= vpmvec3 {0.0f};
+    //  Ratio of inflow momentum thickness of shear layer to diameter, θ/d
+    vpmfloat thetaod = 0.025;
+    // Maximum sigmas in z-direction to create annulis for defining BC
+    vpmfloat max_zsigma = 12.0f;
+    // Threshold at which not to add particles
+    vpmfloat minWfraction = 0.01f;
     // Origin of jet
     vpmvec3 jetOrigin = vpmvec3 {0.0f};
     // orientation of jet
@@ -138,9 +144,9 @@ int initRoundJet(Particle * particleBuffer, int maxParticles){
     // -------  SOLVER OPTIONS ------- 
     int steps_per_d = 50;           // Number of time steps for the centerline at U1 to travel one diameter
     int d_travel_tot = 10;          // Run simulation for an equivalent of this many diameters
-    vpmfloat maxRoR=1.0;            // (m) maximum radial distance to discretize
-    vpmfloat dxotheta = 1/4;        // Distance Δx between particles over momentum thickness θ
-    vpmfloat overlap=2.4;           // Overlap between particles
+    vpmfloat maxRoR = 1.0f;            // (m) maximum radial distance to discretize
+    vpmfloat dxotheta = 0.25f;        // Distance Δx between particles over momentum thickness θ
+    vpmfloat overlap = 2.4f;           // Overlap between particles
 
     int numParticles{ 0 };
 
@@ -162,21 +168,108 @@ int initRoundJet(Particle * particleBuffer, int maxParticles){
     vpmfloat dx         = dxotheta * thetaod * d;     // (m) approximate distance between particles
     vpmfloat sigma      = overlap * dx;               // particle smoothing
 
-    // Velocity profile lambda function
-    auto Vprofile = [](double r, double d, double theta) {
+    // Top-hat velocity profile with smooth edges
+    auto Vprofile = [d](vpmfloat r, vpmfloat theta) {
         return std::abs(r) < d / 2 ? std::tanh((d / 2 - std::abs(r)) / theta) : 0.0;
     };
     
     // Vjet lambda function
     auto Vjet = [U1, d, thetaod, Vprofile](vpmfloat r) {
-        return U1 * Vprofile(r, d, thetaod * d);
+        return U1 * Vprofile(r, thetaod * d);
     };
     
     // -------  SIMULATION SETUP ------- 
-    auto Vjet_wrap = [Vjet](vpmvec3 X){ Vjet(X[1])};
-    // TODO: gradient of Vjet_wrap wrt X
-    // g(X)
+    // auto Vjet_wrap = [Vjet](vpmvec3 X){ Vjet(X[1])};
+    
+    // Convert velocity profile to vorticity profile
+    auto dVdr = [d, thetaod, U1](vpmfloat r){
+        return U1 * r / (pow(cosh((d - 2 * abs(r))/(2 * thetaod * d)), 2) * thetaod * d * abs(r));
+    };
 
-    vpmfloat sigma;
-    int Nphi;
+    auto Wr = [dVdr](vpmfloat r){ return -dVdr(r);};
+    
+    // Brute-force find maximum vorticity in the region to discretize
+    int length = 1000;
+    vpmfloat step = (2 * maxR)/(length - 1);
+    vpmfloat Wpeak = -FLT_MAX;
+
+    for (vpmfloat radius = -maxR; radius <= maxR; radius += step){
+        Wpeak = max(Wr(radius), Wpeak);
+    }
+    
+    // Number of cross sections
+    int Nphi = static_cast<int>(std::ceil(2 * PI * R / dx));
+    // Number of radial sections (annuli)
+    int NR = static_cast<int>(std::ceil(maxR / dx));
+    // (m) actual radial distance between particles
+    vpmfloat dr = maxR / NR;
+
+    // Axial component of the freestream
+    vpmfloat V2 = glm::dot(Vfreestream, Cline);
+
+    // Boundary condition indices
+    std::vector<int> BCi;
+
+    int startingIndex { 0 };
+    // Spatial discretization of the boundary condition
+    for (int ri = 1; ri <= NR; ++ri) {      // Iterate over annuli
+        
+        // Annulus lower, upper bounds and center
+        vpmfloat rlo = dr * (ri - 1);
+        vpmfloat rup = dr * ri;
+        vpmfloat rc = (rlo + rup) / 2;
+
+        // Velocity at center of annulus
+        vpmfloat Vc = V2 + Vjet(rc);
+        // Distance traveled in one time step
+        vpmfloat dz = Vc * dt;
+
+        // Integrate vorticity radially over annulus segment
+        // TODO: Confirm: implement closed form solution for -vJet
+        vpmfloat Wint = -(Vjet(rup) - Vjet(rlo));
+
+        // Annulus circulation
+        vpmfloat circulation = Wint * dz + 1e-12f;
+        // Mean vorticity
+        vpmfloat Wmean = Wint / (rup - rlo);
+
+        // Area of annulus swept
+        vpmfloat area = dz * (rup - rlo);
+
+        // Number of longitudinal divisions
+        int Nz = static_cast<int>(std::ceil(max_zsigma * sigma / dz));
+
+        if (abs(Wmean) / Wpeak >= minWfraction) {
+            // Iterate over Z layers (time steps)
+            for (int zi = 0; zi <= Nz; ++zi) {
+
+                // int num_sides = (zi != 0) ? 2 : 1;
+
+                // rbfFullCylinder to be false.
+                // for (int sgn = -1; sgn <= 1; sgn += 2) {
+                //     if (num_sides == 1 && sgn < 0) break;
+
+                vpmfloat org_np = numParticles;
+
+                vpmvec3 currentJetOrigin = jetOrigin + zi * dz * Cline;
+
+                // Call addAnnulus with appropriate arguments
+                startingIndex = addAnnulus(particleBuffer, circulation, R, Nphi, sigma, area,
+                            jetOrigin, jetOrientation, startingIndex, maxParticles);
+
+                numParticles = startingIndex; // TODO: confirm?
+
+                // If `zi == 0`, update boundary condition indices
+                if (zi == 0) {
+                    // Example of adding indices (modify as needed)
+                    for (int pi = org_np + 1; pi <= numParticles; ++pi) {
+                        BCi.push_back(pi);
+                    }
+                }
+                if (startingIndex == -1) break;
+                // }
+            }
+        }
+    }   
+    return startingIndex;
 }
