@@ -238,7 +238,11 @@ void DynamicSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat 
 
     if (a == 1.0 || a == 0.0) {
         // CALCULATIONS WITH TEST FILTER
-        calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true, alpha);
+#ifdef SHARED_MEMORY
+        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >>>(N, N, particles, particles, kernel, true, alpha);
+#else
+        calcVelJacNaive << <numBlocks, blockSize>> > (N, N, particles, particles, kernel, true, alpha);
+#endif
         cudaDeviceSynchronize();
         checkCUDAError("calcVelJacNaive (DynamicsSFS: test filter) failed!");
 
@@ -251,7 +255,11 @@ void DynamicSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat 
         checkCUDAError("calculateTemporary (DynamicsSFS: test filter) failed!");
 
         // CALCULATIONS WITH DOMAIN FILTER
-        calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true);
+#ifdef SHARED_MEMORY
+        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >>>(N, N, particles, particles, kernel, true);
+#else
+        calcVelJacNaive << <numBlocks, blockSize>> > (N, N, particles, particles, kernel, true);
+#endif
         cudaDeviceSynchronize();
         checkCUDAError("calcVelJacNaive (DynamicsSFS: domain filter) failed!");
 
@@ -270,7 +278,11 @@ void DynamicSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat 
         checkCUDAError("calculateCoefficient failed!");
     }
     else {
-        calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, particles, particles, kernel, true);
+#ifdef SHARED_MEMORY
+        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >>>(N, N, particles, particles, kernel, true);
+#else
+        calcVelJacNaive << <numBlocks, blockSize>> > (N, N, particles, particles, kernel, true);
+#endif
         cudaDeviceSynchronize();
         checkCUDAError("calcVelJacNaive (DynamicsSFS: 2nd step) failed!");
 
@@ -288,7 +300,11 @@ void NoSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, in
     cudaDeviceSynchronize();
     checkCUDAError("resetParticlesSFS (NoSFS) failed!");
 
-    calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+#ifdef SHARED_MEMORY
+    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+#else
+    calcVelJacNaive << <numBlocks, blockSize>> > (N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+#endif
     cudaDeviceSynchronize();
     checkCUDAError("calcVelJacNaive (NoSFS) failed!");
 }
@@ -347,7 +363,15 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= targetN) return;
 
-    // Get required variables from global memory
+#ifdef SHARED_MEMORY
+    int s_index = threadIdx.x;
+    extern __shared__ vpmfloat s_sourceParticle[];
+    vpmvec3*  s_sourceX     = (vpmvec3*)s_sourceParticle;
+    vpmvec3*  s_sourceGamma = (vpmvec3*)(s_sourceX + blockDim.x);
+    vpmfloat* s_sourceSigma = (vpmfloat*)(s_sourceGamma + blockDim.x);
+#endif
+
+    // Get target variables from global memory
     const vpmvec3 targetX = targetParticles[index].X;
 
     vpmvec3 targetU;
@@ -360,45 +384,65 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
         targetU = targetParticles[index].U;
         targetJ = targetParticles[index].J;
     }
-    
-    for (int i = 0; i < sourceN; ++i) {
-        Particle& sourceParticle = sourceParticles[i];
-        const vpmfloat invSourceSigma = 1 / (sourceParticle.sigma * testFilterFactor);
-        const vpmvec3 sourceGamma = sourceParticle.Gamma;
 
-        const vpmvec3 dX = targetX - sourceParticle.X;
-        const vpmfloat r = glm::length(dX);
-
-        // is this needed?
-        if (r == 0.0) continue;
-
-        // Kernel evaluation
-        const vpmfloat g_sgm = kernel.g(r * invSourceSigma);
-        const vpmfloat dg_sgmdr = kernel.dgdr(r * invSourceSigma);
-
-        // Compute velocity
-        const vpmvec3 crossProd = -const4 / (r * r * r) * glm::cross(dX, sourceGamma);
-        targetU += g_sgm * crossProd;
-        
-        // Compute Jacobian
-        vpmfloat tmp = dg_sgmdr * invSourceSigma / r - 3.0 * g_sgm / (r * r);
-
-        for (int l = 0; l < 3; ++l) {
-            for (int k = 0; k < 3; ++k) {
-                targetJ[l][k] += tmp * crossProd[k] * dX[l];
-            }
+#ifdef SHARED_MEMORY
+    // Copy source variables into shared memory
+    for (int j = 0; j < sourceN; j += blockDim.x) {
+        if (j + s_index < sourceN) {
+            s_sourceX[s_index]     = sourceParticles[s_index + j].X;
+            s_sourceGamma[s_index] = sourceParticles[s_index + j].Gamma;
+            s_sourceSigma[s_index] = sourceParticles[s_index + j].sigma;
         }
+        __syncthreads();
 
-        tmp = - const4 * g_sgm / (r * r * r);
+        for (int i = 0; (i < blockDim.x) && (j + i < sourceN); ++i) {
+            const vpmfloat invSourceSigma = 1 / (s_sourceSigma[i] * testFilterFactor);
+            const vpmvec3 sourceGamma = s_sourceGamma[i];
 
-        // Account for kronecker delta term
-        targetJ[0][1] -= tmp * sourceGamma[2];
-        targetJ[0][2] += tmp * sourceGamma[1];
-        targetJ[1][0] += tmp * sourceGamma[2];
-        targetJ[1][2] -= tmp * sourceGamma[0];
-        targetJ[2][0] -= tmp * sourceGamma[1];
-        targetJ[2][1] += tmp * sourceGamma[0];
+            const vpmvec3 dX = targetX - s_sourceX[i];
+#else
+        for (int i = 0; i < sourceN; ++i) {
+            const vpmfloat invSourceSigma = 1 / (sourceParticles[i].sigma * testFilterFactor);
+            const vpmvec3 sourceGamma = sourceParticles[i].Gamma;
+
+            const vpmvec3 dX = targetX - sourceParticles[i].X;
+#endif
+            const vpmfloat r = glm::length(dX);
+
+            // is this needed?
+            if (r == 0.0) continue;
+
+            // Kernel evaluation
+            const vpmfloat g_sgm = kernel.g(r * invSourceSigma);
+            const vpmfloat dg_sgmdr = kernel.dgdr(r * invSourceSigma);
+
+            // Compute velocity
+            const vpmvec3 crossProd = -const4 / (r * r * r) * glm::cross(dX, sourceGamma);
+            targetU += g_sgm * crossProd;
+
+            // Compute Jacobian
+            vpmfloat tmp = dg_sgmdr * invSourceSigma / r - 3.0 * g_sgm / (r * r);
+
+            for (int l = 0; l < 3; ++l) {
+                for (int k = 0; k < 3; ++k) {
+                    targetJ[l][k] += tmp * crossProd[k] * dX[l];
+                }
+            }
+
+            tmp = -const4 * g_sgm / (r * r * r);
+
+            // Account for kronecker delta term
+            targetJ[0][1] -= tmp * sourceGamma[2];
+            targetJ[0][2] += tmp * sourceGamma[1];
+            targetJ[1][0] += tmp * sourceGamma[2];
+            targetJ[1][2] -= tmp * sourceGamma[0];
+            targetJ[2][0] -= tmp * sourceGamma[1];
+            targetJ[2][1] += tmp * sourceGamma[0];
+        }
+#ifdef SHARED_MEMORY
+        __syncthreads();
     }
+#endif
 
     // Copy variables back to global memory
     targetParticles[index].U = targetU;
@@ -480,7 +524,7 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
     }
 
     if (useRelax) {
-        calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, field.dev_particles, field.dev_particles, kernel, true);
+        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >> >(N, N, field.dev_particles, field.dev_particles, kernel, true);
         cudaDeviceSynchronize();
         checkCUDAError("calcVelJacNaive (rungeKutta: Relaxation) failed!");
 
@@ -492,7 +536,7 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
 }
 
 template <typename R, typename S, typename K>
-void writeVTK(const ParticleField<R, S, K>& field, const std::string filename) {
+void writeVTK(ParticleField<R, S, K>& field, const std::string filename) {
     const int dim = 3;
     const Particle* particleBuffer = field.getParticles();
 
@@ -579,7 +623,7 @@ void calcVortexRingMetrics(ParticleField<R, S, K>& field, int iteration, std::st
     }
 
     // Save results to csv file
-    filename += ".csv";
+    filename = "../output/" + filename + ".csv";
     std::ofstream file;
     if (iteration == 0) {
         // Overwrite file and write header in the first iteration
