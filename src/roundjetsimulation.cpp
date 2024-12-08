@@ -4,6 +4,40 @@
 #include "roundjetsimulation.hpp"
 #include "vpmcore/kernel.h"
 
+
+// Function to calculate the rotation matrix
+glm::mat3 rotation_matrix2(vpmvec3 U2angle) {
+    // Convert angles from degrees to radians
+    vpmfloat a = glm::radians(U2angle.z);   // Yaw
+    vpmfloat b = glm::radians(U2angle.y); // Pitch
+    vpmfloat g = glm::radians(U2angle.x);  // Roll
+
+    // Rotation matrix about Z-axis (Yaw)
+    glm::mat3 Rz = {
+        glm::vec3(cos(a), -sin(a), 0.0f),
+        glm::vec3(sin(a),  cos(a), 0.0f),
+        glm::vec3(0.0f,    0.0f,   1.0f)
+    };
+
+    // Rotation matrix about Y-axis (Pitch)
+    glm::mat3 Ry = {
+        glm::vec3(cos(b),  0.0f, sin(b)),
+        glm::vec3(0.0f,    1.0f, 0.0f),
+        glm::vec3(-sin(b), 0.0f, cos(b))
+    };
+
+    // Rotation matrix about X-axis (Roll)
+    glm::mat3 Rx = {
+        glm::vec3(1.0f, 0.0f,    0.0f),
+        glm::vec3(0.0f, cos(g), -sin(g)),
+        glm::vec3(0.0f, sin(g),  cos(g))
+    };
+
+    // Combined rotation matrix
+    return Rz * Ry * Rx;
+}
+
+
 int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
     int Nphi, vpmfloat sigma, vpmfloat area, vpmvec3 ringPosition,
     vpmmat3 ringOrientation, int startingIndex, int maxParticles){
@@ -82,3 +116,66 @@ int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
         }
 
     }
+
+
+int initRoundJet(Particle * particleBuffer, int maxParticles){
+    
+    // ------- SIMULATION PARAMETERS ------- 
+    vpmfloat thetaod=0.025;         // Ratio of inflow momentum thickness of shear layer to diameter, θ/d
+
+    // (m) jet diameter
+    const vpmfloat d{ 1.5812f };
+    vpmfloat U1;
+    // (m/s) Coflow velocity
+    vpmfloat U2; 
+    // (deg) Coflow angle from centerline
+    vpmvec3 U2angle= vpmvec3 {0.0f};
+    // Origin of jet
+    vpmvec3 jetOrigin = vpmvec3 {0.0f};
+    // orientation of jet
+    vpmmat3 jetOrientation = vpmmat3 {1.0f};        // Identity matrix
+
+    // -------  SOLVER OPTIONS ------- 
+    int steps_per_d = 50;           // Number of time steps for the centerline at U1 to travel one diameter
+    int d_travel_tot = 10;          // Run simulation for an equivalent of this many diameters
+    vpmfloat maxRoR=1.0;            // (m) maximum radial distance to discretize
+    vpmfloat dxotheta = 1/4;        // Distance Δx between particles over momentum thickness θ
+    vpmfloat overlap=2.4;           // Overlap between particles
+
+    int numParticles{ 0 };
+
+    // Define freestream (coflow) velocity
+    vpmvec3 Vfreestream = U2 * (rotation_matrix2(U2angle) * jetOrientation[2]);
+
+    // TODO: How to initialize Uinf = Vinf in pfield
+    // TODO: Calculate the integral Wint and initialize circulations using it
+
+    vpmfloat R = d/2;                         // (m) jet radius
+    vpmvec3 Cline = jetOrientation[2];        // Centerline direction
+
+    // Temporal discretization
+    vpmfloat dt = d / steps_per_d / U1;         // (s) time step
+    int nsteps = static_cast<int>(std::ceil(d_travel_tot * d / U1 / dt));       // Number of time steps
+
+    // Spatial discretization
+    vpmfloat maxR       = maxRoR * R;
+    vpmfloat dx         = dxotheta * thetaod * d;     // (m) approximate distance between particles
+    vpmfloat sigma      = overlap * dx;               // particle smoothing
+
+    // Velocity profile lambda function
+    auto Vprofile = [](double r, double d, double theta) {
+        return std::abs(r) < d / 2 ? std::tanh((d / 2 - std::abs(r)) / theta) : 0.0;
+    };
+    
+    // Vjet lambda function
+    auto Vjet = [U1, d, thetaod, Vprofile](vpmfloat r) {
+        return U1 * Vprofile(r, d, thetaod * d);
+    };
+    
+    // -------  SIMULATION SETUP ------- 
+    auto Vjet_wrap = [Vjet](vpmvec3 X){ Vjet(X[1])};
+
+    // TODO: gradient of Vjet_wrap wrt X
+    vpmfloat sigma;
+    int Nphi;
+}
