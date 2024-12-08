@@ -51,20 +51,19 @@ find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
-    src/cudaMat4.hpp
-    src/glslUtility.hpp
-    src/kernel.h
     src/main.hpp
-    src/utilityCore.hpp
+    src/vpmcore/kernel.h
     src/wing.h
+    src/lean_vtk.hpp
+    src/vortexringsimulation.hpp
     )
 
 set(sources
-    src/glslUtility.cpp
-    src/kernel.cu
     src/main.cpp
-    src/utilityCore.cpp
+    src/vpmcore/kernel.cu
     src/wing.cpp
+    src/lean_vtk.cpp
+    src/vortexringsimulation.cpp
     )
 
 list(SORT headers)
