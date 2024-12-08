@@ -169,6 +169,7 @@ struct ParticleField {
     vpmvec3 uInf;               // Uniform freestream function
     S sfs;                      // Subfilter-scale contributions scheme
     R relaxation;               // Relaxation scheme
+    bool synchronized;          // Flag if host buffer is synchronized with device
 
     // Constructor
     ParticleField(

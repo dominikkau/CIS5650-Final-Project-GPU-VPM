@@ -84,10 +84,10 @@ ParticleField<R, S, K>::ParticleField(
     kernel(kernel),
     uInf(uInf),
     sfs(sfs),
-    relaxation(relaxation) {
+    relaxation(relaxation),
+    synchronized(true) {
 
     // Declare device particle buffer
-    
     cudaMalloc((void**)&dev_particles, maxParticles * sizeof(Particle));
     cudaDeviceSynchronize();
     checkCUDAError("cudaMalloc of dev_particleBuffer failed!");
@@ -106,9 +106,12 @@ ParticleField<R, S, K>::~ParticleField() {
 
 template <typename R, typename S, typename K>
 Particle* ParticleField<R, S, K>::getParticles() {
-    cudaMemcpy(particles, dev_particles, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
-    cudaDeviceSynchronize();
-    checkCUDAError("cudaMemcpy dev_particleBuffer->particleBuffer failed!");
+    if (!synchronized) {
+        cudaMemcpy(particles, dev_particles, numParticles * sizeof(Particle), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particleBuffer->particleBuffer failed!");
+        synchronized = true;
+    }
 
     return particles;
 }
@@ -485,32 +488,31 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
     }
 
     ++field.timeStep;
+    field.synchronized = false;
 }
 
 template <typename R, typename S, typename K>
-void writeVTK(ParticleField<R, S, K>& field, std::string filename) {
+void writeVTK(const ParticleField<R, S, K>& field, const std::string filename) {
     const int dim = 3;
-    const int numParticles{ field.numParticles };
     const Particle* particleBuffer = field.getParticles();
 
-    leanvtk::VTUWriter writer;
+    static leanvtk::VTUWriter writer;
 
-    std::vector<double> particleX;
-    std::vector<double> particleU;
-    std::vector<double> particleGamma;
-    std::vector<double> particleOmega;
-    std::vector<double> particleSigma;
-    std::vector<double> particleIdx;
-    particleX.reserve(dim * numParticles);
-    particleU.reserve(dim * numParticles);
-    particleGamma.reserve(dim * numParticles);
-    particleOmega.reserve(dim * numParticles);
-    particleSigma.reserve(numParticles);
-    particleIdx.reserve(numParticles);
+    static std::vector<double> particleX;
+    static std::vector<double> particleU;
+    static std::vector<double> particleGamma;
+    static std::vector<double> particleOmega;
+    static std::vector<double> particleSigma;
+    static std::vector<double> particleIdx;
+    particleX.reserve(field.maxParticles * dim);
+    particleU.reserve(field.maxParticles * dim);
+    particleGamma.reserve(field.maxParticles * dim);
+    particleOmega.reserve(field.maxParticles * dim);
+    particleSigma.reserve(field.maxParticles);
+    particleIdx.reserve(field.maxParticles);
 
     vpmvec3 omega;
-
-    for (int i = 0; i < numParticles; ++i) {
+    for (int i = 0; i < field.numParticles; ++i) {
         const Particle& particle = particleBuffer[i];
 
         particleIdx.push_back(particle.index);
@@ -533,6 +535,82 @@ void writeVTK(ParticleField<R, S, K>& field, std::string filename) {
     writer.add_vector_field("circulation", particleGamma, dim);
     writer.add_vector_field("vorticity", particleOmega, dim);
     writer.write_point_cloud("../output/" + filename + "_" + std::to_string(field.timeStep) + ".vtu", dim, particleX);
+
+    writer.clear();
+    particleX.clear();
+    particleU.clear();
+    particleGamma.clear();
+    particleOmega.clear();
+    particleSigma.clear();
+    particleIdx.clear();
+}
+
+template <typename R, typename S, typename K>
+void calcVortexRingMetrics(ParticleField<R, S, K>& field, int iteration, std::string filename, int numRings = 2) {
+    const Particle* particleBuffer = field.getParticles();
+    int numParticlesRing = field.numParticles / numRings;
+
+    std::vector<vpmfloat> ringRadii;
+    std::vector<vpmvec3>  ringCenters;
+
+    for (int j = 0; j < numRings; ++j) {
+        int offset = j * numParticlesRing;
+        // Calculate ring center
+        vpmvec3 ringCenter = vpmvec3{ 0 };
+        vpmfloat totalGamma = 0;
+        for (int i = offset; i < numParticlesRing + offset; ++i) {
+            vpmfloat Gamma = glm::length(particleBuffer[i].Gamma);
+            totalGamma += Gamma;
+            ringCenter += Gamma * particleBuffer[i].X;
+        }
+        ringCenter /= totalGamma;
+
+        // Calculate ring radius
+        vpmfloat ringRadius = 0;
+        for (int i = offset; i < numParticlesRing + offset; ++i) {
+            vpmfloat Gamma = glm::length(particleBuffer[i].Gamma);
+            vpmfloat radius = glm::length(particleBuffer[i].X - ringCenter);
+            ringRadius += Gamma * radius;
+        }
+        ringRadius /= totalGamma;
+
+        ringCenters.push_back(ringCenter);
+        ringRadii.push_back(ringRadius);
+    }
+
+    // Save results to csv file
+    filename += ".csv";
+    std::ofstream file;
+    if (iteration == 0) {
+        // Overwrite file and write header in the first iteration
+        file.open(filename, std::ios::out);
+        if (file.is_open()) {
+            file << "iteration";
+            for (int i = 1; i < numRings + 1; ++i) {
+                file << ",ring_center_" << i
+                     << ",ring_radius_ " << i;
+            }
+            file << '\n';
+        }
+    }
+    else {
+        // Append to file in subsequent iterations
+        file.open(filename, std::ios::app);
+    }
+
+    if (file.is_open()) {
+        // Write iteration, ring center (Z-coordinate), and radius
+        file << iteration;
+        for (int i = 1; i < numRings + 1; ++i) {
+            file << ',' << ringCenters[i-1][2]
+                 << ',' << ringRadii[i-1];
+        }
+        file << '\n';
+        file.close();
+    }
+    else {
+        std::cerr << "Error: Could not open file " << filename << std::endl;
+    }
 }
 
 template <typename R, typename S, typename K>
@@ -563,18 +641,16 @@ void runVPM(
         relaxation
     };
 
-    std::cout << field.particles[0].U[0] << std::endl;
 
-    writeVTK(field, filename);
+    for (int i = 0; i < numTimeSteps + 1; ++i) {
+        calcVortexRingMetrics(field, i, "test");
 
-    for (int i = 1; i <= numTimeSteps; ++i) {
-        rungeKutta(field, dt, true, numBlocks, blockSize);
-
-        if (i % fileSaveSteps == 0) {
-
+        if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
             writeVTK(field, filename);
             std::cout << field.particles[0].U[0] << std::endl;
         }
+
+        rungeKutta(field, dt, true, numBlocks, blockSize);
     }
 }
 
@@ -647,7 +723,7 @@ void runSimulation() {
         uInf,
         particleBuffer,
         CorrectedPedrizzettiRelaxation(0.3),
-        DynamicSFS(),
+        NoSFS(),
         WinckelmansKernel(),
         blockSize,
         "test"
