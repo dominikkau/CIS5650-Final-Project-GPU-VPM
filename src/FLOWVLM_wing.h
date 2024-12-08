@@ -1,5 +1,4 @@
 #pragma once
-
 #include <array>
 #include <unordered_map>
 #include <vector>
@@ -10,9 +9,6 @@
 #include <memory>
 #include <any>
 #include "constants.h"
-#include "FLOWVLM_dt.h"
-#include "FLOWVLM_solver.h"
-#include <optional>
 
     using namespace std;
 
@@ -48,7 +44,7 @@
         std::vector<double> zn;                         // z-position of bound vortex
 
         // Calculation data
-        std::vector<VLMSolver::Horseshoe> HSs;
+        std::vector<Horseshoe> HSs;
 
         // Constructor
         Wing(double leftxl_, double lefty_, double leftzl_, double leftchord_, double leftchordtwist_);
@@ -65,18 +61,21 @@
             std::function<std::vector<double>(int, double)> extraVinf = nullptr,
             const std::vector<double>& extraVinfArgs = {});
 
-        VLMSolver::Horseshoe getHorseshoe(int m, double t = 0.0,
+        Horseshoe getHorseshoe(int m, double t = 0.0,
             std::function<std::vector<double>(int, double)> extraVinf = nullptr);
 
         std::vector<double> getLE(int n);
         std::vector<double> getTE(int n);
 
         int get_m();
+		Wing copy() const;
+		void _reset(bool keep_Vinf, bool keep_sol);
         void addsolution(const std::string& field_name, const std::vector<double>& sol_field, double t = 0.0);
 
-    private:
-        void _reset(bool keep_sol = false);
+		std::vector<double> normalize(const std::vector<double>& v);
+
         void _calculateHSs(double t, std::function<std::vector<double>(int, double)> extraVinf = nullptr);
+		Wing deepcopy_internal(const Wing& wing);
         void checkCoordSys(const std::vector<std::vector<double>>& Oaxis);
         std::vector<double> countertransform(const std::vector<double>& vec, const std::vector<std::vector<double>>& matrix, const std::vector<double>& origin);
         std::vector<std::vector<double>> inverse(const std::vector<std::vector<double>>& matrix);

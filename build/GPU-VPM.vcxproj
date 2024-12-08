@@ -22,7 +22,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{75F81C7D-2A74-37F2-90B5-B5C19E534A74}</ProjectGuid>
+    <ProjectGuid>{9C892585-50D9-347B-8AB9-D968ABA9465A}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
     <Platform>x64</Platform>
@@ -60,25 +60,25 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\bin\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\bin\Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">GPU-VPM.dir\Debug\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">GPU-VPM</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.exe</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\bin\Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\bin\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">GPU-VPM.dir\Release\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">GPU-VPM</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.exe</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\bin\MinSizeRel\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\bin\MinSizeRel\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">GPU-VPM.dir\MinSizeRel\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">GPU-VPM</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.exe</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\bin\RelWithDebInfo\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\bin\RelWithDebInfo\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">GPU-VPM.dir\RelWithDebInfo\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">GPU-VPM</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.exe</TargetExt>
@@ -87,7 +87,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -107,10 +107,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;GLEW_STATIC;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <CudaCompile>
-      <Include>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(Include)</Include>
+      <Include>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(Include)</Include>
       <Defines>%(Defines);_WINDOWS;GLEW_STATIC;CMAKE_INTDIR="Debug"</Defines>
       <AdditionalOptions>%(AdditionalOptions) -arch=native -Xcompiler="/EHsc -Zi -Ob0"</AdditionalOptions>
       <CodeGeneration></CodeGeneration>
@@ -125,7 +125,7 @@
       <UseHostInclude>false</UseHostInclude>
     </CudaCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -135,7 +135,7 @@
     <PreBuildEvent>
       <Message></Message>
       <Command>setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/shaders" "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/shaders"
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/shaders C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/shaders
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -145,13 +145,13 @@ exit /b %1
 if %errorlevel% neq 0 goto :VCEnd</Command>
     </PreBuildEvent>
     <Link>
-      <AdditionalDependencies>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\lib\glew32s.lib;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\lib\glfw3.lib;opengl32.lib;glu32.lib;cudadevrt.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\lib\glew32s.lib;C:\Users\SIG Admin\.mujoco\mjpro150\bin\glfw3.lib;opengl32.lib;glu32.lib;cudadevrt.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/lib/x64;C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/lib/x64/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ImportLibrary>C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/lib/Debug/GPU-VPM.lib</ImportLibrary>
-      <ProgramDataBaseFile>C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/bin/Debug/GPU-VPM.pdb</ProgramDataBaseFile>
+      <ImportLibrary>C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/lib/Debug/GPU-VPM.lib</ImportLibrary>
+      <ProgramDataBaseFile>C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/bin/Debug/GPU-VPM.pdb</ProgramDataBaseFile>
       <SubSystem>Console</SubSystem>
     </Link>
     <ProjectReference>
@@ -164,7 +164,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -185,10 +185,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <CudaCompile>
-      <Include>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(Include)</Include>
+      <Include>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(Include)</Include>
       <Defines>%(Defines);_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR="Release"</Defines>
       <AdditionalOptions>%(AdditionalOptions) -arch=native -Xcompiler="/EHsc -Ob2"</AdditionalOptions>
       <CodeGeneration></CodeGeneration>
@@ -202,7 +202,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <UseHostInclude>false</UseHostInclude>
     </CudaCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -212,7 +212,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <PreBuildEvent>
       <Message></Message>
       <Command>setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/shaders" "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/shaders"
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/shaders C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/shaders
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -222,13 +222,13 @@ exit /b %1
 if %errorlevel% neq 0 goto :VCEnd</Command>
     </PreBuildEvent>
     <Link>
-      <AdditionalDependencies>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\lib\glew32s.lib;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\lib\glfw3.lib;opengl32.lib;glu32.lib;cudadevrt.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\lib\glew32s.lib;C:\Users\SIG Admin\.mujoco\mjpro150\bin\glfw3.lib;opengl32.lib;glu32.lib;cudadevrt.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/lib/x64;C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/lib/x64/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ImportLibrary>C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/lib/Release/GPU-VPM.lib</ImportLibrary>
-      <ProgramDataBaseFile>C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/bin/Release/GPU-VPM.pdb</ProgramDataBaseFile>
+      <ImportLibrary>C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/lib/Release/GPU-VPM.lib</ImportLibrary>
+      <ProgramDataBaseFile>C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/bin/Release/GPU-VPM.pdb</ProgramDataBaseFile>
       <SubSystem>Console</SubSystem>
     </Link>
     <ProjectReference>
@@ -241,7 +241,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -262,10 +262,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <CudaCompile>
-      <Include>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(Include)</Include>
+      <Include>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(Include)</Include>
       <Defines>%(Defines);_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR="MinSizeRel"</Defines>
       <AdditionalOptions>%(AdditionalOptions) -arch=native -Xcompiler="/EHsc -Ob1"</AdditionalOptions>
       <CodeGeneration></CodeGeneration>
@@ -279,7 +279,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <UseHostInclude>false</UseHostInclude>
     </CudaCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -289,7 +289,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <PreBuildEvent>
       <Message></Message>
       <Command>setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/shaders" "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/shaders"
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/shaders C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/shaders
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -299,13 +299,13 @@ exit /b %1
 if %errorlevel% neq 0 goto :VCEnd</Command>
     </PreBuildEvent>
     <Link>
-      <AdditionalDependencies>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\lib\glew32s.lib;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\lib\glfw3.lib;opengl32.lib;glu32.lib;cudadevrt.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\lib\glew32s.lib;C:\Users\SIG Admin\.mujoco\mjpro150\bin\glfw3.lib;opengl32.lib;glu32.lib;cudadevrt.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/lib/x64;C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/lib/x64/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ImportLibrary>C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/lib/MinSizeRel/GPU-VPM.lib</ImportLibrary>
-      <ProgramDataBaseFile>C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/bin/MinSizeRel/GPU-VPM.pdb</ProgramDataBaseFile>
+      <ImportLibrary>C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/lib/MinSizeRel/GPU-VPM.lib</ImportLibrary>
+      <ProgramDataBaseFile>C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/bin/MinSizeRel/GPU-VPM.pdb</ProgramDataBaseFile>
       <SubSystem>Console</SubSystem>
     </Link>
     <ProjectReference>
@@ -318,7 +318,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -338,10 +338,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <CudaCompile>
-      <Include>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(Include)</Include>
+      <Include>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(Include)</Include>
       <Defines>%(Defines);_WINDOWS;NDEBUG;GLEW_STATIC;CMAKE_INTDIR="RelWithDebInfo"</Defines>
       <AdditionalOptions>%(AdditionalOptions) -arch=native -Xcompiler="/EHsc -Zi -Ob1"</AdditionalOptions>
       <CodeGeneration></CodeGeneration>
@@ -355,7 +355,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <UseHostInclude>false</UseHostInclude>
     </CudaCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\include\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -365,7 +365,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <PreBuildEvent>
       <Message></Message>
       <Command>setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/shaders" "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/shaders"
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/shaders C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/shaders
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -375,13 +375,13 @@ exit /b %1
 if %errorlevel% neq 0 goto :VCEnd</Command>
     </PreBuildEvent>
     <Link>
-      <AdditionalDependencies>C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\lib\glew32s.lib;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\external\lib\glfw3.lib;opengl32.lib;glu32.lib;cudadevrt.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\external\lib\glew32s.lib;C:\Users\SIG Admin\.mujoco\mjpro150\bin\glfw3.lib;opengl32.lib;glu32.lib;cudadevrt.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/lib/x64;C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/lib/x64/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ImportLibrary>C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/lib/RelWithDebInfo/GPU-VPM.lib</ImportLibrary>
-      <ProgramDataBaseFile>C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/bin/RelWithDebInfo/GPU-VPM.pdb</ProgramDataBaseFile>
+      <ImportLibrary>C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/lib/RelWithDebInfo/GPU-VPM.lib</ImportLibrary>
+      <ProgramDataBaseFile>C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/bin/RelWithDebInfo/GPU-VPM.pdb</ProgramDataBaseFile>
       <SubSystem>Console</SubSystem>
     </Link>
     <ProjectReference>
@@ -393,11 +393,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\CMakeLists.txt">
-      <UseUtf8Encoding>Always</UseUtf8Encoding>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/CMakeLists.txt</Message>
+    <CustomBuild Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM" "-BC:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build" --check-stamp-file "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/CMakeFiles/generate.stamp"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM -BC:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build --check-stamp-file C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -405,12 +404,12 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCUDAInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\WindowsPaths.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCUDACompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCXXCompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeRCCompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeSystem.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLEW.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLFW.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLM.cmake;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCUDAInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\WindowsPaths.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCUDACompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCXXCompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeRCCompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeSystem.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLEW.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLFW.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLM.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM" "-BC:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build" --check-stamp-file "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/CMakeFiles/generate.stamp"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM -BC:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build --check-stamp-file C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -418,12 +417,12 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCUDAInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\WindowsPaths.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCUDACompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCXXCompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeRCCompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeSystem.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLEW.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLFW.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLM.cmake;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCUDAInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\WindowsPaths.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCUDACompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCXXCompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeRCCompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeSystem.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLEW.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLFW.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLM.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM" "-BC:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build" --check-stamp-file "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/CMakeFiles/generate.stamp"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM -BC:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build --check-stamp-file C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -431,12 +430,12 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCUDAInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\WindowsPaths.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCUDACompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCXXCompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeRCCompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeSystem.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLEW.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLFW.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLM.cmake;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCUDAInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\WindowsPaths.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCUDACompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCXXCompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeRCCompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeSystem.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLEW.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLFW.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLM.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM" "-BC:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build" --check-stamp-file "C:/Users/nadin/Documents/Repos/CIS-5650 GPU Programming/CIS5650-Final-Project-GPU-VPM/build/CMakeFiles/generate.stamp"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM -BC:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build --check-stamp-file C:/Users/Student/Desktop/Nadine/CIS5650-Final-Project-GPU-VPM/build/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -444,44 +443,42 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCUDAInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\WindowsPaths.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCUDACompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCXXCompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeRCCompiler.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeSystem.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLEW.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLFW.cmake;C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\cmake\FindGLM.cmake;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCUDAInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Compiler\NVIDIA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows-NVIDIA-CUDA.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.30\Modules\Platform\WindowsPaths.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCUDACompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeCXXCompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeRCCompiler.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\3.30.3\CMakeSystem.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLEW.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLFW.cmake;C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\cmake\FindGLM.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM.cpp" />
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_dt.cpp" />
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_postprocessing.cpp" />
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_rotor.cpp" />
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_rotor_ccb.cpp" />
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_solver.cpp" />
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_tools.cpp" />
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_wing.cpp" />
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_wingsystem.cpp" />
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\glslUtility.cpp" />
+    <ClCompile Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM.cpp" />
+    <ClCompile Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_dt.cpp" />
+    <ClCompile Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_postprocessing.cpp" />
+    <ClCompile Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_rotor.cpp" />
+    <ClCompile Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_rotor_ccb.cpp" />
+    <ClCompile Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_solver.cpp" />
+    <ClCompile Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_tools.cpp" />
+    <ClCompile Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_wing.cpp" />
+    <ClCompile Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\glslUtility.cpp" />
     <CudaCompile Include="..\src\kernel.cu" />
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\main.cpp" />
-    <ClCompile Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\utilityCore.cpp" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM.h" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_dt.h" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_postprocessing.h" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_rotor.h" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_rotor_ccb.h" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_solver.h" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_tools.h" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_wing.h" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_wingsystem.h" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\constants.h" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\cudaMat4.hpp" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\glslUtility.hpp" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\kernel.h" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\main.hpp" />
-    <ClInclude Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\src\utilityCore.hpp" />
+    <ClCompile Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\main.cpp" />
+    <ClCompile Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\utilityCore.cpp" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM.h" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_dt.h" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_postprocessing.h" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_rotor.h" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_rotor_ccb.h" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_solver.h" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_tools.h" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\FLOWVLM_wing.h" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\constants.h" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\cudaMat4.hpp" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\glslUtility.hpp" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\kernel.h" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\main.hpp" />
+    <ClInclude Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\src\utilityCore.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="C:\Users\nadin\Documents\Repos\CIS-5650 GPU Programming\CIS5650-Final-Project-GPU-VPM\build\ZERO_CHECK.vcxproj">
-      <Project>{24133ED9-D864-34B5-A01F-1C21001F8D1D}</Project>
+    <ProjectReference Include="C:\Users\Student\Desktop\Nadine\CIS5650-Final-Project-GPU-VPM\build\ZERO_CHECK.vcxproj">
+      <Project>{5B531691-4289-3B6C-BB30-CB86FC3F0762}</Project>
       <Name>ZERO_CHECK</Name>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>

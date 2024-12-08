@@ -1,14 +1,9 @@
 #include "constants.h"
-#include <functional>
 #include "FLOWVLM_solver.h"
 #include <iostream>
-#include <vector>
 #include <cmath>
-#include <Eigen/Dense>
-#include <optional>
 #include <numeric>
 
-using namespace VLMSolver;
 using namespace std;
 
 // ------------ PARAMETERS ------------------------------------------------------
@@ -21,17 +16,6 @@ bool mute_warning = false;
 bool regularize = false;
 bool blobify = false;
 double smoothing_rad = 1e-9;
-
-std::unordered_map<std::string, int> HS_hash = {
-    {"Ap", 1},
-    {"A", 2},
-    {"B", 3},
-    {"Bp", 4},
-    {"CP", 5},
-    {"infDA", 6},
-    {"infDB", 7},
-    {"Gamma", 8}
-};
 
 void VLMSolver::_mute_warning(bool booln) {
     mute_warning = booln;
@@ -70,12 +54,12 @@ bool VLMSolver::check_collinear(double magsqr, double col_crit, bool ign_col) {
 
 // ------------ VORTEX FUNCTIONS ----------------------------------------------
 // Function to compute the Euclidean norm of a 3D vector
-double norm(const std::vector<double>& v) {
+double VLMSolver::norm(const std::vector<double>& v) {
     return std::sqrt(std::inner_product(v.begin(), v.end(), v.begin(), 0.0));
 }
 
 // Calculates the induced velocity of the bound vortex AB on point C
-std::vector<double> _V_AB(const std::vector<double>& A, const std::vector<double>& B, const std::vector<double>& C,
+std::vector<double> VLMSolver::_V_AB(const std::vector<double>& A, const std::vector<double>& B, const std::vector<double>& C,
     double gamma, bool ign_col = false) {
     std::vector<double> r0 = { B[0] - A[0], B[1] - A[1], B[2] - A[2] };
     std::vector<double> r1 = { C[0] - A[0], C[1] - A[1], C[2] - A[2] };
@@ -123,16 +107,16 @@ std::vector<double> _V_AB(const std::vector<double>& A, const std::vector<double
     }
 }
 // Dot product of two 3D vectors
-double dot(const std::vector<double>& v1, const std::vector<double>& v2) {
+double VLMSolver::dot(const std::vector<double>& v1, const std::vector<double>& v2) {
     return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
 }
 
 // Magnitude squared of a 3D vector
-double magsqr(const std::vector<double>& v) {
+double VLMSolver::magsqr(const std::vector<double>& v) {
     return v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
 }
 
-std::vector<double> _V_Ainf_out(const std::vector<double>& A, const std::vector<double>& infD,
+std::vector<double> VLMSolver::_V_Ainf_out(const std::vector<double>& A, const std::vector<double>& infD,
     const std::vector<double>& C, double gamma, bool ign_col = false) {
     std::vector<double> AC = { C[0] - A[0], C[1] - A[1], C[2] - A[2] };
 
@@ -181,18 +165,18 @@ std::vector<double> _V_Ainf_out(const std::vector<double>& A, const std::vector<
     }
 }
 
-std::vector<double> _V_Ainf_in(const std::vector<double>& A, const std::vector<double>& infD,
+std::vector<double> VLMSolver::_V_Ainf_in(const std::vector<double>& A, const std::vector<double>& infD,
     const std::vector<double>& C, double gamma, bool ign_col = false) {
     std::vector<double> aux = _V_Ainf_out(A, infD, C, gamma, ign_col);
     return { -aux[0], -aux[1], -aux[2] };
 }
 
-Eigen::VectorXd solve(
-    const std::vector<VLMSolver::Horseshoe>& HSs,
+Eigen::VectorXd VLMSolver::solve(
+    const std::vector<Horseshoe>& HSs,
     const std::vector<Eigen::Vector3d>& Vinfs,
-    double t = 0.0,
-    std::function<Eigen::Vector3d(const Eigen::Vector3d&, double)> vortexsheet = nullptr,
-    std::function<Eigen::Vector3d(int, double)> extraVinf = nullptr
+    double t,
+    std::function<Eigen::Vector3d(const Eigen::Vector3d&, double)> vortexsheet,
+    std::function<Eigen::Vector3d(int, double)> extraVinf
 ) {
     size_t n = HSs.size();  // Number of horseshoes
     Eigen::MatrixXd G = Eigen::MatrixXd::Zero(n, n);  // Geometry matrix

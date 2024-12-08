@@ -17,13 +17,13 @@ const float DT = 0.2f;
 //int main(int argc, char* argv[]) {
 //  projectName = "GPU-VPM";
 //
-//  if (init(argc, argv)) {
+//  /*if (init(argc, argv)) {
 //    mainLoop();
 //    GPUVPM::endSimulation();
 //    return 0;
 //  } else {
 //    return 1;
-//  }
+//  }*/
 //}
 
 //-------------------------------

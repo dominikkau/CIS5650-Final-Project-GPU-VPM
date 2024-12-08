@@ -66,7 +66,6 @@ set(headers
     src/FLOWVLM_solver.h
     src/FLOWVLM_tools.h
     src/FLOWVLM_wing.h
-    src/FLOWVLM_wingsystem.h
     src/constants.h
     )
 
@@ -83,7 +82,6 @@ set(sources
     src/FLOWVLM_solver.cpp
     src/FLOWVLM_tools.cpp
     src/FLOWVLM_wing.cpp
-    src/FLOWVLM_wingsystem.cpp
     )
 
 list(SORT headers)
