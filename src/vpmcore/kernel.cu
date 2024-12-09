@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <utility>
 #include <random>
 #include <memory>
 #include "kernel.h"
@@ -549,15 +550,9 @@ void runVPM(
     S sfs,
     K kernel,
     int blockSize,
-    std::string filename,
-    Particle* boundaryParticles = nullptr,
-    int BCNum = 0) {
+    std::string filename) {
 
     int numBlocks{ (numParticles + blockSize - 1) / blockSize };
-
-    if (boundaryParticles != nullptr){
-
-    }
 
     ParticleField<R, S, K> field{
         maxParticles,
@@ -583,6 +578,66 @@ void runVPM(
             std::cout << field.particles[0].U[0] << std::endl;
         }
     }
+}
+
+template <typename R, typename S, typename K>
+void runBoundaryVPM(
+    int maxParticles,
+    int numParticles,
+    int numBoundary,
+    int numTimeSteps,
+    vpmfloat dt,
+    int fileSaveSteps,
+    vpmvec3 uInf,
+    Particle* particleBuffer,
+    Particle* boundaryBuffer,
+    R relaxation,
+    S sfs,
+    K kernel,
+    int blockSize,
+    std::string filename) {
+
+    int numBlocks{ (numParticles + blockSize - 1) / blockSize };
+
+    Particle* dev_boundary;
+    cudaMalloc((void**)&dev_boundary, numBoundary * sizeof(Particle));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_boundary failed!");
+
+    // Copy boundary particle buffer from host to device
+    cudaMemcpy(dev_boundary, boundaryBuffer, numBoundary * sizeof(Particle), cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMemcpy boundaryBuffer->dev_boundary failed!");
+
+    ParticleField<R, S, K> field{
+        maxParticles,
+        particleBuffer,
+        numParticles,
+        0,
+        kernel,
+        uInf,
+        sfs,
+        relaxation
+    };
+
+    writeVTK(field, filename);
+
+    for (int i = 1; i <= numTimeSteps; ++i) {
+        rungeKutta(field, dt, true, numBlocks, blockSize);
+
+        if (i % fileSaveSteps == 0) {
+            writeVTK(field, filename);
+        }
+
+        if (field.numParticles + numBoundary < field.maxParticles) {
+            cudaMemcpy(field.dev_particles + field.numParticles, dev_boundary, numBoundary * sizeof(Particle), cudaMemcpyDeviceToDevice);
+            cudaDeviceSynchronize();
+            checkCUDAError("cudaMemcpy dev_boundary->dev_particles failed!");
+            field.numParticles += numBoundary;
+        }
+    }
+
+    cudaFree(dev_boundary);
 }
 
 void randomCubeInit(Particle* particleBuffer, int N, vpmfloat cubeSize, vpmfloat maxCirculation, vpmfloat maxSigma) {
@@ -630,7 +685,7 @@ void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius, vp
 
 void runSimulation() {
     // Define basic parameters
-    int maxParticles{ 2000 };
+    int maxParticles{ 20000 };
     int numTimeSteps{ 2000 };
     vpmfloat dt{ 0.01f };
     int numStepsVTK{ 5 };
@@ -642,14 +697,34 @@ void runSimulation() {
     // Initialize particle buffer
     //randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
     //int numParticles = maxParticles;
-# ifdef ROUNDJET
-    auto [numParticles, boundaryParticles, BCNum] = initRoundJet(particleBuffer, maxParticles);
-#else
-    int numParticles = initVortexRings(particleBuffer, maxParticles);
-    boundaryParticles = nullptr;
 
-#endif
 
+    Particle* boundaryBuffer = new Particle[1000];
+    std::pair<int, int> numbers = initRoundJet(particleBuffer, boundaryBuffer, maxParticles);
+    int numParticles = numbers.first;
+    int numBoundary = numbers.second;
+
+    std::cout << numParticles << " " << numBoundary << std::endl;
+
+    // Run VPM method
+    runBoundaryVPM(
+        maxParticles,
+        numParticles,
+        numBoundary,
+        numTimeSteps,
+        dt,
+        numStepsVTK,
+        uInf,
+        particleBuffer,
+        boundaryBuffer,
+        CorrectedPedrizzettiRelaxation(0.3),
+        DynamicSFS(),
+        WinckelmansKernel(),
+        blockSize,
+        "test"
+    );
+
+    /*
     // Run VPM method
     runVPM(
         maxParticles,
@@ -664,8 +739,9 @@ void runSimulation() {
         WinckelmansKernel(),
         blockSize,
         "test"        
-    );
+    );*/
 
     // Free host particle buffer
     delete[] particleBuffer;
+    delete[] boundaryBuffer;
 }

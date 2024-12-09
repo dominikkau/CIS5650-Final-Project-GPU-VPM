@@ -1,42 +1,10 @@
 #include <iostream>
 #include <cmath>
+#include <vector>
+#include <utility>
 #include <glm/glm.hpp>
 #include "roundjetsimulation.hpp"
 #include "vpmcore/kernel.h"
-
-
-// Function to calculate the rotation matrix
-glm::mat3 rotation_matrix2(vpmvec3 U2angle) {
-    // Convert angles from degrees to radians
-    vpmfloat a = glm::radians(U2angle.z);   // Yaw
-    vpmfloat b = glm::radians(U2angle.y); // Pitch
-    vpmfloat g = glm::radians(U2angle.x);  // Roll
-
-    // Rotation matrix about Z-axis (Yaw)
-    glm::mat3 Rz = {
-        glm::vec3(cos(a), -sin(a), 0.0f),
-        glm::vec3(sin(a),  cos(a), 0.0f),
-        glm::vec3(0.0f,    0.0f,   1.0f)
-    };
-
-    // Rotation matrix about Y-axis (Pitch)
-    glm::mat3 Ry = {
-        glm::vec3(cos(b),  0.0f, sin(b)),
-        glm::vec3(0.0f,    1.0f, 0.0f),
-        glm::vec3(-sin(b), 0.0f, cos(b))
-    };
-
-    // Rotation matrix about X-axis (Roll)
-    glm::mat3 Rx = {
-        glm::vec3(1.0f, 0.0f,    0.0f),
-        glm::vec3(0.0f, cos(g), -sin(g)),
-        glm::vec3(0.0f, sin(g),  cos(g))
-    };
-
-    // Combined rotation matrix
-    return Rz * Ry * Rx;
-}
-
 
 int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
     int Nphi, vpmfloat sigma, vpmfloat area, vpmvec3 jetOrigin,
@@ -79,8 +47,8 @@ int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
         for (int i = 0; i < Nphi; i++){
             
             // Non-dimensional arc-length position of cross section along centerline
-            vpmfloat sc1 = ds * N;        // Lower bound
-            vpmfloat sc2 = ds *(N+1);     // Upper bound
+            vpmfloat sc1 = ds * i;        // Lower bound
+            vpmfloat sc2 = ds *(i+1);     // Upper bound
             vpmfloat sc = (sc1 + sc2)/2;  // Center
 
             // Angle of cross section along centerline
@@ -119,11 +87,9 @@ int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
 }
 
 
-pair<int, Particle*> initRoundJet(Particle * particleBuffer, int maxParticles){
+std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuffer, int maxParticles) {
     // TODO: Is this the correct way to return the particle buffer?
     // ------- SIMULATION PARAMETERS ------- 
-    vpmfloat thetaod=0.025;         // Ratio of inflow momentum thickness of shear layer to diameter, θ/d
-
     // (m) jet diameter
     const vpmfloat d{ 1.5812f };
     vpmfloat U1;
@@ -152,7 +118,7 @@ pair<int, Particle*> initRoundJet(Particle * particleBuffer, int maxParticles){
     int numParticles{ 0 };
 
     // Define freestream (coflow) velocity
-    vpmvec3 Vfreestream = U2 * (rotation_matrix2(U2angle) * jetOrientation[2]);
+    vpmvec3 Vfreestream = vpmvec3{ 0, 0, U2 };
 
     // TODO: How to initialize Uinf = Vinf in pfield
 
@@ -194,7 +160,7 @@ pair<int, Particle*> initRoundJet(Particle * particleBuffer, int maxParticles){
     vpmfloat Wpeak = -FLT_MAX;
 
     for (vpmfloat radius = -maxR; radius <= maxR; radius += step){
-        Wpeak = max(Wr(radius), Wpeak);
+        Wpeak = fmax(Wr(radius), Wpeak);
     }
     
     // Number of cross sections
@@ -209,7 +175,7 @@ pair<int, Particle*> initRoundJet(Particle * particleBuffer, int maxParticles){
 
     // Boundary condition indices (needed only if we're removing the others before running simul)
     std::vector<int> BCi;
-    Particle * boundaryParticles;
+    //Particle * boundaryParticles;
 
     int startingIndex { 0 };
     // Spatial discretization of the boundary condition
@@ -268,10 +234,10 @@ pair<int, Particle*> initRoundJet(Particle * particleBuffer, int maxParticles){
     int j = 0;
     // BCi always the same in
     for (int i = 0; i < BCi.size(); i++){
-        boundaryParticles[j] = particleBuffer[BCi[i]];
+        boundaryBuffer[j] = particleBuffer[BCi[i]];
         j++;
     }
     // remove all particles from particleBuffer that are not in the BCi array?
     // need to return initial boundary particle buffer
-    return {numParticles, boundaryParticles, BCi.size()}; // or BCi.size();
+    return {numParticles, BCi.size()}; // or BCi.size();
 }
