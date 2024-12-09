@@ -227,7 +227,6 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
                 // If `zi == 0`, update boundary condition indices
                 if (zi == 0) {
                     for (int pi = org_np + 1; pi <= numParticles; ++pi) {
-                        std::cout << pi << " ";
                         BCi.push_back(pi);
                     }
                 }
