@@ -39,6 +39,10 @@ GPU-VPM is implemented with CUDA, a parallel computing platform and API created 
 </p>
 The implementation follows the basic structure of Ed Alvarez’ implementation in FLOWVPM. Both the classical and reformulated formulation of the vortex particle method were implemented. Each formulation can be customized for simulations by swapping out different options in a modular fashion as shown in the above graphic. Grayed out features are not implemented in the current implementation.
 
+We implemented the classic and the reformulated versions of VPM in CUDA that update the `ParticleField` object with each time step. The calculations for the particle parameters such as position, velocity, circulation are performed through Runge-Kutta time-integration method and the PedrizzettiRelaxation scheme.
+
+We simulated two identical vortex rings with initial radii R = 1, thickness = 0.1, and separation dZ = 0.79. A **Vortex Ring** is essentially a doughnut-shaped region of fluid where the fluid particles spin rapidly around an imaginary circular axis. The discretization hierarchy went from a torus to cross sections into layers of rings, which in turn was discretized into cells around the circumference. The initialization parameters were chosen such that the number of particles does not exceed the maximum particles at any point of time.
+
 ## Implementation
 We decided to implement this as a CUDA C++ project.
 The VPM solver (which is used to simulate dynamic particles) runs on the GPU. We chose to implement a vortex ring as our primary simulation, with the following parameters for customization:
