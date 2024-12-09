@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-<img src="images/.gif" width=500>
+<img src="images/banner.gif">
 </p>
 
 ## Description
