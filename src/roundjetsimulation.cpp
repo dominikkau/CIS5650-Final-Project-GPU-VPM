@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include "roundjetsimulation.hpp"
 #include "vpmcore/kernel.h"
+#include <iostream>
 
 int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
     int Nphi, vpmfloat sigma, vpmfloat area, vpmvec3 jetOrigin,
@@ -91,10 +92,10 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
     // TODO: Is this the correct way to return the particle buffer?
     // ------- SIMULATION PARAMETERS ------- 
     // (m) jet diameter
-    const vpmfloat d{ 1.5812f };
-    vpmfloat U1;
+    const vpmfloat d{ 45.4e-3f };
+    vpmfloat U1 = 40.0f;
     // (m/s) Coflow velocity
-    vpmfloat U2; 
+    vpmfloat U2 = 0.0f; 
     // (deg) Coflow angle from centerline
     vpmvec3 U2angle= vpmvec3 {0.0f};
     //  Ratio of inflow momentum thickness of shear layer to diameter, θ/d
@@ -110,7 +111,7 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
 
     // -------  SOLVER OPTIONS ------- 
     int steps_per_d = 50;           // Number of time steps for the centerline at U1 to travel one diameter
-    int d_travel_tot = 10;          // Run simulation for an equivalent of this many diameters
+    int d_travel_tot = 60;          // Run simulation for an equivalent of this many diameters
     vpmfloat maxRoR = 1.0f;            // (m) maximum radial distance to discretize
     vpmfloat dxotheta = 0.25f;        // Distance Δx between particles over momentum thickness θ
     vpmfloat overlap = 2.4f;           // Overlap between particles
@@ -218,16 +219,19 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
                 // Call addAnnulus with appropriate arguments
                 startingIndex = addAnnulus(particleBuffer, circulation, R, Nphi, sigma, area,
                             jetOrigin, jetOrientation, isStatic, startingIndex, maxParticles);
-
+                
+                if (startingIndex == -1) break;
+  
                 numParticles = startingIndex;
 
                 // If `zi == 0`, update boundary condition indices
                 if (zi == 0) {
                     for (int pi = org_np + 1; pi <= numParticles; ++pi) {
+                        std::cout << pi << " ";
                         BCi.push_back(pi);
                     }
                 }
-                if (startingIndex == -1) break;
+
             }
         }
     }   
