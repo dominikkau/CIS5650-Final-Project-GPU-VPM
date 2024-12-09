@@ -685,63 +685,74 @@ void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius, vp
 
 void runSimulation() {
     // Define basic parameters
-    int maxParticles{ 20000 };
+    int maxParticles{ 100000 };
     int numTimeSteps{ 2000 };
     vpmfloat dt{ 0.01f };
     int numStepsVTK{ 5 };
     vpmvec3 uInf{ 0, 0, 0 };
     int blockSize{ 128 };
+    const int simulationType = 0;
 
-    // Create host particle buffer
     Particle* particleBuffer = new Particle[maxParticles];
-    // Initialize particle buffer
-    //randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
-    //int numParticles = maxParticles;
+    int numParticles;
+    switch (simulationType)
+    {
+    case 0:
+        randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
+        numParticles = maxParticles;
+        break;
+    case 1:
+        randomCubeInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
+        numParticles = maxParticles;
+        break;
+    case 2:
+        numParticles =  initVortexRings(particleBuffer, maxParticles);
+        break;
+    case 3:
+        Particle* boundaryBuffer = new Particle[10000];
+        std::pair<int, int> numbers = initRoundJet(particleBuffer, boundaryBuffer, maxParticles);
+        numParticles = numbers.first;
+        int numBoundary = numbers.second;
 
+        // Run VPM method
+        runBoundaryVPM(
+            maxParticles,
+            numParticles,
+            numBoundary,
+            numTimeSteps,
+            dt,
+            numStepsVTK,
+            uInf,
+            particleBuffer,
+            boundaryBuffer,
+            CorrectedPedrizzettiRelaxation(0.3),
+            DynamicSFS(),
+            WinckelmansKernel(),
+            blockSize,
+            "test"
+        );
+        delete[] boundaryBuffer;
+    default:
+        return;
+    }
 
-    Particle* boundaryBuffer = new Particle[1000];
-    std::pair<int, int> numbers = initRoundJet(particleBuffer, boundaryBuffer, maxParticles);
-    int numParticles = numbers.first;
-    int numBoundary = numbers.second;
-
-    std::cout << numParticles << " " << numBoundary << std::endl;
-
-    // Run VPM method
-    runBoundaryVPM(
-        maxParticles,
-        numParticles,
-        numBoundary,
-        numTimeSteps,
-        dt,
-        numStepsVTK,
-        uInf,
-        particleBuffer,
-        boundaryBuffer,
-        CorrectedPedrizzettiRelaxation(0.3),
-        DynamicSFS(),
-        WinckelmansKernel(),
-        blockSize,
-        "test"
-    );
-
-    /*
-    // Run VPM method
-    runVPM(
-        maxParticles,
-        numParticles,
-        numTimeSteps,
-        dt,
-        numStepsVTK,
-        uInf,
-        particleBuffer,
-        CorrectedPedrizzettiRelaxation(0.3),
-        DynamicSFS(),
-        WinckelmansKernel(),
-        blockSize,
-        "test"        
-    );*/
-
+    if (simulationType != 3) {
+        runVPM(
+            maxParticles,
+            numParticles,
+            numTimeSteps,
+            dt,
+            numStepsVTK,
+            uInf,
+            particleBuffer,
+            CorrectedPedrizzettiRelaxation(0.3),
+            DynamicSFS(),
+            WinckelmansKernel(),
+            blockSize,
+            "test"
+        );
+    }
     // Free host particle buffer
     delete[] particleBuffer;
-    delete[] boundaryBuffer;
+    
 }

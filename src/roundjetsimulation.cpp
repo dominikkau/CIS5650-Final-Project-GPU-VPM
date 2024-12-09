@@ -5,7 +5,6 @@
 #include <glm/glm.hpp>
 #include "roundjetsimulation.hpp"
 #include "vpmcore/kernel.h"
-#include <iostream>
 
 int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
     int Nphi, vpmfloat sigma, vpmfloat area, vpmvec3 jetOrigin,
@@ -99,11 +98,11 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
     // (deg) Coflow angle from centerline
     vpmvec3 U2angle= vpmvec3 {0.0f};
     //  Ratio of inflow momentum thickness of shear layer to diameter, θ/d
-    vpmfloat thetaod = 0.025;
+    vpmfloat thetaod = 0.05;
     // Maximum sigmas in z-direction to create annulis for defining BC
-    vpmfloat max_zsigma = 6.0f;
+    vpmfloat max_zsigma = 2.0f;
     // Threshold at which not to add particles
-    vpmfloat minWfraction = 0.01f;
+    vpmfloat minWfraction = 0.02f;
     // Origin of jet
     vpmvec3 jetOrigin = vpmvec3 {0.0f};
     // orientation of jet
