@@ -114,7 +114,14 @@ Both our GPU implementation as well as the original, CPU-based FLOWVPM implement
 
 <i>Randomly initialized points in a particle field. Our first sign of success! :)
 </i>
+
+<p align="center">
+<img src="images/blooper.gif" width=500>
+</p>
+<i>Those are some wacky vortex rings, huh?
+</i>
 </center>
+
 <center>
 <h2> 
 Meet the Team
