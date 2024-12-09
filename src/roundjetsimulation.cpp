@@ -101,7 +101,7 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
     //  Ratio of inflow momentum thickness of shear layer to diameter, θ/d
     vpmfloat thetaod = 0.025;
     // Maximum sigmas in z-direction to create annulis for defining BC
-    vpmfloat max_zsigma = 12.0f;
+    vpmfloat max_zsigma = 6.0f;
     // Threshold at which not to add particles
     vpmfloat minWfraction = 0.01f;
     // Origin of jet
@@ -110,7 +110,7 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
     vpmmat3 jetOrientation = vpmmat3 {1.0f};        // Identity matrix
 
     // -------  SOLVER OPTIONS ------- 
-    int steps_per_d = 50;           // Number of time steps for the centerline at U1 to travel one diameter
+    int steps_per_d = 100;           // Number of time steps for the centerline at U1 to travel one diameter
     int d_travel_tot = 60;          // Run simulation for an equivalent of this many diameters
     vpmfloat maxRoR = 1.0f;            // (m) maximum radial distance to discretize
     vpmfloat dxotheta = 0.25f;        // Distance Δx between particles over momentum thickness θ
