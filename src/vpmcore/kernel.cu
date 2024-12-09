@@ -365,8 +365,8 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
 
 #ifdef SHARED_MEMORY
     int s_index = threadIdx.x;
-    extern __shared__ vpmfloat s_sourceParticle[];
-    vpmvec3*  s_sourceX     = (vpmvec3*)s_sourceParticle;
+    extern __shared__ vpmfloat sharedMemory[];
+    vpmvec3*  s_sourceX     = (vpmvec3*)sharedMemory;
     vpmvec3*  s_sourceGamma = (vpmvec3*)(s_sourceX + blockDim.x);
     vpmfloat* s_sourceSigma = (vpmfloat*)(s_sourceGamma + blockDim.x);
 #endif
@@ -524,7 +524,11 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
     }
 
     if (useRelax) {
-        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >> >(N, N, field.dev_particles, field.dev_particles, kernel, true);
+#ifdef SHARED_MEMORY
+        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(N, N, field.dev_particles, field.dev_particles, kernel, true);
+#else
+        calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, field.dev_particles, field.dev_particles, kernel, true);
+#endif
         cudaDeviceSynchronize();
         checkCUDAError("calcVelJacNaive (rungeKutta: Relaxation) failed!");
 
@@ -672,7 +676,7 @@ void runVPM(
     int blockSize,
     std::string filename) {
 
-    int numBlocks{ (numParticles + blockSize - 1) / blockSize };
+    int numBlocks = (numParticles + blockSize - 1) / blockSize;
 
     ParticleField<R, S, K> field{
         maxParticles,
@@ -744,11 +748,11 @@ void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius, vp
 void runSimulation() {
     // Define basic parameters
     int maxParticles{ 2000 };
-    int numTimeSteps{ 2000 };
+    int numTimeSteps{ 1000 };
     vpmfloat dt{ 0.01f };
     int numStepsVTK{ 5 };
     vpmvec3 uInf{ 0, 0, 0 };
-    int blockSize{ 128 };
+    int blockSize{ 64 };
 
     // Create host particle buffer
     Particle* particleBuffer = new Particle[maxParticles];

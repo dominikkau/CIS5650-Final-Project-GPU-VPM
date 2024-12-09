@@ -5,9 +5,9 @@
 #include <glm/glm.hpp>
 #include <string>
 
-#define ENABLE_CUDA_ERROR
+//#define ENABLE_CUDA_ERROR
 #define TRANSPOSED
-#define DOUBLE_PRECISION
+//#define DOUBLE_PRECISION
 #define CLASSIC_VPM
 #define SHARED_MEMORY
 
@@ -19,17 +19,17 @@
 #define sqrt2  (vpmfloat)1.4142135623730951
 
 #ifdef DOUBLE_PRECISION
-#define EPS 1e-9
-typedef glm::dvec3 vpmvec3;
-typedef glm::dvec2 vpmvec2;
-typedef glm::dmat3 vpmmat3;
-typedef double     vpmfloat;
+    #define EPS 1e-9
+    typedef glm::dvec3 vpmvec3;
+    typedef glm::dvec2 vpmvec2;
+    typedef glm::dmat3 vpmmat3;
+    typedef double     vpmfloat;
 #else
-#define EPS 1e-6f
-typedef glm::fvec3 vpmvec3;
-typedef glm::fvec2 vpmvec2;
-typedef glm::fmat3 vpmmat3;
-typedef float      vpmfloat;
+    #define EPS 1e-6f
+    typedef glm::fvec3 vpmvec3;
+    typedef glm::fvec2 vpmvec2;
+    typedef glm::fmat3 vpmmat3;
+    typedef float      vpmfloat;
 #endif
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
