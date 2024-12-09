@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <vector>
 #include <glm/glm.hpp>
 #include "vortexringsimulation.hpp"
 #include "vpmcore/kernel.h"
@@ -129,7 +130,7 @@ int addVortexRing(Particle* particleBuffer, vpmfloat circulation, vpmfloat R, vp
     return idx;
 }
 
-int initVortexRings(Particle* particleBuffer, int maxParticles) {
+int initVortexRings(Particle* particleBuffer, int maxParticles, int Nphi, int nc) {
     // Number of rings
     const int nrings{ 2 };
     // Offset of rings
@@ -151,8 +152,8 @@ int initVortexRings(Particle* particleBuffer, int maxParticles) {
         Rs[i] = 0.7906f;
         Rcrosss[i] = 0.07906f;
         sigmas[i] = 0.07906f;
-        Nphis[i] = 100;
-        ncs[i] = 1;
+        Nphis[i] = Nphi;
+        ncs[i] = nc;
         extra_ncs[i] = 0;
         ringPositions[i] = vpmvec3{ 0, 0, dZ * i };
         ringOrientations[i] = vpmmat3{ 1.0f };

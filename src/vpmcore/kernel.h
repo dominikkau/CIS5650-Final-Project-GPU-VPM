@@ -170,6 +170,7 @@ struct ParticleField {
     vpmvec3 uInf;               // Uniform freestream function
     S sfs;                      // Subfilter-scale contributions scheme
     R relaxation;               // Relaxation scheme
+    bool synchronized;          // Flag if host buffer is synchronized with device
 
     // Constructor
     ParticleField(
@@ -234,7 +235,7 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
 
 void randomCubeInit(Particle* particleBuffer, int N, vpmfloat cubeSize = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
 void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
-void runSimulation();
+void runSimulation(int Nphi, int nc);
 
 template <typename R, typename S, typename K>
 void runVPM(
