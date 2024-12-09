@@ -6,6 +6,7 @@
 #include "kernel.h"
 #include "../lean_vtk.hpp"
 #include "../vortexringsimulation.hpp"
+#include "../roundjetsimulation.hpp"
 #include <device_launch_parameters.h>
 
 void checkCUDAErrorFn(const char* msg, const char* file, int line) {
@@ -548,9 +549,15 @@ void runVPM(
     S sfs,
     K kernel,
     int blockSize,
-    std::string filename) {
+    std::string filename,
+    Particle* boundaryParticles = nullptr,
+    int BCNum = 0) {
 
     int numBlocks{ (numParticles + blockSize - 1) / blockSize };
+
+    if (boundaryParticles != nullptr){
+
+    }
 
     ParticleField<R, S, K> field{
         maxParticles,
@@ -635,7 +642,13 @@ void runSimulation() {
     // Initialize particle buffer
     //randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
     //int numParticles = maxParticles;
+# ifdef ROUNDJET
+    auto [numParticles, boundaryParticles, BCNum] = initRoundJet(particleBuffer, maxParticles);
+#else
     int numParticles = initVortexRings(particleBuffer, maxParticles);
+    boundaryParticles = nullptr;
+
+#endif
 
     // Run VPM method
     runVPM(
@@ -650,7 +663,7 @@ void runSimulation() {
         DynamicSFS(),
         WinckelmansKernel(),
         blockSize,
-        "test"
+        "test"        
     );
 
     // Free host particle buffer

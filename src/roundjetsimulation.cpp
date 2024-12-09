@@ -40,7 +40,7 @@ glm::mat3 rotation_matrix2(vpmvec3 U2angle) {
 
 int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
     int Nphi, vpmfloat sigma, vpmfloat area, vpmvec3 jetOrigin,
-    vpmmat3 jetOrientation, int startingIndex, int maxParticles){
+    vpmmat3 jetOrientation, bool isStatic, int startingIndex, int maxParticles){
         
         // Arclength corresponding to phi for circle with radius r
         auto fun_S = [](vpmfloat phi, vpmfloat r) { return r * phi; };
@@ -112,14 +112,15 @@ int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
             particleBuffer[idx].sigma = sigma;
             particleBuffer[idx].vol = area * length;
             particleBuffer[idx].index = idx;
+            particleBuffer[idx].isStatic = isStatic;
             ++idx;
         }
         return idx;
 }
 
 
-int initRoundJet(Particle * particleBuffer, int maxParticles){
-    
+pair<int, Particle*> initRoundJet(Particle * particleBuffer, int maxParticles){
+    // TODO: Is this the correct way to return the particle buffer?
     // ------- SIMULATION PARAMETERS ------- 
     vpmfloat thetaod=0.025;         // Ratio of inflow momentum thickness of shear layer to diameter, θ/d
 
@@ -154,7 +155,6 @@ int initRoundJet(Particle * particleBuffer, int maxParticles){
     vpmvec3 Vfreestream = U2 * (rotation_matrix2(U2angle) * jetOrientation[2]);
 
     // TODO: How to initialize Uinf = Vinf in pfield
-    // TODO: Calculate the integral Wint and initialize circulations using it
 
     vpmfloat R = d/2;                         // (m) jet radius
     vpmvec3 Cline = jetOrientation[2];        // Centerline direction
@@ -207,8 +207,9 @@ int initRoundJet(Particle * particleBuffer, int maxParticles){
     // Axial component of the freestream
     vpmfloat V2 = glm::dot(Vfreestream, Cline);
 
-    // Boundary condition indices
+    // Boundary condition indices (needed only if we're removing the others before running simul)
     std::vector<int> BCi;
+    Particle * boundaryParticles;
 
     int startingIndex { 0 };
     // Spatial discretization of the boundary condition
@@ -243,33 +244,34 @@ int initRoundJet(Particle * particleBuffer, int maxParticles){
             // Iterate over Z layers (time steps)
             for (int zi = 0; zi <= Nz; ++zi) {
 
-                // int num_sides = (zi != 0) ? 2 : 1;
-
-                // rbfFullCylinder to be false.
-                // for (int sgn = -1; sgn <= 1; sgn += 2) {
-                //     if (num_sides == 1 && sgn < 0) break;
-
-                vpmfloat org_np = numParticles;
+                int org_np = numParticles;
 
                 vpmvec3 currentJetOrigin = jetOrigin + zi * dz * Cline;
-
+               
+                bool isStatic = zi!=0;
                 // Call addAnnulus with appropriate arguments
                 startingIndex = addAnnulus(particleBuffer, circulation, R, Nphi, sigma, area,
-                            jetOrigin, jetOrientation, startingIndex, maxParticles);
+                            jetOrigin, jetOrientation, isStatic, startingIndex, maxParticles);
 
-                numParticles = startingIndex; // TODO: confirm?
+                numParticles = startingIndex;
 
                 // If `zi == 0`, update boundary condition indices
                 if (zi == 0) {
-                    // Example of adding indices (modify as needed)
                     for (int pi = org_np + 1; pi <= numParticles; ++pi) {
                         BCi.push_back(pi);
                     }
                 }
                 if (startingIndex == -1) break;
-                // }
             }
         }
     }   
-    return startingIndex;
+    int j = 0;
+    // BCi always the same in
+    for (int i = 0; i < BCi.size(); i++){
+        boundaryParticles[j] = particleBuffer[BCi[i]];
+        j++;
+    }
+    // remove all particles from particleBuffer that are not in the BCi array?
+    // need to return initial boundary particle buffer
+    return {numParticles, boundaryParticles, BCi.size()}; // or BCi.size();
 }
