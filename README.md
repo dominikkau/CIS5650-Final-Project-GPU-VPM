@@ -1,19 +1,26 @@
 <h1 align="center"> GPU-VPM </h1>
 <p align="center">
-A GPU-based aerodynamics solver
+✈  A GPU-based aerodynamics solver  ✈
 </p>
 
 <p align="center">
-<img src="images/particle_field.png" width=500>
+<img src="images/.gif" width=500>
 </p>
 
 ## Description
-GPU-VPM is a GPU-based implementation of the Vortex Particle Method (VPM) which simulates airflow in aerodynamics. Positioned between low-fidelity, fast simulations and high-fidelity, resource-intensive CFD methods, this medium-fidelity approach enables realistic aerodynamic modeling without requiring heavy computational resources. 
-GPU-VPM is implemented with CUDA, a parallel computing platform and API created by NVIDIA which allows software to use GPUs for faster processing. Our implementation focuses on high-performance, parallelized vortex particle calculations which make it suitable for early-stage design of aerial vehicles.
+GPU-VPM is a GPU-based implementation of the Vortex Particle Method (VPM) which simulates airflow in aerodynamics. 
+
+Positioned between low-fidelity, fast simulations and high-fidelity, resource-intensive CFD methods, the Vortex Particle Method is a medium-fidelity approach which enables realistic aerodynamic modeling without requiring heavy computational resources.
+
+<p align="center">
+<img src="images/vpm_chart.png" width=900>
+</p>
+
+GPU-VPM is implemented with CUDA, a parallel computing platform and API created by NVIDIA which allows software to use the GPU for faster processing. Thus, our implementation focuses on high-performance, parallelized vortex particle calculations which make it suitable for early-stage design of aerial vehicles.
 
 ## Build Instructions
 1. Clone this repository to your computer.
-2. Build the project using CMake. We recommend using CMake version 3.30.3. 
+2. Build the project using CMake. We recommend using CMake version 3.30.3.
 
     <img src="images/cmake.png" width=700>
 
@@ -21,6 +28,10 @@ GPU-VPM is implemented with CUDA, a parallel computing platform and API created 
 4. Set the build mode to "Release" to run the project optimally.
 
     <img src="images/release.png" width=700>
+5. Basic parameters, such as the max number of particles created in the simulation, can be set in the runSimulation() function found in kernel.cu:
+    
+    <img src="images/kernel.png" width=300>
+    <img src="images/run_sim.png" width=400>
 
 ## Methodology
 <img src="images/[INSERT MODULAR DIAGRAM HERE].png" width=700>
