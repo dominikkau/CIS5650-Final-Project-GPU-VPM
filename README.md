@@ -114,6 +114,8 @@ Both our GPU implementation as well as the original, CPU-based FLOWVPM implement
 
 As we can see, the original CPU-based implementation takes the longest time to complete (over an hour!). Our implementation is 23x faster than the original, and almost as fast as the most optimized version of this method which uses the Fast Multipole Method (FMM).
 
+<img src="images/verification.png" width=1000>
+
 ## Bloopers
 <center>
 <img src="images/particle_field.png" width=500>
