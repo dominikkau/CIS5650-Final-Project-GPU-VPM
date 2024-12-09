@@ -67,7 +67,7 @@ The following graph shows the performance of the vortex ring simulation using ou
 | blockSize    | 128                  |
 +--------------+----------------------+
 
-Then the values of Nphi and nc were increased incrementally as follows:
+Then, the values of Nphi (the number of cross sections in the ring) and nc (the number of layers to discretize the toroid into) were increased incrementally as follows:
 +------+----+
 | Nphi | nc |
 +======+====+
@@ -96,6 +96,10 @@ Then the values of Nphi and nc were increased incrementally as follows:
 
 As we can see, the time taken to run the simulation increases as the values of Nphi and nc increase.
 
+We also monitored the number of particles as the values of Nphi and nc were increased, resulting in the following graph.
+<img src="images/graph2.png" width=1000>
+As expected, the time taken to run the simulation increases as the number of particles increases.
+
 ## GPU-VPM vs CPU FLOWVPM
 
 Validation was then performed via a comparison of the runtime of the vortex ring simulation using our GPU-based implementation versus the original CPU-based FLOWVPM implementation.
@@ -108,6 +112,7 @@ Both our GPU implementation as well as the original, CPU-based FLOWVPM implement
 
 <img src="images/compare.png" width=1000>
 
+As we can see, the original CPU-based implementation takes the longest time to complete (over an hour!). Our implementation is 23x faster than the original, and almost as fast as the most optimized version of this method which uses the Fast Multipole Method (FMM).
 
 ## Bloopers
 <center>
