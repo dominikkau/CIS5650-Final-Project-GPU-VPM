@@ -8,7 +8,7 @@
 </p>
 
 ## Description
-GPU-VPM is a GPU-based implementation of the Vortex Particle Method (VPM) which simulates airflow in aerodynamics. 
+GPU-VPM is a GPU-based implementation of the reformulated Vortex Particle Method (VPM) which simulates airflow in aerodynamics. 
 
 Positioned between low-fidelity, fast simulations and high-fidelity, resource-intensive CFD methods, the Vortex Particle Method is a medium-fidelity approach which enables realistic aerodynamic modeling without requiring heavy computational resources.
 
@@ -40,8 +40,12 @@ GPU-VPM is implemented with CUDA, a parallel computing platform and API created 
 
 ## Implementation
 We decided to implement this as a CUDA C++ project.
-The VPM solver (which is used to simulate dynamic particles) runs on the GPU.
-    
+The VPM solver (which is used to simulate dynamic particles) runs on the GPU. We chose to implement a vortex ring as our primary simulation, with the following parameters for customization:
+
+<center>
+<img src="images/params.png" width=500>
+</center>
+
 ## Performance Analysis
 Validation was performed via a comparison of the runtime of the vortex ring simulation using our GPU-based implementation versus the original CPU-based FLOWVPM implementation.
 
@@ -49,16 +53,18 @@ Our GPU based implementation was run on a laptop with the following specs:
 * **MACHINE 1:** ASUS ROG Zephyrus M16
     * **OS:** Windows 11 
     * **Processor:** 12th Gen Intel(R) Core(TM) i9-12900H, 2500 Mhz, 14 Core(s), 20 Logical Processor(s)     
-    * **GPU:** NVIDIA GeForce RTX 3070 Ti Laptop GPU 
+    * **GPU:** NVIDIA GeForce RTX 3070 Ti 
 
 The original, CPU-based FLOWVPM implementation was run on a desktop PC with the following specs:
 * **MACHINE 2:** CETS lab computer
     * **OS:** Windows 10
-    * **Processor:** i7-12700 @ 2.10 GHz, 32 GB, 
-    * **GPU:** T1000 4096 MB
+    * **Processor:** Intel(R) Xeon(R) CPU E5-1630 v4 @ 3.70GHz, 32GB
+    * **GPU:** NVIDIA GeForce RTX 3070 Ti
+
+Multiple machines were needed in order to ensure that data could be collected from the simulations in a timely fashion. 
 
 ## GPU-VPM Vortex Ring Simulation Performance
-The following graph shows the performance of the vortex ring simulation using our GPU-based implementation. The simulation was run with the following parameters:
+The following graph shows the performance of the vortex ring simulation using our GPU-based implementation. The simulation was run with the following constant parameters:
 
 +--------------+----------------------+
 | Parameter    | Value                |
@@ -70,7 +76,33 @@ The following graph shows the performance of the vortex ring simulation using ou
 | blockSize    | 128                  |
 +--------------+----------------------+
 
+The values of Nphi and nc were increased incrementally as follows:
++------+----+
+| Nphi | nc |
++======+====+
+| 100  | 1  |
++------+----+
+| 100  | 2  |
++------+----+
+| 100  | 3  |
++------+----+
+| 200  | 1  |
++------+----+
+| 200  | 2  |
++------+----+
+| 200  | 3  |
++------+----+
+| 300  | 1  |
++------+----+
+| 300  | 2  |
++------+----+
+| 300  | 3  |
++------+----+
+
+
 <img src="images/graph1.png" width=1000>
+<i>Note: The max number of particles was set to INT_MAX for this simulation, but this was exceeded when the simulation ran with Nphi = 300 and nc = 3. Thus, this graph only includes up to nc = 2.
+</i>
 
 ## Bloopers
 <center>
