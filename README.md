@@ -34,9 +34,10 @@ GPU-VPM is implemented with CUDA, a parallel computing platform and API created 
     <img src="images/run_sim.png" width=400>
 
 ## Methodology
-<img src="images/[INSERT MODULAR DIAGRAM HERE].png" width=700>
-
-
+<p align="center">
+<img src="images/overview.png" width=900>
+</p>
+The implementation follows the basic structure of Ed Alvarez’ implementation in FLOWVPM. Both the classical and reformulated formulation of the vortex particle method were implemented. Each formulation can be customized for simulations by swapping out different options in a modular fashion as shown in the above graphic. Grayed out features are not implemented in the current implementation.
 
 ## Implementation
 We decided to implement this as a CUDA C++ project.
