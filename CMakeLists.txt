@@ -56,6 +56,7 @@ set(headers
     src/wing.h
     src/lean_vtk.hpp
     src/vortexringsimulation.hpp
+    src/roundjetsimulation.hpp
     )
 
 set(sources
