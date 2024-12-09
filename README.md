@@ -47,21 +47,11 @@ The VPM solver (which is used to simulate dynamic particles) runs on the GPU. We
 </center>
 
 ## Performance Analysis
-Validation was performed via a comparison of the runtime of the vortex ring simulation using our GPU-based implementation versus the original CPU-based FLOWVPM implementation.
-
 Our GPU based implementation was run on a laptop with the following specs:
 * **MACHINE 1:** ASUS ROG Zephyrus M16
     * **OS:** Windows 11 
     * **Processor:** 12th Gen Intel(R) Core(TM) i9-12900H, 2500 Mhz, 14 Core(s), 20 Logical Processor(s)     
     * **GPU:** NVIDIA GeForce RTX 3070 Ti 
-
-The original, CPU-based FLOWVPM implementation was run on a desktop PC with the following specs:
-* **MACHINE 2:** CETS lab computer
-    * **OS:** Windows 10
-    * **Processor:** Intel(R) Xeon(R) CPU E5-1630 v4 @ 3.70GHz, 32GB
-    * **GPU:** NVIDIA GeForce RTX 3070 Ti
-
-Multiple machines were needed in order to ensure that data could be collected from the simulations in a timely fashion. 
 
 ## GPU-VPM Vortex Ring Simulation Performance
 The following graph shows the performance of the vortex ring simulation using our GPU-based implementation. The simulation was run with the following constant parameters:
@@ -76,7 +66,7 @@ The following graph shows the performance of the vortex ring simulation using ou
 | blockSize    | 128                  |
 +--------------+----------------------+
 
-The values of Nphi and nc were increased incrementally as follows:
+Then the values of Nphi and nc were increased incrementally as follows:
 +------+----+
 | Nphi | nc |
 +======+====+
@@ -99,10 +89,24 @@ The values of Nphi and nc were increased incrementally as follows:
 | 300  | 3  |
 +------+----+
 
-
 <img src="images/graph1.png" width=1000>
 <i>Note: The max number of particles was set to INT_MAX for this simulation, but this was exceeded when the simulation ran with Nphi = 300 and nc = 3. Thus, this graph only includes up to nc = 2.
 </i>
+
+As we can see, the time taken to run the simulation increases as the values of Nphi and nc increase.
+
+## GPU-VPM vs CPU FLOWVPM
+
+Validation was then performed via a comparison of the runtime of the vortex ring simulation using our GPU-based implementation versus the original CPU-based FLOWVPM implementation.
+
+Both our GPU implementation as well as the original, CPU-based FLOWVPM implementation were run on a desktop PC with the following specs:
+* **MACHINE 2:** CETS lab computer
+    * **OS:** Windows 10
+    * **Processor:** Intel(R) Xeon(R) CPU E5-1630 v4 @ 3.70GHz, 32GB
+    * **GPU:** NVIDIA GeForce RTX 3070 Ti
+
+<img src="images/compare.png" width=1000>
+
 
 ## Bloopers
 <center>
