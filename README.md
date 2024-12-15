@@ -1,10 +1,11 @@
+
 <h1 align="center"> GPU-VPM </h1>
 <p align="center">
 ✈  A GPU-based aerodynamics solver  ✈
 </p>
 
 <p align="center">
-<img src="images/.gif" width=500>
+<img src="images/banner.gif">
 </p>
 
 ## Description
@@ -27,112 +28,114 @@ GPU-VPM is implemented with CUDA, a parallel computing platform and API created 
 3. Open the project using Visual Studio. We recommend **Visual Studio 2019**. 
 4. Set the build mode to "Release" to run the project optimally.
 
-    <img src="images/release.png" width=700>
+    <img src="images/release.PNG" width=700>
 5. Basic parameters, such as the max number of particles created in the simulation, can be set in the runSimulation() function found in kernel.cu:
     
-    <img src="images/kernel.png" width=300>
-    <img src="images/run_sim.png" width=400>
+    <img src="images/kernel.PNG" width=300>
+    <img src="images/run_sim.PNG" width=400>
 
 ## Methodology
-<img src="images/[INSERT MODULAR DIAGRAM HERE].png" width=700>
+<p align="center">
+<img src="images/overview.PNG" width=900>
+</p>
+The implementation follows the basic structure of Ed Alvarez’ implementation in FLOWVPM. Both the classical and reformulated formulation of the vortex particle method were implemented. Each formulation can be customized for simulations by swapping out different options in a modular fashion as shown in the above graphic. Grayed out features are not implemented in the current implementation.
 
+We implemented the classic and the reformulated versions of VPM in CUDA that update the `ParticleField` object with each time step. The calculations for the particle parameters such as position, velocity, circulation are performed through Runge-Kutta time-integration method and the PedrizzettiRelaxation scheme.
 
+We simulated two identical vortex rings with initial radii R = 1, thickness = 0.1, and separation dZ = 0.79. A **Vortex Ring** is essentially a doughnut-shaped region of fluid where the fluid particles spin rapidly around an imaginary circular axis. The discretization hierarchy went from a torus to cross sections into layers of rings, which in turn was discretized into cells around the circumference. The initialization parameters were chosen such that the number of particles does not exceed the maximum particles at any point of time.
 
 ## Implementation
 We decided to implement this as a CUDA C++ project.
 The VPM solver (which is used to simulate dynamic particles) runs on the GPU. We chose to implement a vortex ring as our primary simulation, with the following parameters for customization:
 
-<center>
+<p align="center">
 <img src="images/params.png" width=500>
-</center>
+</p>
 
 ## Performance Analysis
-Validation was performed via a comparison of the runtime of the vortex ring simulation using our GPU-based implementation versus the original CPU-based FLOWVPM implementation.
-
 Our GPU based implementation was run on a laptop with the following specs:
-* **MACHINE 1:** ASUS ROG Zephyrus M16
-    * **OS:** Windows 11 
-    * **Processor:** 12th Gen Intel(R) Core(TM) i9-12900H, 2500 Mhz, 14 Core(s), 20 Logical Processor(s)     
-    * **GPU:** NVIDIA GeForce RTX 3070 Ti 
 
-The original, CPU-based FLOWVPM implementation was run on a desktop PC with the following specs:
-* **MACHINE 2:** CETS lab computer
-    * **OS:** Windows 10
-    * **Processor:** Intel(R) Xeon(R) CPU E5-1630 v4 @ 3.70GHz, 32GB
-    * **GPU:** NVIDIA GeForce RTX 3070 Ti
+**MACHINE 1:** ASUS ROG Zephyrus M16
+* **OS:** Windows 11 
+* **Processor:** 12th Gen Intel(R) Core(TM) i9-12900H, 2500 Mhz, 14 Core(s), 20 Logical Processor(s)     
+* **GPU:** NVIDIA GeForce RTX 3070 Ti 
 
-Multiple machines were needed in order to ensure that data could be collected from the simulations in a timely fashion. 
-
-## GPU-VPM Vortex Ring Simulation Performance
+### GPU-VPM Vortex Ring Simulation Performance
 The following graph shows the performance of the vortex ring simulation using our GPU-based implementation. The simulation was run with the following constant parameters:
 
-+--------------+----------------------+
 | Parameter    | Value                |
-+==============+======================+
+|--------------|----------------------|
 | maxParticles | 2147483647 (INT_MAX) |
-+--------------+----------------------+
 | numTimeSteps | 2000                 |
-+--------------+----------------------+
 | blockSize    | 128                  |
-+--------------+----------------------+
 
-The values of Nphi and nc were increased incrementally as follows:
-+------+----+
+Then, the values of Nphi (the number of cross sections in the ring) and nc (the number of layers to discretize the toroid into) were increased incrementally as follows:
+
 | Nphi | nc |
-+======+====+
+|------|----|
 | 100  | 1  |
-+------+----+
 | 100  | 2  |
-+------+----+
 | 100  | 3  |
-+------+----+
 | 200  | 1  |
-+------+----+
 | 200  | 2  |
-+------+----+
 | 200  | 3  |
-+------+----+
 | 300  | 1  |
-+------+----+
 | 300  | 2  |
-+------+----+
 | 300  | 3  |
-+------+----+
-
 
 <img src="images/graph1.png" width=1000>
 <i>Note: The max number of particles was set to INT_MAX for this simulation, but this was exceeded when the simulation ran with Nphi = 300 and nc = 3. Thus, this graph only includes up to nc = 2.
 </i>
 
+As we can see, the time taken to run the simulation increases as the values of Nphi and nc increase.
+
+We also monitored the number of particles as the values of Nphi and nc were increased, resulting in the following graph.
+<img src="images/graph2.png" width=1000>
+As expected, the time taken to run the simulation increases as the number of particles increases.
+
+## GPU-VPM vs CPU FLOWVPM
+
+Validation was then performed via a comparison of the runtime of the vortex ring simulation using our GPU-based implementation versus the original CPU-based FLOWVPM implementation.
+
+Both our GPU implementation as well as the original, CPU-based FLOWVPM implementation were run on a desktop PC with the following specs:
+
+**MACHINE 2:** CETS lab computer
+* **OS:** Windows 10
+* **Processor:** Intel(R) Xeon(R) CPU E5-1630 v4 @ 3.70GHz, 32GB
+* **GPU:** NVIDIA GeForce RTX 3070 Ti
+
+<img src="images/compare.png" width=1000>
+
+As we can see, the original CPU-based implementation takes the longest time to complete (over an hour!). Our implementation is 23x faster than the original, and almost as fast as the most optimized version of this method which uses the Fast Multipole Method (FMM).
+
+<img src="images/verification.png" width=1000>
+
 ## Bloopers
-<center>
+<p align="center">
 <img src="images/particle_field.png" width=500>
 
 <i>Randomly initialized points in a particle field. Our first sign of success! :)
 </i>
-</center>
-<center>
-<h2> 
-Meet the Team
-</h2>
-</center>
-
-+-----------------------------------------------------+--------------------------------------------------+-----------------------------------------------------------+
-| <img src="images/dominik.png" width=200>            | <img src="images/nadine.png" width=200>          | <img src="images/shreyas.png" width=200>                  |
-+=====================================================+==================================================+===========================================================+
-| Dominik Kau                                         | Nadine Adnane                                    | Shreyas Singh                                             |
-+-----------------------------------------------------+--------------------------------------------------+-----------------------------------------------------------+
-| [dominikk@seas.upenn.edu](dominikk@seas.upenn.edu)  | [nadnane@seas.upenn.edu](nadnane@seas.upenn.edu) | [shreyas4@seas.upenn.edu](shreyas4@seas.upenn.edu)        |
-+-----------------------------------------------------+--------------------------------------------------+-----------------------------------------------------------+
-| [LinkedIn](https://www.linkedin.com/in/dominikkau/) | [LinkedIn](https://www.linkedin.com/in/nadnane/) | [LinkedIn](https://www.linkedin.com/in/shreyassinghiitr/) |
-+-----------------------------------------------------+--------------------------------------------------+-----------------------------------------------------------+
-
-<h2 align="center">
-Special Thanks
-</h2>
 
 <p align="center">
-<img src="images/ed.png" width = 200>
+<img src="images/blooper.gif" width=500>
+</p>
+<i>Those are some wacky vortex rings, huh?
+</i>
+</p>
+
+<h2 align="center">Meet the Team</h2>
+
+| ![Dominik](images/dominik.png) | ![Nadine](images/nadine.png) | ![Shreyas](images/shreyas.png) |
+|--------------------------------|-----------------------------|--------------------------------|
+| Dominik Kau                   | Nadine Adnane              | Shreyas Singh                 |
+| [Email](dominikk@seas.upenn.edu) | [Email](nadnane@seas.upenn.edu) | [Email](shreyas4@seas.upenn.edu) |
+| [LinkedIn](https://www.linkedin.com/in/dominikkau/) | [LinkedIn](https://www.linkedin.com/in/nadnane/) | [LinkedIn](https://www.linkedin.com/in/shreyassinghiitr/) |
+
+<h2 align="center">Special Thanks</h2>
+
+<p align="center">
+<img src="images/ed.png" width=200>
 </p>
 
 <p align="center">
