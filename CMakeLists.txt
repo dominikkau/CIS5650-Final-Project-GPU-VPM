@@ -53,7 +53,6 @@ include_directories(${GLM_INCLUDE_DIRS})
 set(headers
     src/main.hpp
     src/vpmcore/kernel.h
-    src/wing.h
     src/lean_vtk.hpp
     src/vortexringsimulation.hpp
     src/roundjetsimulation.hpp
@@ -62,7 +61,6 @@ set(headers
 set(sources
     src/main.cpp
     src/vpmcore/kernel.cu
-    src/wing.cpp
     src/lean_vtk.cpp
     src/vortexringsimulation.cpp
     src/roundjetsimulation.cpp
@@ -85,11 +83,3 @@ else()
 endif()
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE "$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CMAKE_PROJECT_NAME})
-
-add_custom_command(
-    TARGET ${CMAKE_PROJECT_NAME}
-    PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/shaders
-        ${CMAKE_BINARY_DIR}/shaders
-    )
