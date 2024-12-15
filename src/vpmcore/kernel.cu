@@ -1,11 +1,13 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <utility>
 #include <random>
 #include <memory>
 #include "kernel.h"
 #include "../lean_vtk.hpp"
 #include "../vortexringsimulation.hpp"
+#include "../roundjetsimulation.hpp"
 #include <device_launch_parameters.h>
 
 void checkCUDAErrorFn(const char* msg, const char* file, int line) {
@@ -653,6 +655,66 @@ void runVPM(
     }
 }
 
+template <typename R, typename S, typename K>
+void runBoundaryVPM(
+    int maxParticles,
+    int numParticles,
+    int numBoundary,
+    int numTimeSteps,
+    vpmfloat dt,
+    int fileSaveSteps,
+    vpmvec3 uInf,
+    Particle* particleBuffer,
+    Particle* boundaryBuffer,
+    R relaxation,
+    S sfs,
+    K kernel,
+    int blockSize,
+    std::string filename) {
+
+    int numBlocks{ (numParticles + blockSize - 1) / blockSize };
+
+    Particle* dev_boundary;
+    cudaMalloc((void**)&dev_boundary, numBoundary * sizeof(Particle));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_boundary failed!");
+
+    // Copy boundary particle buffer from host to device
+    cudaMemcpy(dev_boundary, boundaryBuffer, numBoundary * sizeof(Particle), cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMemcpy boundaryBuffer->dev_boundary failed!");
+
+    ParticleField<R, S, K> field{
+        maxParticles,
+        particleBuffer,
+        numParticles,
+        0,
+        kernel,
+        uInf,
+        sfs,
+        relaxation
+    };
+
+    writeVTK(field, filename);
+
+    for (int i = 1; i <= numTimeSteps; ++i) {
+        rungeKutta(field, dt, true, numBlocks, blockSize);
+
+        if (i % fileSaveSteps == 0) {
+            writeVTK(field, filename);
+        }
+
+        if (field.numParticles + numBoundary < field.maxParticles) {
+            cudaMemcpy(field.dev_particles + field.numParticles, dev_boundary, numBoundary * sizeof(Particle), cudaMemcpyDeviceToDevice);
+            cudaDeviceSynchronize();
+            checkCUDAError("cudaMemcpy dev_boundary->dev_particles failed!");
+            field.numParticles += numBoundary;
+        }
+    }
+
+    cudaFree(dev_boundary);
+}
+
 void randomCubeInit(Particle* particleBuffer, int N, vpmfloat cubeSize, vpmfloat maxCirculation, vpmfloat maxSigma) {
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -698,36 +760,74 @@ void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius, vp
 
 void runSimulation(int Nphi, int nc) {
     // Define basic parameters
-    int maxParticles{ 20000 };
+    int maxParticles{ 100000 };
     int numTimeSteps{ 2000 };
     vpmfloat dt{ 0.01f };
     int numStepsVTK{ 5 };
     vpmvec3 uInf{ 0, 0, 0 };
     int blockSize{ 128 };
+    const int simulationType = 0;
 
-    // Create host particle buffer
     Particle* particleBuffer = new Particle[maxParticles];
-    // Initialize particle buffer
-    //randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
-    //int numParticles = maxParticles;
-    int numParticles = initVortexRings(particleBuffer, maxParticles, Nphi, nc);
+    int numParticles;
+    switch (simulationType)
+    {
+    case 0:
+        randomSphereInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
+        numParticles = maxParticles;
+        break;
+    case 1:
+        randomCubeInit(particleBuffer, maxParticles, 10.0f, 1.0f, 0.5f);
+        numParticles = maxParticles;
+        break;
+    case 2:
+        numParticles =  initVortexRings(particleBuffer, maxParticles);
+        break;
+    case 3:
+        Particle* boundaryBuffer = new Particle[10000];
+        std::pair<int, int> numbers = initRoundJet(particleBuffer, boundaryBuffer, maxParticles);
+        numParticles = numbers.first;
+        int numBoundary = numbers.second;
 
-    // Run VPM method
-    runVPM(
-        maxParticles,
-        numParticles,
-        numTimeSteps,
-        dt,
-        numStepsVTK,
-        uInf,
-        particleBuffer,
-        CorrectedPedrizzettiRelaxation(0.3),
-        NoSFS(),
-        WinckelmansKernel(),
-        blockSize,
-        "test"
-    );
+        // Run VPM method
+        runBoundaryVPM(
+            maxParticles,
+            numParticles,
+            numBoundary,
+            numTimeSteps,
+            dt,
+            numStepsVTK,
+            uInf,
+            particleBuffer,
+            boundaryBuffer,
+            CorrectedPedrizzettiRelaxation(0.3),
+            DynamicSFS(),
+            WinckelmansKernel(),
+            blockSize,
+            "test"
+        );
+        delete[] boundaryBuffer;
+    default:
+        return;
+    }
 
+    if (simulationType != 3) {
+        runVPM(
+            maxParticles,
+            numParticles,
+            numTimeSteps,
+            dt,
+            numStepsVTK,
+            uInf,
+            particleBuffer,
+            CorrectedPedrizzettiRelaxation(0.3),
+            DynamicSFS(),
+            WinckelmansKernel(),
+            blockSize,
+            "test"
+        );
+    }
     // Free host particle buffer
     delete[] particleBuffer;
+    
 }

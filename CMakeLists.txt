@@ -55,6 +55,7 @@ set(headers
     src/vpmcore/kernel.h
     src/lean_vtk.hpp
     src/vortexringsimulation.hpp
+    src/roundjetsimulation.hpp
     )
 
 set(sources
@@ -62,6 +63,7 @@ set(sources
     src/vpmcore/kernel.cu
     src/lean_vtk.cpp
     src/vortexringsimulation.cpp
+    src/roundjetsimulation.cpp
     )
 
 list(SORT headers)
@@ -81,5 +83,3 @@ else()
 endif()
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE "$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CMAKE_PROJECT_NAME})
-
-
