@@ -71,7 +71,7 @@ ParticleField<R, S, K>::ParticleField(
     int maxParticles,
     Particle* particles,
     int numParticles,
-    int timeSteps,
+    int timeStep,
     K kernel,
     vpmvec3 uInf,
     S sfs,
@@ -120,10 +120,19 @@ Particle* ParticleField<R, S, K>::getParticles() {
 // *                      RELAXATION                           *
 // *************************************************************
 
-inline void PedrizzettiRelaxation::operator()(int N, Particle* particles, int numBlocks, int blockSize) {
-    pedrizzettiRelax<<<numBlocks, blockSize>>>(N, particles, relaxFactor);
+template <typename R, typename S, typename K>
+void PedrizzettiRelaxation::operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize) {
+#ifdef SHARED_MEMORY
+    calcVelJacNaive << <numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >> > (N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+#else
+    calcVelJacNaive<< <numBlocks, blockSize >> > (N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+#endif
     cudaDeviceSynchronize();
-    checkCUDAError("pedrizzettiRelax failed!");
+    checkCUDAError("calcVelJacNaive (PedrizzettiRelaxation) failed!");
+
+    pedrizzettiRelax<<<numBlocks, blockSize>>>(N, field.dev_particles, relaxFactor);
+    cudaDeviceSynchronize();
+    checkCUDAError("PedrizzettiRelaxation failed!");
 }
 
 __global__ void pedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor) {
@@ -137,10 +146,19 @@ __global__ void pedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFacto
         + relaxFactor * glm::length(oldGamma) / glm::length(omega) * omega;
 }
 
-inline void CorrectedPedrizzettiRelaxation::operator()(int N, Particle* particles, int numBlocks, int blockSize) {
-    correctedPedrizzettiRelax<<<numBlocks, blockSize>>>(N, particles, relaxFactor);
+template <typename R, typename S, typename K>
+void CorrectedPedrizzettiRelaxation::operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize) {
+#ifdef SHARED_MEMORY
+    calcVelJacNaive << <numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >> > (N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+#else
+    calcVelJacNaive << <numBlocks, blockSize >> > (N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+#endif
     cudaDeviceSynchronize();
-    checkCUDAError("correctedPedrizzettiRelax failed!");
+    checkCUDAError("calcVelJacNaive (CorrectedPedrizzettiRelaxation) failed!");
+
+    correctedPedrizzettiRelax<<<numBlocks, blockSize>>>(N, field.dev_particles, relaxFactor);
+    cudaDeviceSynchronize();
+    checkCUDAError("CorrectedPedrizzettiRelaxation failed!");
 }
 
 __global__ void correctedPedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor) {
@@ -361,7 +379,6 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
     Particle* sourceParticles, K kernel, bool reset, vpmfloat testFilterFactor) {
 
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    if (index >= targetN) return;
 
 #ifdef SHARED_MEMORY
     int s_index = threadIdx.x;
@@ -369,7 +386,30 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
     vpmvec3*  s_sourceX     = (vpmvec3*)sharedMemory;
     vpmvec3*  s_sourceGamma = (vpmvec3*)(s_sourceX + blockDim.x);
     vpmfloat* s_sourceSigma = (vpmfloat*)(s_sourceGamma + blockDim.x);
-#endif
+
+    vpmvec3 targetX;
+    vpmvec3 targetU;
+    vpmmat3 targetJ;
+    if (index < targetN) {
+        // Get target variables from global memory
+        targetX = targetParticles[index].X;
+
+        if (reset) {
+            targetU = vpmvec3{ 0.0 };
+            targetJ = vpmmat3{ 0.0 };
+        }
+        else {
+            targetU = targetParticles[index].U;
+            targetJ = targetParticles[index].J;
+        }
+    }
+    else {
+		targetX = vpmvec3{ 0.0 };
+		targetU = vpmvec3{ 0.0 };
+		targetJ = vpmmat3{ 0.0 };
+    }
+#else
+    if (index >= targetN) return;
 
     // Get target variables from global memory
     const vpmvec3 targetX = targetParticles[index].X;
@@ -384,6 +424,8 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
         targetU = targetParticles[index].U;
         targetJ = targetParticles[index].J;
     }
+#endif
+
 
 #ifdef SHARED_MEMORY
     // Copy source variables into shared memory
@@ -423,7 +465,9 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
             // Compute Jacobian
             vpmfloat tmp = dg_sgmdr * invSourceSigma / r - 3.0 * g_sgm / (r * r);
 
+#pragma unroll
             for (int l = 0; l < 3; ++l) {
+#pragma unroll
                 for (int k = 0; k < 3; ++k) {
                     targetJ[l][k] += tmp * crossProd[k] * dX[l];
                 }
@@ -442,11 +486,19 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
 #ifdef SHARED_MEMORY
         __syncthreads();
     }
+
+    if (index < targetN) {
+        // Copy variables back to global memory
+        targetParticles[index].U = targetU;
+        targetParticles[index].J = targetJ;
+    }
+#else
+	// Copy variables back to global memory
+	targetParticles[index].U = targetU;
+	targetParticles[index].J = targetJ;
 #endif
 
-    // Copy variables back to global memory
-    targetParticles[index].U = targetU;
-    targetParticles[index].J = targetJ;
+
 }
 
 __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat b, vpmfloat dt, vpmfloat zeta0, vpmvec3 Uinf) {
@@ -469,6 +521,14 @@ __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat 
         particleM = particles[index].M;
     }
     
+    const vpmvec3  particleJ0 = particleJ[0];
+    const vpmvec3  particleJ1 = particleJ[1];
+    const vpmvec3  particleJ2 = particleJ[2];
+
+    const vpmvec3  particleM0 = particleM[0];
+    const vpmvec3  particleM1 = particleM[1];
+    const vpmvec3  particleM2 = particleM[2];
+
     // Position update
     particleM[0] = a * particleM[0] + dt * (particleU + Uinf);
     particleX += b * particleM[0];
@@ -495,7 +555,9 @@ __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat 
     particles[index].sigma = particleSigma;
 #endif
 
-    particles[index].M = particleM; 
+
+
+    particles[index].M = particleM;
 }
 
 template <typename R, typename S, typename K>
@@ -521,19 +583,12 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
         rungeKuttaStep<<<numBlocks, blockSize>>>(N, field.dev_particles, a, b, dt, kernel.zeta(0.0), field.uInf);
         cudaDeviceSynchronize();
         checkCUDAError("rungeKuttaStep failed!");
+
+        field.synchronized = false;
+        field.getParticles();
     }
 
-    if (useRelax) {
-#ifdef SHARED_MEMORY
-        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(N, N, field.dev_particles, field.dev_particles, kernel, true);
-#else
-        calcVelJacNaive<<<numBlocks, blockSize>>>(N, N, field.dev_particles, field.dev_particles, kernel, true);
-#endif
-        cudaDeviceSynchronize();
-        checkCUDAError("calcVelJacNaive (rungeKutta: Relaxation) failed!");
-
-        field.relaxation(N, field.dev_particles, numBlocks, blockSize);
-    }
+    field.relaxation(N, field, numBlocks, blockSize);
 
     ++field.timeStep;
     field.synchronized = false;
@@ -747,12 +802,12 @@ void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius, vp
 
 void runSimulation() {
     // Define basic parameters
-    int maxParticles{ 2000 };
-    int numTimeSteps{ 1000 };
+    int maxParticles{ 20000 };
+    int numTimeSteps{ 100 };
     vpmfloat dt{ 0.01f };
-    int numStepsVTK{ 5 };
+    int numStepsVTK{ 0 };
     vpmvec3 uInf{ 0, 0, 0 };
-    int blockSize{ 64 };
+    int blockSize{ 256 };
 
     // Create host particle buffer
     Particle* particleBuffer = new Particle[maxParticles];

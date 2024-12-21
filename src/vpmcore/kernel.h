@@ -9,7 +9,7 @@
 #define TRANSPOSED
 //#define DOUBLE_PRECISION
 #define CLASSIC_VPM
-#define SHARED_MEMORY
+//#define SHARED_MEMORY
 
 #define PI     (vpmfloat)3.14159265358979
 #define const1 (vpmfloat)0.06349363593424097
@@ -140,7 +140,8 @@ struct PedrizzettiRelaxation {
     vpmfloat relaxFactor;
     PedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
 
-    inline void operator()(int N, Particle* particles, int numBlocks, int blockSize);
+    template <typename R, typename S, typename K>
+    void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize);
 };
 
 __global__ void pedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor);
@@ -149,13 +150,15 @@ struct CorrectedPedrizzettiRelaxation {
     vpmfloat relaxFactor;
     CorrectedPedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
 
-    inline void operator()(int N, Particle* particles, int numBlocks, int blockSize);
+    template <typename R, typename S, typename K>
+    void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize);
 };
 
 __global__ void correctedPedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor);
 
 struct NoRelaxation {
-    inline void operator()(int N, Particle* particles, int numBlocks, int blockSize) {}
+    template <typename R, typename S, typename K>
+    inline void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize) {}
 };
 
 // ParticleField definition
