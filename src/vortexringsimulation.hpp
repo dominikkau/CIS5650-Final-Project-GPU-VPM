@@ -9,3 +9,4 @@ int addVortexRing(Particle* particleBuffer, vpmfloat circulation, vpmfloat R, vp
     vpmmat3 ringOrientation, int startingIndex, int maxParticles);
 
 int initVortexRings(Particle* particleBuffer, int maxParticles);
+int initVortexRingsCoal(CoalescedParticle particleBuffer, int maxParticles);

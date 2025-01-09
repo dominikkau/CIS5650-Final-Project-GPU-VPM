@@ -10,6 +10,7 @@
 
 void checkCUDAErrorFn(const char* msg, const char* file, int line) {
 #ifdef ENABLE_CUDA_ERROR
+	cudaDeviceSynchronize();
     cudaError_t err = cudaGetLastError();
     if (cudaSuccess == err) {
         return;
@@ -116,6 +117,357 @@ Particle* ParticleField<R, S, K>::getParticles() {
     return particles;
 }
 
+
+// *************************************************************
+// *         COALESCED  PARTICLE FIELD IMPLEMENTATION          *
+// *************************************************************
+
+template <typename R, typename S, typename K>
+void CoalescedParticleField<R, S, K>::addParticle(Particle& particle) {
+    if (numParticles == maxParticles) return;
+
+    Particle* dev_tmpParticle;
+	cudaMalloc((void**)&dev_tmpParticle, sizeof(Particle));
+	cudaDeviceSynchronize();
+	checkCUDAError("cudaMalloc of dev_tmpParticle failed!");
+
+	cudaMemcpy(dev_tmpParticle, &particle, sizeof(Particle), cudaMemcpyHostToDevice);
+	cudaDeviceSynchronize();
+	checkCUDAError("cudaMemcpy of dev_tmpParticle failed!");
+
+	cudaMemcpy(dev_particles.X + numParticles, &dev_tmpParticle->X, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(dev_particles.U + numParticles, &dev_tmpParticle->U, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(dev_particles.J + numParticles, &dev_tmpParticle->J, sizeof(vpmmat3), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(dev_particles.Gamma + numParticles, &dev_tmpParticle->Gamma, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.sigma + numParticles, &dev_tmpParticle->sigma, sizeof(vpmfloat), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(dev_particles.SFS + numParticles, &dev_tmpParticle->SFS, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(dev_particles.C + numParticles, &dev_tmpParticle->C, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(dev_particles.M + numParticles, &dev_tmpParticle->M, sizeof(vpmmat3), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(dev_particles.index + numParticles, &dev_tmpParticle->index, sizeof(int), cudaMemcpyDeviceToDevice);
+    /*cudaMemcpy(dev_particles.PSE + numParticles, &dev_tmpParticle->PSE, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.isStatic + numParticles, &dev_tmpParticle->isStatic, sizeof(bool), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.vol + numParticles, &dev_tmpParticle->vol, sizeof(vpmfloat), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.circulation + numParticles, &dev_tmpParticle->circulation, sizeof(vpmfloat), cudaMemcpyDeviceToDevice);*/
+
+    ++numParticles;
+
+	cudaFree(dev_tmpParticle);
+}
+
+template <typename R, typename S, typename K>
+void CoalescedParticleField<R, S, K>::overwriteParticle(Particle& particle, unsigned int index) {
+    if (index > numParticles) addParticle(particle);
+
+    Particle* dev_tmpParticle;
+    cudaMalloc((void**)&dev_tmpParticle, sizeof(Particle));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_tmpParticle failed!");
+
+    cudaMemcpy(dev_tmpParticle, &particle, sizeof(Particle), cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMemcpy of dev_tmpParticle failed!");
+
+    cudaMemcpy(dev_particles.X + index, &dev_tmpParticle->X, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.U + index, &dev_tmpParticle->U, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.J + index, &dev_tmpParticle->J, sizeof(vpmmat3), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.Gamma + index, &dev_tmpParticle->Gamma, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.sigma + index, &dev_tmpParticle->sigma, sizeof(vpmfloat), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.SFS + index, &dev_tmpParticle->SFS, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.C + index, &dev_tmpParticle->C, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.M + index, &dev_tmpParticle->M, sizeof(vpmmat3), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.index + index, &dev_tmpParticle->index, sizeof(int), cudaMemcpyDeviceToDevice);
+    /*cudaMemcpy(dev_particles.PSE + index, &dev_tmpParticle->PSE, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.isStatic + index, &dev_tmpParticle->isStatic, sizeof(bool), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.vol + index, &dev_tmpParticle->vol, sizeof(vpmfloat), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.circulation + index, &dev_tmpParticle->circulation, sizeof(vpmfloat), cudaMemcpyDeviceToDevice);*/
+
+    cudaFree(dev_tmpParticle);
+}
+
+template <typename R, typename S, typename K>
+void CoalescedParticleField<R, S, K>::removeParticle(unsigned int index) {
+    // not the last particle
+    if (index != numParticles - 1) {
+        cudaMemcpy(dev_particles.X + index, dev_particles.X + numParticles, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.U + index, dev_particles.U + numParticles, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.J + index, dev_particles.J + numParticles, sizeof(vpmmat3), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.Gamma + index, dev_particles.Gamma + numParticles, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.sigma + index, dev_particles.sigma + numParticles, sizeof(vpmfloat), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.SFS + index, dev_particles.SFS + numParticles, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.C + index, dev_particles.C + numParticles, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.M + index, dev_particles.M + numParticles, sizeof(vpmmat3), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.index + index, dev_particles.index + numParticles, sizeof(int), cudaMemcpyDeviceToDevice);
+        /*cudaMemcpy(dev_particles.PSE + index, dev_particles.PSE + numParticles, sizeof(vpmvec3), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.isStatic + index, dev_particles.isStatic + numParticles, sizeof(bool), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.vol + index, dev_particles.vol + numParticles, sizeof(vpmfloat), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.circulation + index, dev_particles.circulation + numParticles, sizeof(vpmfloat), cudaMemcpyDeviceToDevice);*/
+    }
+
+    --numParticles;
+}
+
+template <typename R, typename S, typename K>
+void CoalescedParticleField<R, S, K>::initDevParticles() {
+    // Declare device particle buffers
+    cudaMalloc((void**)&dev_particles.X, maxParticles * sizeof(vpmvec3));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.X failed!");
+
+    cudaMalloc((void**)&dev_particles.U, maxParticles * sizeof(vpmvec3));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.U failed!");
+
+    cudaMalloc((void**)&dev_particles.J, maxParticles * sizeof(vpmmat3));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.J failed!");
+
+    cudaMalloc((void**)&dev_particles.Gamma, maxParticles * sizeof(vpmvec3));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.Gamma failed!");
+
+    cudaMalloc((void**)&dev_particles.sigma, maxParticles * sizeof(vpmfloat));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.sigma failed!");
+
+    cudaMalloc((void**)&dev_particles.SFS, maxParticles * sizeof(vpmvec3));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.SFS failed!");
+
+    cudaMalloc((void**)&dev_particles.C, maxParticles * sizeof(vpmvec3));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.C failed!");
+
+    cudaMalloc((void**)&dev_particles.M, maxParticles * sizeof(vpmmat3));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.M failed!");
+
+    cudaMalloc((void**)&dev_particles.index, maxParticles * sizeof(int));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.index failed!");
+
+    /*cudaMalloc((void**)&dev_particles.PSE, maxParticles * sizeof(vpmvec3));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.PSE failed!");
+
+    cudaMalloc((void**)&dev_particles.isStatic, maxParticles * sizeof(bool));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.isStatic failed!");
+
+    cudaMalloc((void**)&dev_particles.vol, maxParticles * sizeof(vpmfloat));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.vol failed!");
+
+    cudaMalloc((void**)&dev_particles.circulation, maxParticles * sizeof(vpmfloat));
+    cudaDeviceSynchronize();
+    checkCUDAError("cudaMalloc of dev_particles.circulation failed!");*/
+
+    synchronized = 0;
+}
+
+template <typename R, typename S, typename K>
+void CoalescedParticleField<R, S, K>::copyDevParticlesToHost(int bufferMask) {
+    if (bufferMask & BUFFER_X) {
+        cudaMemcpy(particles.X, dev_particles.X, numParticles * sizeof(vpmvec3), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.X->particles.X failed!");
+    }
+    if (bufferMask & BUFFER_U) {
+        cudaMemcpy(particles.U, dev_particles.U, numParticles * sizeof(vpmvec3), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.U->particles.U failed!");
+    }
+    if (bufferMask & BUFFER_J) {
+        cudaMemcpy(particles.J, dev_particles.J, numParticles * sizeof(vpmmat3), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.J->particles.J failed!");
+    }
+    if (bufferMask & BUFFER_GAMMA) {
+        cudaMemcpy(particles.Gamma, dev_particles.Gamma, numParticles * sizeof(vpmvec3), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.Gamma->particles.Gamma failed!");
+    }
+    if (bufferMask & BUFFER_SIGMA) {
+        cudaMemcpy(particles.sigma, dev_particles.sigma, numParticles * sizeof(vpmfloat), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.sigma->particles.sigma failed!");
+    }
+    if (bufferMask & BUFFER_SFS) {
+        cudaMemcpy(particles.SFS, dev_particles.SFS, numParticles * sizeof(vpmvec3), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.SFS->particles.SFS failed!");
+    }
+    if (bufferMask & BUFFER_C) {
+        cudaMemcpy(particles.C, dev_particles.C, numParticles * sizeof(vpmvec3), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.C->particles.C failed!");
+    }
+    if (bufferMask & BUFFER_M) {
+        cudaMemcpy(particles.M, dev_particles.M, numParticles * sizeof(vpmmat3), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.M->particles.M failed!");
+    }
+    if (bufferMask & BUFFER_INDEX) {
+        cudaMemcpy(particles.index, dev_particles.index, numParticles * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.index->particles.index failed!");
+    }
+
+    /*if (bufferMask & BUFFER_PSE) {
+        cudaMemcpy(particles.PSE, dev_particles.PSE, numParticles * sizeof(vpmvec3), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.PSE->particles.PSE failed!");
+    }
+
+    if (bufferMask & BUFFER_IS_STATIC) {
+        cudaMemcpy(particles.isStatic, dev_particles.isStatic, numParticles * sizeof(bool), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.isStatic->particles.isStatic failed!");
+    }
+
+    if (bufferMask & BUFFER_VOL) {
+        cudaMemcpy(particles.vol, dev_particles.vol, numParticles * sizeof(vpmfloat), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.vol->particles.vol failed!");
+    }
+
+    if (bufferMask & BUFFER_CIRCULATION) {
+        cudaMemcpy(particles.circulation, dev_particles.circulation, numParticles * sizeof(vpmfloat), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy dev_particles.circulation->particles.circulation failed!");
+    }*/
+
+    synchronized |= bufferMask;
+}
+
+template <typename R, typename S, typename K>
+void CoalescedParticleField<R, S, K>::copyDevParticlesToDevice(int bufferMask) {
+    // Declare device particle buffers
+	if (bufferMask & BUFFER_X) {
+		cudaMemcpy(dev_particles.X, particles.X, numParticles * sizeof(vpmvec3), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.X->dev_particles.X failed!");
+	}
+    
+    if (bufferMask & BUFFER_U) {
+        cudaMemcpy(dev_particles.U, particles.U, numParticles * sizeof(vpmvec3), cudaMemcpyHostToDevice);
+        cudaDeviceSynchronize();
+        checkCUDAError("cudaMemcpy particles.U->dev_particles.U failed!");
+    }
+
+	if (bufferMask & BUFFER_J) {
+		cudaMemcpy(dev_particles.J, particles.J, numParticles * sizeof(vpmmat3), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.J->dev_particles.J failed!");
+	}
+
+	if (bufferMask & BUFFER_GAMMA) {
+		cudaMemcpy(dev_particles.Gamma, particles.Gamma, numParticles * sizeof(vpmvec3), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.Gamma->dev_particles.Gamma failed!");
+	}
+
+	if (bufferMask & BUFFER_SIGMA) {
+		cudaMemcpy(dev_particles.sigma, particles.sigma, numParticles * sizeof(vpmfloat), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.sigma->dev_particles.sigma failed!");
+	}
+
+	if (bufferMask & BUFFER_SFS) {
+		cudaMemcpy(dev_particles.SFS, particles.SFS, numParticles * sizeof(vpmvec3), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.SFS->dev_particles.SFS failed!");
+	}
+
+	if (bufferMask & BUFFER_C) {
+		cudaMemcpy(dev_particles.C, particles.C, numParticles * sizeof(vpmvec3), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.C->dev_particles.C failed!");
+	}
+
+	if (bufferMask & BUFFER_M) {
+		cudaMemcpy(dev_particles.M, particles.M, numParticles * sizeof(vpmmat3), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.M->dev_particles.M failed!");
+	}
+
+	if (bufferMask & BUFFER_INDEX) {
+		cudaMemcpy(dev_particles.index, particles.index, numParticles * sizeof(int), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.index->dev_particles.index failed!");
+	}
+
+	/*if (bufferMask & BUFFER_PSE) {
+		cudaMemcpy(dev_particles.PSE, particles.PSE, numParticles * sizeof(vpmvec3), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.PSE->dev_particles.PSE failed!");
+	}
+
+	if (bufferMask & BUFFER_IS_STATIC) {
+		cudaMemcpy(dev_particles.isStatic, particles.isStatic, numParticles * sizeof(bool), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.isStatic->dev_particles.isStatic failed!");
+	}
+    
+	if (bufferMask & BUFFER_VOL) {
+		cudaMemcpy(dev_particles.vol, particles.vol, numParticles * sizeof(vpmfloat), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.vol->dev_particles.vol failed!");
+	}
+
+	if (bufferMask & BUFFER_CIRCULATION) {
+		cudaMemcpy(dev_particles.circulation, particles.circulation, numParticles * sizeof(vpmfloat), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		checkCUDAError("cudaMemcpy particles.circulation->dev_particles.circulation failed!");
+	}*/
+
+    synchronized |= bufferMask;
+}
+
+template <typename R, typename S, typename K>
+CoalescedParticleField<R, S, K>::CoalescedParticleField(
+    unsigned int maxParticles,
+    CoalescedParticle particles,
+    unsigned int numParticles,
+    int bufferMask,
+    unsigned int timeStep,
+    K kernel,
+    vpmvec3 uInf,
+    S sfs,
+    R relaxation)
+    :
+    maxParticles(maxParticles),
+    particles(particles),
+    numParticles(numParticles),
+    timeStep(timeStep),
+    kernel(kernel),
+    uInf(uInf),
+    sfs(sfs),
+    relaxation(relaxation),
+    synchronized(0) {
+
+	initDevParticles();
+
+	copyDevParticlesToDevice(bufferMask);
+};
+
+template <typename R, typename S, typename K>
+CoalescedParticleField<R, S, K>::~CoalescedParticleField() {
+    // free device memory
+    cudaFree(dev_particles.X);
+	cudaFree(dev_particles.U);
+	cudaFree(dev_particles.J);
+	cudaFree(dev_particles.Gamma);
+	cudaFree(dev_particles.sigma);
+	cudaFree(dev_particles.SFS);
+	cudaFree(dev_particles.C);
+	cudaFree(dev_particles.M);
+	cudaFree(dev_particles.index);
+	/*cudaFree(dev_particles.PSE);
+	cudaFree(dev_particles.isStatic);
+	cudaFree(dev_particles.vol);
+	cudaFree(dev_particles.circulation);*/
+}
+
 // *************************************************************
 // *                      RELAXATION                           *
 // *************************************************************
@@ -170,8 +522,8 @@ __global__ void correctedPedrizzettiRelax(int N, Particle* particles, vpmfloat r
     const vpmfloat omegaNorm = glm::length(omega);
     const vpmfloat gammaNorm = glm::length(oldGamma);
 
-    const vpmfloat tmp = sqrt(1.0 - 2.0 * (1.0 - relaxFactor) * relaxFactor
-        * (1.0 - glm::dot(oldGamma, omega) / (omegaNorm * gammaNorm)));
+    const vpmfloat tmp = sqrt(1.0f - 2.0f * (1.0f - relaxFactor) * relaxFactor
+        * (1.0f - glm::dot(oldGamma, omega) / (omegaNorm * gammaNorm)));
 
     particles[index].Gamma = ((1.0f - relaxFactor) * oldGamma
         + relaxFactor * gammaNorm / omegaNorm * omega) / tmp;
@@ -211,7 +563,7 @@ __global__ void calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
     vpmvec3 particleC = particles[index].C;
 
     vpmfloat numerator = glm::dot(particleM[0], particleGamma);
-    numerator *= 3.0 * alpha - 2.0;
+    numerator *= 3.0f * alpha - 2.0f;
 
     vpmfloat denominator = glm::dot(particleM[1], particleGamma);
     denominator *= particleSigma * particleSigma * particleSigma / zeta0;
@@ -220,8 +572,8 @@ __global__ void calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
     if (particleC[2] == 0) particleC[2] = denominator;
 
     // Lagrangian average
-    numerator = relaxFactor * numerator + (1 - relaxFactor) * particleC[1];
-    denominator = relaxFactor * denominator + (1 - relaxFactor) * particleC[2];
+    numerator = relaxFactor * numerator + (1.0f - relaxFactor) * particleC[1];
+    denominator = relaxFactor * denominator + (1.0f - relaxFactor) * particleC[2];
 
     // Enforce maximum and minimum absolute values
     if (fabs(numerator / denominator) > maxC) {
@@ -254,7 +606,7 @@ void DynamicSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat 
     Particle* particles = field.dev_particles;
     const int N = field.numParticles;
 
-    if (a == 1.0 || a == 0.0) {
+    if (a == 1.0f || a == 0.0f) {
         // CALCULATIONS WITH TEST FILTER
 #ifdef SHARED_MEMORY
         calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >>>(N, N, particles, particles, kernel, true, alpha);
@@ -331,16 +683,16 @@ __global__ void resetParticles(int N, Particle* particles) {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
-    particles[index].U = vpmvec3{ 0.0 };
-    particles[index].J = vpmmat3{ 0.0 };
-    particles[index].PSE = vpmvec3{ 0.0 };
+    particles[index].U = vpmvec3{ 0.0f };
+    particles[index].J = vpmmat3{ 0.0f };
+    particles[index].PSE = vpmvec3{ 0.0f };
 }
 
 __global__ void resetParticlesSFS(int N, Particle* particles) {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
-    particles[index].SFS = vpmvec3{ 0.0 };
+    particles[index].SFS = vpmvec3{ 0.0f };
 }
 
 template <typename K>
@@ -355,7 +707,7 @@ __global__ void calcEstrNaive(int targetN, int sourceN, Particle* targetParticle
     const vpmmat3 targetJ = targetParticles[index].J;
     vpmvec3 targetSFS;
     if (reset) {
-        targetSFS = vpmvec3{ 0.0 };
+        targetSFS = vpmvec3{ 0.0f };
     }
     else {
         targetSFS = targetParticles[index].SFS;
@@ -395,8 +747,8 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
         targetX = targetParticles[index].X;
 
         if (reset) {
-            targetU = vpmvec3{ 0.0 };
-            targetJ = vpmmat3{ 0.0 };
+            targetU = vpmvec3{ 0.0f };
+            targetJ = vpmmat3{ 0.0f };
         }
         else {
             targetU = targetParticles[index].U;
@@ -404,10 +756,17 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
         }
     }
     else {
-		targetX = vpmvec3{ 0.0 };
-		targetU = vpmvec3{ 0.0 };
-		targetJ = vpmmat3{ 0.0 };
+		targetX = vpmvec3{ 0.0f };
+		targetU = vpmvec3{ 0.0f };
+		targetJ = vpmmat3{ 0.0f };
     }
+
+#ifdef PREFETCH
+    vpmvec3 bufferX = sourceParticles[s_index].X;
+    vpmvec3 bufferGamma = sourceParticles[s_index].Gamma;
+    vpmfloat bufferSigma = sourceParticles[s_index].sigma;
+#endif
+
 #else
     if (index >= targetN) return;
 
@@ -417,25 +776,45 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
     vpmvec3 targetU;
     vpmmat3 targetJ;
     if (reset) {
-        targetU = vpmvec3{ 0.0 };
-        targetJ = vpmmat3{ 0.0 };
+        targetU = vpmvec3{ 0.0f };
+        targetJ = vpmmat3{ 0.0f };
     }
     else {
         targetU = targetParticles[index].U;
         targetJ = targetParticles[index].J;
     }
+
+#ifdef PREFETCH
+    vpmvec3 bufferX = sourceParticles[0].X;
+    vpmvec3 bufferGamma = sourceParticles[0].Gamma;
+    vpmfloat bufferSigma = sourceParticles[0].sigma;
 #endif
 
+#endif
 
 #ifdef SHARED_MEMORY
     // Copy source variables into shared memory
     for (int j = 0; j < sourceN; j += blockDim.x) {
         if (j + s_index < sourceN) {
+#ifdef PREFETCH
+            s_sourceX[s_index] = bufferX;
+            s_sourceGamma[s_index] = bufferGamma;
+            s_sourceSigma[s_index] = bufferSigma;
+#else
             s_sourceX[s_index]     = sourceParticles[s_index + j].X;
             s_sourceGamma[s_index] = sourceParticles[s_index + j].Gamma;
             s_sourceSigma[s_index] = sourceParticles[s_index + j].sigma;
+#endif   
         }
         __syncthreads();
+
+#ifdef PREFETCH
+        if (s_index + j + 1 < sourceN) {
+            bufferX = sourceParticles[s_index + j + 1].X;
+            bufferGamma = sourceParticles[s_index + j + 1].Gamma;
+            bufferSigma = sourceParticles[s_index + j + 1].sigma;
+        }
+#endif
 
         for (int i = 0; (i < blockDim.x) && (j + i < sourceN); ++i) {
             const vpmfloat invSourceSigma = 1 / (s_sourceSigma[i] * testFilterFactor);
@@ -444,15 +823,29 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
             const vpmvec3 dX = targetX - s_sourceX[i];
 #else
         for (int i = 0; i < sourceN; ++i) {
+#ifdef PREFETCH
+            const vpmfloat invSourceSigma = 1 / (bufferSigma * testFilterFactor);
+            const vpmvec3 sourceGamma = bufferGamma;
+
+            const vpmvec3 dX = targetX - bufferX;
+
+            if (i + 1 < sourceN) {
+                bufferX = sourceParticles[i + 1].X;
+                bufferGamma = sourceParticles[i + 1].Gamma;
+                bufferSigma = sourceParticles[i + 1].sigma;
+            }
+#else
             const vpmfloat invSourceSigma = 1 / (sourceParticles[i].sigma * testFilterFactor);
             const vpmvec3 sourceGamma = sourceParticles[i].Gamma;
 
             const vpmvec3 dX = targetX - sourceParticles[i].X;
 #endif
+            
+#endif
             const vpmfloat r = glm::length(dX);
 
             // is this needed?
-            if (r == 0.0) continue;
+            if (r == 0.0f) continue;
 
             // Kernel evaluation
             const vpmfloat g_sgm = kernel.g(r * invSourceSigma);
@@ -463,7 +856,7 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
             targetU += g_sgm * crossProd;
 
             // Compute Jacobian
-            vpmfloat tmp = dg_sgmdr * invSourceSigma / r - 3.0 * g_sgm / (r * r);
+            vpmfloat tmp = dg_sgmdr * invSourceSigma / r - 3.0f * g_sgm / (r * r);
 
 #pragma unroll
             for (int l = 0; l < 3; ++l) {
@@ -497,8 +890,178 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetPartic
 	targetParticles[index].U = targetU;
 	targetParticles[index].J = targetJ;
 #endif
+}
 
+template <typename K>
+__global__ void calcVelJacNaiveCoal(int targetN, int sourceN, CoalescedParticle targetParticles, 
+    CoalescedParticle sourceParticles, K kernel, bool reset, vpmfloat testFilterFactor) {
 
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	const vpmfloat invTestFilterFactor = 1.0f / testFilterFactor;
+
+#ifdef SHARED_MEMORY
+    int s_index = threadIdx.x;
+    extern __shared__ vpmfloat sharedMemory[];
+    vpmvec3*  s_sourceX     = (vpmvec3*)sharedMemory;
+    vpmvec3*  s_sourceGamma = (vpmvec3*)(s_sourceX + blockDim.x);
+    vpmfloat* s_sourceInvSigma = (vpmfloat*)(s_sourceGamma + blockDim.x);
+
+    vpmvec3 targetX;
+    vpmvec3 targetU;
+    vpmmat3 targetJ;
+    if (index < targetN) {
+        // Get target variables from global memory
+        targetX = targetParticles.X[index];
+
+        if (reset) {
+            targetU = vpmvec3{ 0.0f };
+            targetJ = vpmmat3{ 0.0f };
+        }
+        else {
+            targetU = targetParticles.U[index];
+            targetJ = targetParticles.J[index];
+        }
+    }
+    else {
+		targetX = vpmvec3{ 0.0f };
+		targetU = vpmvec3{ 0.0f };
+		targetJ = vpmmat3{ 0.0f };
+    }
+
+#ifdef PREFETCH
+    vpmvec3 bufferX = sourceParticles.X[s_index];
+    vpmvec3 bufferGamma = sourceParticles.Gamma[s_index];
+    vpmfloat bufferSigma = sourceParticles.sigma[s_index];
+#endif
+
+#else
+    if (index >= targetN) return;
+
+    // Get target variables from global memory
+    const vpmvec3 targetX = targetParticles.X[index];
+
+    vpmvec3 targetU;
+    vpmmat3 targetJ;
+    if (reset) {
+        targetU = vpmvec3{ 0.0f };
+        targetJ = vpmmat3{ 0.0f };
+    }
+    else {
+        targetU = targetParticles.U[index];
+        targetJ = targetParticles.J[index];
+    }
+
+#ifdef PREFETCH
+    vpmvec3 bufferX = sourceParticles.X[0];
+    vpmvec3 bufferGamma = sourceParticles.Gamma[0];
+    vpmfloat bufferSigma = invTestFilterFactor / sourceParticles.sigma[0];
+#endif
+
+#endif
+
+#ifdef SHARED_MEMORY
+    // Copy source variables into shared memory
+    for (int j = 0; j < sourceN; j += blockDim.x) {
+        if (j + s_index < sourceN) {
+#ifdef PREFETCH
+            s_sourceX[s_index] = bufferX;
+            s_sourceGamma[s_index] = bufferGamma;
+            s_sourceInvSigma[s_index] = bufferSigma;
+#else
+            s_sourceX[s_index]     = sourceParticles.X[s_index + j];
+            s_sourceGamma[s_index] = sourceParticles.Gamma[s_index + j];
+            s_sourceInvSigma[s_index] = invTestFilterFactor / sourceParticles.sigma[s_index + j];
+#endif   
+        }
+        __syncthreads();
+
+#ifdef PREFETCH
+        if (s_index + j + 1 < sourceN) {
+            bufferX = sourceParticles.X[s_index + j + 1];
+            bufferGamma = sourceParticles.Gamma[s_index + j + 1];
+            bufferSigma = invTestFilterFactor / sourceParticles.sigma[s_index + j + 1];
+        }
+#endif
+
+        for (int i = 0; (i < blockDim.x) && (j + i < sourceN); ++i) {
+            vpmvec3 dX = targetX - s_sourceX[i];
+            vpmfloat r = glm::length(dX);
+            const vpmfloat invSourceSigma = r * s_sourceInvSigma[i];
+			vpmvec3 sourceGamma = s_sourceGamma[i];
+            
+#else
+        for (int i = 0; i < sourceN; ++i) {
+#ifdef PREFETCH
+            vpmvec3 dX = targetX - bufferX;
+            vpmfloat r = glm::length(dX);
+            const vpmfloat invSourceSigma = r / (bufferSigma * testFilterFactor);
+            vpmvec3 sourceGamma = bufferGamma;
+
+            if (i + 1 < sourceN) {
+                bufferX = sourceParticles.X[i + 1];
+                bufferGamma = sourceParticles.Gamma[i + 1];
+                bufferSigma = sourceParticles.sigma[i + 1];
+            }
+#else
+            
+            vpmvec3 dX = targetX - sourceParticles.X[i];
+            vpmfloat r = glm::length(dX);
+            vpmvec3 sourceGamma = sourceParticles.Gamma[i];
+            const vpmfloat invSourceSigma = r / (sourceParticles.sigma[i] * testFilterFactor);
+#endif
+            
+#endif
+            // is this needed?
+            if (r == 0.0f) continue;
+
+            r = 1.0f / r;
+
+            // Kernel evaluation
+			const vpmvec2 g_dgdr = kernel.g_dgdr(invSourceSigma);
+
+            const vpmfloat tmp = -const4 * (r * r * r);
+
+            // Compute velocity
+            const vpmvec3 crossProd = tmp * glm::cross(dX, sourceGamma);
+            targetU += g_dgdr[0] * crossProd;
+
+            // Compute Jacobian
+            dX *= (g_dgdr[1] * invSourceSigma - 3.0f * g_dgdr[0]) * (r * r);
+
+            /*
+#pragma unroll
+            for (int l = 0; l < 3; ++l) {
+#pragma unroll
+                for (int k = 0; k < 3; ++k) {
+                    targetJ[l][k] += crossProd[k] * dX[l];
+                }
+            }*/
+
+            targetJ += glm::outerProduct(crossProd, dX);
+            sourceGamma *= tmp * g_dgdr[0];
+
+            // Account for kronecker delta term
+            targetJ[0][1] -= sourceGamma[2];
+            targetJ[0][2] += sourceGamma[1];
+            targetJ[1][0] += sourceGamma[2];
+            targetJ[1][2] -= sourceGamma[0];
+            targetJ[2][0] -= sourceGamma[1];
+            targetJ[2][1] += sourceGamma[0];
+        }
+#ifdef SHARED_MEMORY
+        __syncthreads();
+    }
+
+    if (index < targetN) {
+        // Copy variables back to global memory
+        targetParticles.U[index] = targetU;
+        targetParticles.J[index] = targetJ;
+    }
+#else
+	// Copy variables back to global memory
+	targetParticles.U[index] = targetU;
+	targetParticles.J[index] = targetJ;
+#endif
 }
 
 __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat b, vpmfloat dt, vpmfloat zeta0, vpmvec3 Uinf) {
@@ -514,8 +1077,8 @@ __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat 
     vpmvec3  particleGamma = particles[index].Gamma;
     vpmvec3  particleX     = particles[index].X;
     vpmmat3  particleM;
-    if (a == 1.0 || a == 0.0) {
-        particleM = vpmmat3{ 0.0 };
+    if (a == 1.0f || a == 0.0f) {
+        particleM = vpmmat3{ 0.0f };
     }
     else {
         particleM = particles[index].M;
@@ -536,13 +1099,13 @@ __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat 
 
     vpmvec3 S = xDotNablaY(particleGamma, particleJ);
 #ifdef CLASSIC_VPM
-    vpmfloat Z = 0.0;
+    vpmfloat Z = 0.0f;
 #else
-    vpmfloat Z = 0.2 * glm::dot(S, particleGamma) / glm::dot(particleGamma, particleGamma);
+    vpmfloat Z = (vpmfloat)0.2 * glm::dot(S, particleGamma) / glm::dot(particleGamma, particleGamma);
 #endif
 
     // Gamma update
-    particleM[1] = a * particleM[1] + dt * (S - 3 * Z * particleGamma
+    particleM[1] = a * particleM[1] + dt * (S - 3.0f * Z * particleGamma
         - particleC * particleSFS * particleSigma * particleSigma * particleSigma / zeta0);
     particleGamma += b * particleM[1];
     particles[index].Gamma = particleGamma;
@@ -554,8 +1117,6 @@ __global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat 
 
     particles[index].sigma = particleSigma;
 #endif
-
-
 
     particles[index].M = particleM;
 }
@@ -583,9 +1144,6 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
         rungeKuttaStep<<<numBlocks, blockSize>>>(N, field.dev_particles, a, b, dt, kernel.zeta(0.0), field.uInf);
         cudaDeviceSynchronize();
         checkCUDAError("rungeKuttaStep failed!");
-
-        field.synchronized = false;
-        field.getParticles();
     }
 
     field.relaxation(N, field, numBlocks, blockSize);
@@ -746,7 +1304,7 @@ void runVPM(
 
 
     for (int i = 0; i < numTimeSteps + 1; ++i) {
-        calcVortexRingMetrics(field, i, "test");
+        //calcVortexRingMetrics(field, i, "test");
 
         if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
             writeVTK(field, filename);
@@ -807,7 +1365,7 @@ void runSimulation() {
     vpmfloat dt{ 0.01f };
     int numStepsVTK{ 0 };
     vpmvec3 uInf{ 0, 0, 0 };
-    int blockSize{ 256 };
+    int blockSize{ 64 };
 
     // Create host particle buffer
     Particle* particleBuffer = new Particle[maxParticles];
@@ -834,4 +1392,79 @@ void runSimulation() {
 
     // Free host particle buffer
     delete[] particleBuffer;
+}
+
+void timeKernel(int repetitions) {
+    // Define basic parameters
+    unsigned int maxParticles{ 100000 };
+    vpmvec3 uInf{ 0, 0, 0 };
+    int blockSize{ 64 };
+
+    // Create host particle buffer
+    CoalescedParticle particles;
+    particles.X = new vpmvec3[maxParticles];
+    particles.Gamma = new vpmvec3[maxParticles];
+    particles.sigma = new vpmfloat[maxParticles];
+    particles.index = new int[maxParticles];
+	particles.U = new vpmvec3[maxParticles];
+    particles.J = new vpmmat3[maxParticles];
+
+    // Initialize particle buffer
+    unsigned int numParticles = initVortexRingsCoal(particles, maxParticles);
+
+    int numBlocks = (numParticles + blockSize - 1) / blockSize;
+
+    CoalescedParticleField<CorrectedPedrizzettiRelaxation, NoSFS, WinckelmansKernel> field{
+        maxParticles,
+        particles,
+        numParticles,
+		BUFFER_X | BUFFER_GAMMA | BUFFER_SIGMA | BUFFER_INDEX,
+        0,
+        WinckelmansKernel(),
+        uInf,
+        NoSFS(),
+        CorrectedPedrizzettiRelaxation(0.3)
+    };
+
+    /*// Create CUDA events
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    // Record the start event
+    cudaEventRecord(start);*/
+
+	for (int i = 0; i < repetitions; ++i) {
+#ifdef SHARED_MEMORY
+        calcVelJacNaiveCoal<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(field.numParticles, field.numParticles, field.dev_particles, field.dev_particles, field.kernel, true);
+#else
+        calcVelJacNaiveCoal<<<numBlocks, blockSize>>>(field.numParticles, field.numParticles, field.dev_particles, field.dev_particles, field.kernel, true);
+#endif
+        //field.copyDevParticlesToHost(BUFFER_U | BUFFER_J);
+        //std::cout << field.particles.J[0][0][2] << std::endl;
+		cudaDeviceSynchronize();
+	}
+
+    /*// Record the stop event
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    // Calculate the elapsed time
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    // Output the duration
+    std::cout << "Kernel execution took " << milliseconds << " milliseconds for " << repetitions << " repetitions." << std::endl;
+
+    // Destroy CUDA events
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);*/
+
+    // Free host particle buffer
+    delete[] particles.X;
+    delete[] particles.U;
+    delete[] particles.J;
+    delete[] particles.Gamma;
+    delete[] particles.sigma;
+    delete[] particles.index;
 }
