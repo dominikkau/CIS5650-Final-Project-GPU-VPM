@@ -214,6 +214,16 @@ enum BufferType {
     // Add other buffers as needed
 };
 
+enum OutputType {
+    OUTPUT_NONE = 0,
+    OUTPUT_X = 1 << 0,
+    OUTPUT_U = 1 << 1,
+    OUTPUT_OMEGA = 1 << 2,
+    OUTPUT_GAMMA = 1 << 3,
+    OUTPUT_SIGMA = 1 << 4,
+    OUTPUT_ALL = 0xFFFF
+};
+
 // ParticleField definition
 template <typename R = PedrizzettiRelaxation, typename S = NoSFS, typename K = GaussianErfKernel>
 struct ParticleField {

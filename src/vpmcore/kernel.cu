@@ -627,9 +627,9 @@ __global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetPar
     vpmvec3 targetXSigma{ 0.0f };
     for (int j = 0; j < sourceN; j += blockDim.x) {
         if (j + s_index < sourceN) {
+            s_sourceInvSigma[s_index] = 1.0f / (sourceParticles.sigma[s_index + j] * testFilterFactor);
             s_sourceX[s_index] = sourceParticles.X[s_index + j] * s_sourceInvSigma[s_index];
             s_sourceJ[s_index] = sourceParticles.J[s_index + j];
-            s_sourceInvSigma[s_index] = 1.0f / (sourceParticles.sigma[s_index + j] * testFilterFactor);
             s_sourceGammaSigma[s_index] = sourceParticles.Gamma[s_index + j]
                 * s_sourceInvSigma[s_index] * s_sourceInvSigma[s_index] * s_sourceInvSigma[s_index];
             targetXSigma = targetX * s_sourceInvSigma[s_index];
@@ -637,7 +637,7 @@ __global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetPar
         __syncthreads();
 
         for (int i = 0; (i < blockDim.x) && (j + i < sourceN); ++i) {
-            targetSFS += kernel.zeta(glm::length(targetX - s_sourceX[i]))
+            targetSFS += kernel.zeta(glm::length(targetXSigma - s_sourceX[i]))
                 * xDotNablaY(s_sourceGammaSigma[i], targetJ - s_sourceJ[i]);
         }
 
@@ -703,28 +703,19 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, ParticleBuffer targetP
             // is this needed?
             if (r == 0.0f) continue;
 
-            r = 1.0f / r;
+            const vpmfloat invR = 1.0f / r;
 
             // Kernel evaluation
 			const vpmvec2 g_dgdr = kernel.g_dgdr(invSourceSigma);
 
-            const vpmfloat tmp = -const4 * (r * r * r);
+            const vpmfloat tmp = -const4 * (invR * invR * invR);
 
             // Compute velocity
             const vpmvec3 crossProd = tmp * glm::cross(dX, sourceGamma);
             targetU += g_dgdr[0] * crossProd;
 
             // Compute Jacobian
-            dX *= (g_dgdr[1] * invSourceSigma - 3.0f * g_dgdr[0]) * (r * r);
-
-            /*
-#pragma unroll
-            for (int l = 0; l < 3; ++l) {
-#pragma unroll
-                for (int k = 0; k < 3; ++k) {
-                    targetJ[l][k] += crossProd[k] * dX[l];
-                }
-            }*/
+            dX *= (g_dgdr[1] * invSourceSigma - 3.0f * g_dgdr[0]) * (invR *invR);
 
             targetJ += glm::outerProduct(crossProd, dX);
             sourceGamma *= tmp * g_dgdr[0];
@@ -837,12 +828,17 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
 }
 
 template <typename R, typename S, typename K>
-void writeVTK(ParticleField<R, S, K>& field, const std::string filename) {
+void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int outputMask) {
     const int dim = 3;
 
-    field.cpyParticlesDeviceToHost(
-        BUFFER_INDEX | BUFFER_X | BUFFER_U | BUFFER_GAMMA | BUFFER_SIGMA
-    );
+    int bufferMask = 0;
+    if (outputMask & OUTPUT_X) bufferMask |= BUFFER_X;
+    if (outputMask & OUTPUT_U) bufferMask |= BUFFER_U;
+    if (outputMask & OUTPUT_OMEGA) bufferMask |= BUFFER_J;
+    if (outputMask & OUTPUT_SIGMA) bufferMask |= BUFFER_SIGMA;
+    if (outputMask & OUTPUT_GAMMA) bufferMask |= BUFFER_GAMMA;
+
+    field.cpyParticlesDeviceToHost(bufferMask);
 
     static leanvtk::VTUWriter writer;
 
@@ -859,20 +855,47 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename) {
     particleSigma.reserve(field.maxParticles);
     particleIdx.reserve(field.maxParticles);
 
-    vpmvec3 omega;
-    for (int i = 0; i < field.numParticles; ++i) {
-        particleIdx.push_back(field.particles.index[i]);
-        particleSigma.push_back(field.particles.sigma[i]);
+    if (outputMask & OUTPUT_X) {
+        particleX.insert(
+            particleX.begin(),
+            (vpmfloat*)field.particles.X,
+            (vpmfloat*)(field.particles.X + field.numParticles) + dim
+        );
+    }
+    if (outputMask & OUTPUT_U) {
+        particleU.insert(
+            particleU.begin(),
+            (vpmfloat*)field.particles.U,
+            (vpmfloat*)(field.particles.U + field.numParticles) + dim
+        );
+    }
+    if (outputMask & OUTPUT_GAMMA) {
+        particleGamma.insert(
+            particleGamma.begin(),
+            (vpmfloat*)field.particles.Gamma,
+            (vpmfloat*)(field.particles.Gamma + field.numParticles) + dim
+        );
+    }
+    if (outputMask & OUTPUT_SIGMA) {
+        particleSigma.insert(
+            particleSigma.begin(),
+            field.particles.sigma,
+            field.particles.sigma + field.numParticles
+        );
+    }
 
-        omega = nablaCrossX(field.particles.J[i]);
+    if (outputMask & OUTPUT_OMEGA) {
+        vpmvec3 omega;
+        for (int i = 0; i < field.numParticles; ++i) {
+            particleIdx.push_back(field.particles.index[i]);
+            particleSigma.push_back(field.particles.sigma[i]);
 
-        for (int j = 0; j < dim; ++j) {
-            particleU.push_back(field.particles.U[i][j]);
-            particleX.push_back(field.particles.X[i][j]);
-            particleGamma.push_back(field.particles.Gamma[i][j]);
-            particleOmega.push_back(omega[j]);
+            omega = nablaCrossX(field.particles.J[i]);
+
+            particleOmega.insert(particleOmega.end(), (vpmfloat*)&omega, (vpmfloat*)&omega + 3);
         }
     }
+
 
     writer.add_scalar_field("index", particleIdx);
     writer.add_scalar_field("sigma", particleSigma);
@@ -992,10 +1015,10 @@ void runVPM(
     for (int i = 0; i < numTimeSteps + 1; ++i) {
         //calcVortexRingMetrics(field, i, "test");
 
-        //if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
-        //    writeVTK(field, filename);
-        //    //std::cout << field.particles[0].U[0] << std::endl;
-        //}
+        if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
+            writeVTK(field, filename, OUTPUT_ALL);
+            //std::cout << field.particles[0].U[0] << std::endl;
+        }
 
         rungeKutta(field, dt, true, numBlocks, blockSize);
 
