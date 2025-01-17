@@ -9,8 +9,6 @@
 #define TRANSPOSED
 //#define DOUBLE_PRECISION
 #define CLASSIC_VPM
-#define SHARED_MEMORY
-#define PREFETCH
 
 #ifdef DOUBLE_PRECISION
     #define EPS 1e-9
@@ -117,7 +115,7 @@ template <typename R, typename S, typename K>
 struct ParticleField;
 
 struct Particle;
-struct CoalescedParticle;
+struct ParticleBuffer;
 
 struct DynamicSFS {
     vpmfloat minC;
@@ -133,9 +131,9 @@ struct DynamicSFS {
     void operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize);
 };
 
-__global__ void calculateTemporary(int N, Particle* particles, bool testFilter);
+__global__ void calculateTemporary(int N, ParticleBuffer particles, bool testFilter);
 
-__global__ void calculateCoefficient(int N, Particle* particles, vpmfloat zeta0,
+__global__ void calculateCoefficient(int N, ParticleBuffer particles, vpmfloat zeta0,
     vpmfloat alpha, vpmfloat relaxFactor, bool forcePositive, vpmfloat minC, vpmfloat maxC);
 
 struct NoSFS {
@@ -151,7 +149,7 @@ struct PedrizzettiRelaxation {
     void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize);
 };
 
-__global__ void pedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor);
+__global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relaxFactor);
 
 struct CorrectedPedrizzettiRelaxation {
     vpmfloat relaxFactor;
@@ -161,43 +159,11 @@ struct CorrectedPedrizzettiRelaxation {
     void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize);
 };
 
-__global__ void correctedPedrizzettiRelax(int N, Particle* particles, vpmfloat relaxFactor);
+__global__ void correctedPedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relaxFactor);
 
 struct NoRelaxation {
     template <typename R, typename S, typename K>
     inline void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize) {}
-};
-
-// ParticleField definition
-template <typename R=PedrizzettiRelaxation, typename S=NoSFS, typename K=GaussianErfKernel>
-struct ParticleField {
-    int maxParticles;           // Maximum number of particles
-    Particle* particles;        // Pointer to host particle buffer
-    Particle* dev_particles;    // Pointer to device particle buffer
-    int numParticles;           // Number of particles in the field
-    int timeStep;               // Current time step
-    K kernel;                   // Vortex particle kernel
-    vpmvec3 uInf;               // Uniform freestream function
-    S sfs;                      // Subfilter-scale contributions scheme
-    R relaxation;               // Relaxation scheme
-    bool synchronized;          // Flag if host buffer is synchronized with device
-
-    // Constructor
-    ParticleField(
-        int maxparticles,
-        Particle* particles,
-        int numParticles = 0,
-        int timeStep = 0,
-        K kernel = GaussianErfKernel(),
-        vpmvec3 uInf = vpmvec3(0, 0, 0),
-        S sfs = NoSFS(),
-        R relaxation = PedrizzettiRelaxation(0.005));
-    // Destructor
-    ~ParticleField();
-
-    void addParticle(Particle& particle);
-    void removeParticle(int index);
-    Particle* getParticles(); // Copies particle array from device to host
 };
 
 struct Particle {
@@ -221,7 +187,9 @@ struct Particle {
     vpmvec3 SFS;
 
     // Constructor
-    Particle();
+    Particle()
+        : X(0.0f), Gamma(0.0f), sigma(0.0f), vol(0.0f), circulation(0.0f), isStatic(false),
+        U(0.0f), J(0.0f), PSE(0.0f), M(0.0f), C(0.0f), SFS(0.0f), index(0) {}
  
     __host__ __device__ void Particle::reset();    // Reset particle U, J and PSE
     __host__ __device__ void Particle::resetSFS(); // Reset particle SFS
@@ -242,16 +210,16 @@ enum BufferType {
 	BUFFER_VOL = 1 << 10,
 	BUFFER_CIRCULATION = 1 << 11,
 	BUFFER_ISSTATIC = 1 << 12,
-	BUFFER_ALL = 0xFFFFFFFF
+	BUFFER_ALL = 0xFFFF
     // Add other buffers as needed
 };
 
 // ParticleField definition
 template <typename R = PedrizzettiRelaxation, typename S = NoSFS, typename K = GaussianErfKernel>
-struct CoalescedParticleField {
+struct ParticleField {
     unsigned int maxParticles;           // Maximum number of particles
-    CoalescedParticle particles;        // Pointer to host particle buffer
-    CoalescedParticle dev_particles;    // Pointer to device particle buffer
+    ParticleBuffer particles;        // Pointer to host particle buffer
+    ParticleBuffer dev_particles;    // Pointer to device particle buffer
     unsigned int numParticles;           // Number of particles in the field
     unsigned int timeStep;               // Current time step
     K kernel;                   // Vortex particle kernel
@@ -261,9 +229,9 @@ struct CoalescedParticleField {
     int synchronized;           // Flags if host buffers are synchronized with device
 
     // Constructor
-    CoalescedParticleField(
-        unsigned int maxparticles,
-        CoalescedParticle particles,
+    ParticleField(
+        unsigned int maxParticles,
+        ParticleBuffer particles,
         unsigned int numParticles,
         int bufferMask,
         unsigned int timeStep = 0,
@@ -271,31 +239,30 @@ struct CoalescedParticleField {
         vpmvec3 uInf = vpmvec3(0, 0, 0),
         S sfs = NoSFS(),
         R relaxation = PedrizzettiRelaxation(0.005)
-        );
+    );
     // Destructor
-    ~CoalescedParticleField();
+    ~ParticleField();
 
-    void initDevParticles();
+    void initParticlesDevice();
 
-	void copyDevParticlesToHost(int bufferMask);
+	void cpyParticlesDeviceToHost(int bufferMask);
+	void cpyParticlesHostToDevice(int bufferMask);
 
-	void copyDevParticlesToDevice(int bufferMask);
-
-    void addParticle(Particle& particle);
-    void overwriteParticle(Particle& particle, unsigned int index);
-    void removeParticle(unsigned int index);
+    void addParticleDevice(Particle& particle);
+    void overwriteParticleDevice(Particle& particle, unsigned int index);
+    void removeParticleDevice(unsigned int index);
 };
 
-struct CoalescedParticle {
-	vpmvec3* X = NULL;          // Position
+struct ParticleBuffer {
+    vpmvec3* X = NULL;          // Position
     vpmvec3* Gamma = NULL;      // Vectorial circulation
     vpmfloat* sigma = NULL;     // Smoothing radius
-	int* index = NULL;          // Indices of particles
-	vpmvec3* U = NULL;          // Velocity at particle
-	vpmmat3* J = NULL;          // Jacobian at particle
-	vpmmat3* M = NULL;          // Auxiliary memory
-	vpmvec3* C = NULL;          // SFS coefficient, numerator, denominator
-	vpmvec3* SFS = NULL;
+    int* index = NULL;          // Indices of particles
+    vpmvec3* U = NULL;          // Velocity at particle
+    vpmmat3* J = NULL;          // Jacobian at particle
+    vpmmat3* M = NULL;          // Auxiliary memory
+    vpmvec3* C = NULL;          // SFS coefficient, numerator, denominator
+    vpmvec3* SFS = NULL;
 
     /*vpmfloat* vol;            // Volume
     vpmfloat* circulation;    // Scalar circulation
@@ -303,39 +270,36 @@ struct CoalescedParticle {
     vpmvec3* PSE;             // Particle-strength exchange*/
 };
 
-__global__ void resetParticles(int N, Particle* particles);
-__global__ void resetParticlesSFS(int N, Particle* particles);
+__global__ void resetParticles(int N, ParticleBuffer particles);
+__global__ void resetParticlesSFS(int N, ParticleBuffer particles);
 
 template <typename K>
-__global__ void calcEstrNaive(int targetN, int sourceN, Particle* targetParticles,
-    Particle* sourceParticles, K kernel, bool reset=false, vpmfloat testFilterFactor=1.0);
+__global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetParticles,
+    ParticleBuffer sourceParticles, K kernel, bool reset=false, vpmfloat testFilterFactor=1.0);
 
 template <typename K>
-__global__ void calcVelJacNaive(int targetN, int sourceN, Particle* targetParticles,
-    Particle* sourceParticles, K kernel, bool reset=false, vpmfloat testFilterFactor=1.0);
+__global__ void calcVelJacNaive(int targetN, int sourceN, ParticleBuffer targetParticles,
+    ParticleBuffer sourceParticles, K kernel, bool reset=false, vpmfloat testFilterFactor=1.0);
 
-template <typename K>
-__global__ void calcVelJacNaiveCoal(int targetN, int sourceN, CoalescedParticle targetParticles,
-    CoalescedParticle sourceParticles, K kernel, bool reset, vpmfloat testFilterFactor = 1.0);
-
-__global__ void rungeKuttaStep(int N, Particle* particles, vpmfloat a, vpmfloat b, vpmfloat dt, vpmfloat zeta0, vpmvec3 Uinf);
+__global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpmfloat a, vpmfloat b, vpmfloat dt,
+    vpmfloat zeta0, vpmvec3 Uinf);
 
 template <typename R, typename S, typename K>
 void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int numBlocks, int blockSize);
 
-void randomCubeInit(Particle* particleBuffer, int N, vpmfloat cubeSize = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
-void randomSphereInit(Particle* particleBuffer, int N, vpmfloat sphereRadius = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
+void randomCubeInit(ParticleBuffer particleBuffer, int N, vpmfloat cubeSize = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
+void randomSphereInit(ParticleBuffer particleBuffer, int N, vpmfloat sphereRadius = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
 void runSimulation();
 
 template <typename R, typename S, typename K>
 void runVPM(
-    int maxParticles,
-    int numParticles,
-    int numTimeSteps,
+    unsigned int maxParticles,
+    unsigned int numParticles,
+    unsigned int numTimeSteps,
     vpmfloat dt,
-    int fileSaveSteps,
+    unsigned int fileSaveSteps,
     vpmvec3 uInf,
-    Particle* particleBuffer,
+    ParticleBuffer particleBuffer,
     R relaxation,
     S sfs,
     K kernel,
@@ -343,4 +307,4 @@ void runVPM(
     std::string filename
 );
 
-void timeKernel(int repetitions);
+//void timeKernel(int repetitions);
