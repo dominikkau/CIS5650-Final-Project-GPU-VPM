@@ -5,7 +5,7 @@
 
 int main(int argc, char* argv[]) {
     
-    timeKernel(1);
+    timeKernel(500);
 
     return 0;
 }

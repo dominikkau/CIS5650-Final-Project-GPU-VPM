@@ -10,7 +10,7 @@
 //#define DOUBLE_PRECISION
 #define CLASSIC_VPM
 #define SHARED_MEMORY
-//#define PREFETCH
+#define PREFETCH
 
 #ifdef DOUBLE_PRECISION
     #define EPS 1e-9
