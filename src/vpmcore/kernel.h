@@ -221,6 +221,7 @@ enum OutputType {
     OUTPUT_OMEGA = 1 << 2,
     OUTPUT_GAMMA = 1 << 3,
     OUTPUT_SIGMA = 1 << 4,
+    OUTPUT_INDEX = 1 << 5,
     OUTPUT_ALL = 0xFFFF
 };
 

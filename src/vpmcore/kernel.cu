@@ -837,6 +837,7 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
     if (outputMask & OUTPUT_OMEGA) bufferMask |= BUFFER_J;
     if (outputMask & OUTPUT_SIGMA) bufferMask |= BUFFER_SIGMA;
     if (outputMask & OUTPUT_GAMMA) bufferMask |= BUFFER_GAMMA;
+    if (outputMask & OUTPUT_INDEX) bufferMask |= BUFFER_INDEX;
 
     field.cpyParticlesDeviceToHost(bufferMask);
 
@@ -857,41 +858,43 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
 
     if (outputMask & OUTPUT_X) {
         particleX.insert(
-            particleX.begin(),
+            particleX.end(),
             (vpmfloat*)field.particles.X,
-            (vpmfloat*)(field.particles.X + field.numParticles) + dim
+            (vpmfloat*)(field.particles.X + field.numParticles)
         );
     }
     if (outputMask & OUTPUT_U) {
         particleU.insert(
-            particleU.begin(),
+            particleU.end(),
             (vpmfloat*)field.particles.U,
-            (vpmfloat*)(field.particles.U + field.numParticles) + dim
+            (vpmfloat*)(field.particles.U + field.numParticles)
         );
     }
     if (outputMask & OUTPUT_GAMMA) {
         particleGamma.insert(
-            particleGamma.begin(),
+            particleGamma.end(),
             (vpmfloat*)field.particles.Gamma,
-            (vpmfloat*)(field.particles.Gamma + field.numParticles) + dim
+            (vpmfloat*)(field.particles.Gamma + field.numParticles)
         );
     }
     if (outputMask & OUTPUT_SIGMA) {
         particleSigma.insert(
-            particleSigma.begin(),
+            particleSigma.end(),
             field.particles.sigma,
             field.particles.sigma + field.numParticles
         );
     }
-
+    if (outputMask & OUTPUT_INDEX) {
+        particleIdx.insert(
+            particleIdx.end(),
+            field.particles.index,
+            field.particles.index + field.numParticles
+        );
+    }
     if (outputMask & OUTPUT_OMEGA) {
         vpmvec3 omega;
         for (int i = 0; i < field.numParticles; ++i) {
-            particleIdx.push_back(field.particles.index[i]);
-            particleSigma.push_back(field.particles.sigma[i]);
-
             omega = nablaCrossX(field.particles.J[i]);
-
             particleOmega.insert(particleOmega.end(), (vpmfloat*)&omega, (vpmfloat*)&omega + 3);
         }
     }
@@ -1069,7 +1072,7 @@ void runSimulation() {
     unsigned int maxParticles{ 20000 };
     unsigned int numTimeSteps{ 1000 };
     vpmfloat dt{ 2.55922e-2f };
-    unsigned int numStepsVTK{ 0 };
+    unsigned int numStepsVTK{ 1 };
     vpmvec3 uInf{ 0, 0, 0 };
     int blockSize{ 64 };
 
