@@ -6,9 +6,9 @@
 #include "roundjetsimulation.hpp"
 #include "vpmcore/kernel.h"
 
-int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
+unsigned int addAnnulus(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat R,
     int Nphi, vpmfloat sigma, vpmfloat area, vpmvec3 jetOrigin,
-    vpmmat3 jetOrientation, bool isStatic, int startingIndex, int maxParticles){
+    vpmmat3 jetOrientation, bool isStatic, unsigned int startingIndex, unsigned int maxParticles) {
         
         // Arclength corresponding to phi for circle with radius r
         auto fun_S = [](vpmfloat phi, vpmfloat r) { return r * phi; };
@@ -74,21 +74,22 @@ int addAnnulus(Particle* particleBuffer, vpmfloat circulation, vpmfloat R,
 
             if (idx >= maxParticles - 1) return -1;
 
-            particleBuffer[idx].X = fun_X_global(X);
-            particleBuffer[idx].Gamma = fun_Gamma_global(Gamma);
-            particleBuffer[idx].circulation = circulation;
-            particleBuffer[idx].sigma = sigma;
-            particleBuffer[idx].vol = area * length;
-            particleBuffer[idx].index = idx;
-            particleBuffer[idx].isStatic = isStatic;
+            particleBuffer.X[idx] = fun_X_global(X);
+            particleBuffer.Gamma[idx] = fun_Gamma_global(Gamma);
+            //particleBuffer[idx].circulation[idx] = circulation;
+            particleBuffer.sigma[idx] = sigma;
+            //particleBuffer.vol[idx] = area * length;
+            particleBuffer.index[idx] = idx;
+            //particleBuffer.isStatic[idx] = isStatic;
             ++idx;
         }
         return idx;
 }
 
 
-std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuffer, int maxParticles) {
-    // TODO: Is this the correct way to return the particle buffer?
+std::pair<unsigned int, unsigned int> initRoundJet(ParticleBuffer particleBuffer, ParticleBuffer boundaryBuffer,
+    unsigned int maxParticles) {
+
     // ------- SIMULATION PARAMETERS ------- 
     // (m) jet diameter
     const vpmfloat d{ 45.4e-3f };
@@ -112,7 +113,7 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
     int steps_per_d = 100;           // Number of time steps for the centerline at U1 to travel one diameter
     int d_travel_tot = 60;          // Run simulation for an equivalent of this many diameters
     vpmfloat maxRoR = 1.0f;            // (m) maximum radial distance to discretize
-    vpmfloat dxotheta = 0.25f;        // Distance Δx between particles over momentum thickness θ
+    vpmfloat dxotheta = 0.5f;        // Distance Δx between particles over momentum thickness θ
     vpmfloat overlap = 2.4f;           // Overlap between particles
 
     int numParticles{ 0 };
@@ -148,7 +149,7 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
     // auto Vjet_wrap = [Vjet](vpmvec3 X){ Vjet(X[1])};
     
     // Convert velocity profile to vorticity profile
-    auto dVdr = [d, thetaod, U1](vpmfloat r){
+    auto dVdr = [d, thetaod, U1](vpmfloat r) {
         return U1 * r / (pow(cosh((d - 2 * abs(r))/(2 * thetaod * d)), 2) * thetaod * d * abs(r));
     };
 
@@ -159,7 +160,7 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
     vpmfloat step = (2 * maxR)/(length - 1);
     vpmfloat Wpeak = -FLT_MAX;
 
-    for (vpmfloat radius = -maxR; radius <= maxR; radius += step){
+    for (vpmfloat radius = -maxR; radius <= maxR; radius += step) {
         Wpeak = fmax(Wr(radius), Wpeak);
     }
     
@@ -215,17 +216,18 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
                 vpmvec3 currentJetOrigin = jetOrigin + zi * dz * Cline;
                
                 bool isStatic = zi!=0;
+
                 // Call addAnnulus with appropriate arguments
                 startingIndex = addAnnulus(particleBuffer, circulation, R, Nphi, sigma, area,
-                            jetOrigin, jetOrientation, isStatic, startingIndex, maxParticles);
+                    currentJetOrigin, jetOrientation, isStatic, startingIndex, maxParticles);
                 
                 if (startingIndex == -1) break;
   
                 numParticles = startingIndex;
 
-                // If `zi == 0`, update boundary condition indices
+                // If zi == 0, update boundary condition indices
                 if (zi == 0) {
-                    for (int pi = org_np + 1; pi <= numParticles; ++pi) {
+                    for (int pi = org_np; pi < numParticles; ++pi) {
                         BCi.push_back(pi);
                     }
                 }
@@ -236,7 +238,10 @@ std::pair<int, int> initRoundJet(Particle* particleBuffer, Particle* boundaryBuf
     int j = 0;
     // BCi always the same in
     for (int i = 0; i < BCi.size(); i++){
-        boundaryBuffer[j] = particleBuffer[BCi[i]];
+        boundaryBuffer.X[j] = particleBuffer.X[BCi[i]];
+        boundaryBuffer.Gamma[j] = particleBuffer.Gamma[BCi[i]];
+        boundaryBuffer.sigma[j] = particleBuffer.sigma[BCi[i]];
+        boundaryBuffer.index[j] = particleBuffer.index[BCi[i]];
         j++;
     }
     // remove all particles from particleBuffer that are not in the BCi array?

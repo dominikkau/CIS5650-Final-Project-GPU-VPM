@@ -5,11 +5,10 @@
 #include <glm/glm.hpp>
 #include <string>
 
-#define ENABLE_CUDA_ERROR
+//#define ENABLE_CUDA_ERROR
 #define TRANSPOSED
 //#define DOUBLE_PRECISION
-#define CLASSIC_VPM
-#define ROUNDJET
+//#define CLASSIC_VPM
 
 #ifdef DOUBLE_PRECISION
     #define EPS 1e-9
@@ -254,12 +253,14 @@ struct ParticleField {
 
     void initParticlesDevice();
 
-	void cpyParticlesDeviceToHost(int bufferMask);
-	void cpyParticlesHostToDevice(int bufferMask);
+	void syncParticlesDeviceToHost(int bufferMask);
+	void syncParticlesHostToDevice(int bufferMask);
 
     void addParticleDevice(Particle& particle);
     void overwriteParticleDevice(Particle& particle, unsigned int index);
     void removeParticleDevice(unsigned int index);
+    void cpyParticlesDeviceToDevice(ParticleBuffer inParticles, unsigned int inNumParticles,
+        unsigned int startIndex, int bufferMask);
 };
 
 struct ParticleBuffer {
@@ -279,6 +280,9 @@ struct ParticleBuffer {
     vpmvec3* PSE;             // Particle-strength exchange*/
 };
 
+unsigned int cpyParticleBuffer(ParticleBuffer destBuffer, ParticleBuffer srcBuffer, unsigned int destNumParticles,
+    unsigned int destMaxParticles, unsigned int srcNumParticles, unsigned int destIndex, int bufferMask, cudaMemcpyKind cpyDirection);
+
 __global__ void resetParticles(int N, ParticleBuffer particles);
 __global__ void resetParticlesSFS(int N, ParticleBuffer particles);
 
@@ -296,8 +300,6 @@ __global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpmfloat a, vpmf
 template <typename R, typename S, typename K>
 void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int numBlocks, int blockSize);
 
-void randomCubeInit(ParticleBuffer particleBuffer, int N, vpmfloat cubeSize = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
-void randomSphereInit(ParticleBuffer particleBuffer, int N, vpmfloat sphereRadius = 10.0f, vpmfloat maxCirculation = 1.0f, vpmfloat maxSigma = 1.0f);
 void runSimulation();
 
 template <typename R, typename S, typename K>
