@@ -26,13 +26,13 @@ void checkCUDAErrorFn(const char* msg, const char* file, int line) {
 }
 
 __host__ __device__ void Particle::reset() {
-    U   = vpmvec3(0.0f);
-    J   = vpmmat3(0.0f);
-    PSE = vpmvec3(0.0f);
+    U   = vpmvec3{ 0.0f };
+    J   = vpmmat3{ 0.0f };
+    //PSE = vpmvec3{ 0.0f };
 }
 
 __host__ __device__ void Particle::resetSFS() {
-    SFS = vpmvec3(0.0f);
+    SFS = vpmvec3{ 0.0f };
 }
 
 // *************************************************************
@@ -395,7 +395,7 @@ ParticleField<R, S, K>::~ParticleField() {
 
 template <typename R, typename S, typename K>
 void PedrizzettiRelaxation::operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize) {
-    calcVelJacNaive << <numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >> > (N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     cudaDeviceSynchronize();
     checkCUDAError("calcVelJacNaive (PedrizzettiRelaxation) failed!");
 
@@ -417,7 +417,7 @@ __global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relax
 
 template <typename R, typename S, typename K>
 void CorrectedPedrizzettiRelaxation::operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize) {
-    calcVelJacNaive << <numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >> > (N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     cudaDeviceSynchronize();
     checkCUDAError("calcVelJacNaive (CorrectedPedrizzettiRelaxation) failed!");
 
@@ -700,9 +700,7 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, ParticleBuffer targetP
             const vpmfloat invSourceSigma = r * s_sourceInvSigma[i];
 			vpmvec3 sourceGamma = s_sourceGamma[i];
             
-            // is this needed?
             if (r == 0.0f) continue;
-
             const vpmfloat invR = 1.0f / r;
 
             // Kernel evaluation
@@ -758,14 +756,6 @@ __global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpmfloat a, vpmf
     else {
         particleM = particles.M[index];
     }
-    
-    const vpmvec3  particleJ0 = particleJ[0];
-    const vpmvec3  particleJ1 = particleJ[1];
-    const vpmvec3  particleJ2 = particleJ[2];
-
-    const vpmvec3  particleM0 = particleM[0];
-    const vpmvec3  particleM1 = particleM[1];
-    const vpmvec3  particleM2 = particleM[2];
 
     // Position update
     particleM[0] = a * particleM[0] + dt * (particleU + Uinf);
@@ -898,7 +888,6 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
             particleOmega.insert(particleOmega.end(), (vpmfloat*)&omega, (vpmfloat*)&omega + 3);
         }
     }
-
 
     writer.add_scalar_field("index", particleIdx);
     writer.add_scalar_field("sigma", particleSigma);

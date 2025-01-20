@@ -167,29 +167,26 @@ struct NoRelaxation {
 };
 
 struct Particle {
-    // User-defined variables
-    vpmvec3 X;               // Position
-    vpmvec3 Gamma;           // Vectorial circulation
-    vpmfloat sigma;          // Smoothing radius
-    vpmfloat vol;            // Volume
+    vpmvec3 X;          // Position
+    vpmvec3 Gamma;      // Vectorial circulation
+    vpmfloat sigma;     // Smoothing radius
+    int index;          // Indices of particles
+    vpmvec3 U;          // Velocity at particle
+    vpmmat3 J;          // Jacobian at particle
+    vpmmat3 M;          // Auxiliary memory
+    vpmvec3 C;          // SFS coefficient, numerator, denominator
+    vpmvec3 SFS;
+
+    /*vpmfloat vol;            // Volume
     vpmfloat circulation;    // Scalar circulation
     bool isStatic;           // Indicates if particle is static
-    int index;
-
-    // Properties
-    vpmvec3 U;               // Velocity at particle
-    vpmmat3 J;               // Jacobian at particle
-    vpmvec3 PSE;             // Particle-strength exchange
-
-    // Internal variables
-    vpmmat3 M;               // Auxiliary memory
-    vpmvec3 C;               // SFS coefficient, numerator, denominator
-    vpmvec3 SFS;
+    vpmvec3 PSE;             // Particle-strength exchange*/
 
     // Constructor
     Particle()
-        : X(0.0f), Gamma(0.0f), sigma(0.0f), vol(0.0f), circulation(0.0f), isStatic(false),
-        U(0.0f), J(0.0f), PSE(0.0f), M(0.0f), C(0.0f), SFS(0.0f), index(0) {}
+        : X(0.0f), Gamma(0.0f), sigma(0.0f), 
+        U(0.0f), J(0.0f),  M(0.0f), C(0.0f), SFS(0.0f), index(0) {}
+        //PSE(0.0f), vol(0.0f), circulation(0.0f), isStatic(false), 
  
     __host__ __device__ void Particle::reset();    // Reset particle U, J and PSE
     __host__ __device__ void Particle::resetSFS(); // Reset particle SFS
