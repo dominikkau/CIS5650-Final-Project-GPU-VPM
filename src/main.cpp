@@ -1,65 +1,35 @@
 #include "main.hpp"
 #include "vpmcore/kernel.h"
-#include <cuda_runtime.h>
+#include <chrono>
 #include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
 
 int main(int argc, char* argv[]) {
+    
+    // Create CUDA events
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
-    const std::string logFileName = "vortex_ring_simulation_log.txt";
-    std::ofstream logFile(logFileName, std::ios::out);
+    // Record the start event
+    cudaEventRecord(start);
 
-    if (!logFile.is_open()) {
-        std::cerr << "Failed to open log file: " << logFileName << std::endl;
-        return 1;
-    }
+    //timeKernel(500);
+    runSimulation();
 
-    // Log file header
-    logFile << "Nphi,nc,Time(ms)" << std::endl;
+    // Record the stop event
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
 
-    // Varying parameters
-    std::vector<int> Nphis = { 100, 200, 300 }; // Add more values as needed
-    std::vector<int> ncs = { 1, 2, 3 };         // Add more values as needed
+    // Calculate the elapsed time
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
 
-    for (int Nphi : Nphis) {
-        for (int nc : ncs) {
-            cudaEvent_t start, stop;
-            cudaEventCreate(&start);
-            cudaEventCreate(&stop);
+    // Output the duration
+    std::cout << "Kernel execution took " << milliseconds << " milliseconds." << std::endl;
 
-            cudaEventRecord(start, 0);
-
-            try {
-                runSimulation(Nphi, nc);
-            }
-            catch (const std::exception& e) {
-                std::cerr << "Simulation failed for Nphi=" << Nphi
-                    << ", nc=" << nc << ": " << e.what() << std::endl;
-                logFile << Nphi << "," << nc << ",FAILED" << std::endl;
-                continue; // Skip to the next combination
-            }
-
-            cudaEventRecord(stop, 0);
-            cudaEventSynchronize(stop);
-
-            float milliseconds = 0;
-            cudaEventElapsedTime(&milliseconds, start, stop);
-
-            // Output results to console and log file
-            std::cout << "Nphi: " << Nphi << ", nc: " << nc
-                << ", Time: " << milliseconds << " ms" << std::endl;
-
-            logFile << Nphi << "," << nc << "," << milliseconds << std::endl;
-
-            cudaEventDestroy(start);
-            cudaEventDestroy(stop);
-        }
-    }
-
-    logFile.close();
-    std::cout << "Results logged to " << logFileName << std::endl;
+    // Destroy CUDA events
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     return 0;
 }
