@@ -23,27 +23,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-find_package(OpenGL REQUIRED)
-
 if(UNIX)
     include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
-    find_package(glfw3 REQUIRED)
-    find_package(GLEW REQUIRED)
-    set(LIBRARIES glfw ${GLEW_LIBRARIES} ${OPENGL_LIBRARIES})
-else(UNIX)
-    set(EXTERNAL "${CMAKE_SOURCE_DIR}/external")
-
-    set(GLFW_ROOT_DIR ${EXTERNAL})
-    set(GLFW_USE_STATIC_LIBS ON)
-    find_package(GLFW REQUIRED)
-
-    set(GLEW_ROOT_DIR ${EXTERNAL})
-    set(GLEW_USE_STATIC_LIBS ON)
-    find_package(GLEW REQUIRED)
-
-    add_definitions(${GLEW_DEFINITIONS})
-    include_directories(${GLEW_INCLUDE_DIR} ${GLFW_INCLUDE_DIR})
-    set(LIBRARIES ${GLEW_LIBRARY} ${GLFW_LIBRARY} ${OPENGL_LIBRARY})
 endif(UNIX)
 
 set(GLM_ROOT_DIR "${CMAKE_SOURCE_DIR}/external")
