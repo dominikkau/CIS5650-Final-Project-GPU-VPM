@@ -33,7 +33,9 @@ include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
     src/main.hpp
+    src/vpmcore/common.h
     src/vpmcore/kernel.h
+    src/vpmcore/particlebuffer.h
     src/lean_vtk.hpp
     src/vortexringsimulation.hpp
     src/roundjetsimulation.hpp
@@ -42,6 +44,7 @@ set(headers
 set(sources
     src/main.cpp
     src/vpmcore/kernel.cu
+    src/vpmcore/particlebuffer.cu
     src/lean_vtk.cpp
     src/vortexringsimulation.cpp
     src/roundjetsimulation.cpp

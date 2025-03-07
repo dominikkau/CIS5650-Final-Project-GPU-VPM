@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 #define ENABLE_CUDA_ERROR
 #define TRANSPOSED
 //#define DOUBLE_PRECISION

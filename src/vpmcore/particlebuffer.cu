@@ -85,18 +85,19 @@ void ParticleBuffer::mallocFields(unsigned int numParticles, int bufferMask) {
         break;
 
     case BUFFER_HOST_PINNED:
-        cudaMallocHost((void**)&X, numParticles * sizeof(vpmvec3));
-        if (status != cudaSuccess) printf("Error allocating pinned host memory (X)\n");
-        status = cudaMallocHost((void**)&particleU, numParticles * sizeof(vpmvec3));
-        if (status != cudaSuccess) printf("Error allocating pinned host memory (U)\n");
-        status = cudaMallocHost((void**)&particleJ, numParticles * sizeof(vpmmat3));
-        if (status != cudaSuccess) printf("Error allocating pinned host memory (J)\n");
-        status = cudaMallocHost((void**)&particleindex, numParticles * sizeof(int));
-        if (status != cudaSuccess) printf("Error allocating pinned host memory (index)\n");
-        status = cudaMallocHost((void**)&particleGamma, numParticles * sizeof(vpmvec3));
-        if (status != cudaSuccess) printf("Error allocating pinned host memory (Gamma)\n");
-        status = cudaMallocHost((void**)&particlesigma, numParticles * sizeof(vpmfloat));
-        if (status != cudaSuccess) printf("Error allocating pinned host memory (sigma)\n");
+        if (bufferMask & BUFFER_X) cudaMallocHost((void**)&X, numParticles * sizeof(vpmvec3));
+        if (bufferMask & BUFFER_U) cudaMallocHost((void**)&U, numParticles * sizeof(vpmvec3));
+        if (bufferMask & BUFFER_J) cudaMallocHost((void**)&J, numParticles * sizeof(vpmmat3));
+        if (bufferMask & BUFFER_GAMMA) cudaMallocHost((void**)&Gamma, numParticles * sizeof(vpmvec3));
+        if (bufferMask & BUFFER_SIGMA) cudaMallocHost((void**)&sigma, numParticles * sizeof(vpmfloat));
+        if (bufferMask & BUFFER_SFS) cudaMallocHost((void**)&SFS, numParticles * sizeof(vpmvec3));
+        if (bufferMask & BUFFER_C) cudaMallocHost((void**)&C, numParticles * sizeof(vpmvec3));
+        if (bufferMask & BUFFER_M) cudaMallocHost((void**)&M, numParticles * sizeof(vpmmat3));
+        if (bufferMask & BUFFER_INDEX) cudaMallocHost((void**)&X, numParticles * sizeof(vpmvec3));
+        /*if (bufferMask & BUFFER_PSE) cudaMallocHost((void**)&PSE, numParticles * sizeof(vpmvec3));
+        if (bufferMask & BUFFER_IS_STATIC) cudaMallocHost((void**)&isStatic, numParticles * sizeof(bool));
+        if (bufferMask & BUFFER_VOL) cudaMallocHost((void**)&vol, numParticles * sizeof(vpmfloat));
+        if (bufferMask & BUFFER_CIRC) cudaMallocHost((void**)&circulation, numParticles * sizeof(vpmfloat));*/
         break;
     }
 

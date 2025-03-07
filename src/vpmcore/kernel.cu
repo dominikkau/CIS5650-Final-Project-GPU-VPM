@@ -123,13 +123,13 @@ void ParticleField<R, S, K>::removeParticleDevice(unsigned int index) {
 
 template <typename R, typename S, typename K>
 void ParticleField<R, S, K>::syncParticlesDeviceToHost(int bufferMask) {
-    cpyParticleBuffer(particles, dev_particles, 0, numParticles, bufferMask & (~synchronized));
+    _cpyParticleBuffer(particles, dev_particles, 0, numParticles, bufferMask & (~synchronized));
     synchronized |= bufferMask;
 }
 
 template <typename R, typename S, typename K>
 void ParticleField<R, S, K>::syncParticlesHostToDevice(int bufferMask) {
-    cpyParticleBuffer(dev_particles, particles, 0, numParticles, bufferMask & (~synchronized));
+    _cpyParticleBuffer(dev_particles, particles, 0, numParticles, bufferMask & (~synchronized));
     synchronized |= bufferMask;
 } 
 
@@ -158,7 +158,12 @@ ParticleField<R, S, K>::ParticleField(
     dev_particles.mallocFields(maxParticles, BUFFER_ALL);
     synchronized = 0;
 
-	syncParticlesHostToDevice(bufferMask);
+    // Minimum requirement for initialization
+    if (!(particles.bufferFields & (BUFFER_X | BUFFER_GAMMA | BUFFER_SIGMA))) {
+        std::cerr << "Initialization particleBuffer does not have minimum required fields" << std::endl;
+        exit(1);
+    }
+	syncParticlesHostToDevice(particles.bufferFields);
 };
 
 template <typename R, typename S, typename K>
@@ -830,7 +835,7 @@ void runBoundaryVPM(
     int numBlocks = (numParticles + blockSize - 1) / blockSize;
 
     ParticleBuffer dev_boundaryBuffer{ BUFFER_DEVICE };
-    dev_boundaryBuffer.mallocFields(BUFFER_X | BUFFER_SIGMA | BUFFER_GAMMA | BUFFER_INDEX);
+    dev_boundaryBuffer.mallocFields(numBoundary, BUFFER_X | BUFFER_SIGMA | BUFFER_GAMMA | BUFFER_INDEX);
 
     // Copy boundary particle buffer from host to device
     cpyParticleBuffer(dev_boundaryBuffer, boundaryBuffer, numBoundary, numBoundary, numBoundary, 0,
