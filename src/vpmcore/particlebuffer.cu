@@ -93,7 +93,7 @@ void ParticleBuffer::mallocFields(unsigned int numParticles, int bufferMask) {
         if (bufferMask & BUFFER_SFS) cudaMallocHost((void**)&SFS, numParticles * sizeof(vpmvec3));
         if (bufferMask & BUFFER_C) cudaMallocHost((void**)&C, numParticles * sizeof(vpmvec3));
         if (bufferMask & BUFFER_M) cudaMallocHost((void**)&M, numParticles * sizeof(vpmmat3));
-        if (bufferMask & BUFFER_INDEX) cudaMallocHost((void**)&X, numParticles * sizeof(vpmvec3));
+        if (bufferMask & BUFFER_INDEX) cudaMallocHost((void**)&index, numParticles * sizeof(int));
         /*if (bufferMask & BUFFER_PSE) cudaMallocHost((void**)&PSE, numParticles * sizeof(vpmvec3));
         if (bufferMask & BUFFER_IS_STATIC) cudaMallocHost((void**)&isStatic, numParticles * sizeof(bool));
         if (bufferMask & BUFFER_VOL) cudaMallocHost((void**)&vol, numParticles * sizeof(vpmfloat));
