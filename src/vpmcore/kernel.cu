@@ -10,23 +10,6 @@
 #include "../roundjetsimulation.hpp"
 #include <device_launch_parameters.h>
 
-void checkCUDAErrorFn(const char* msg, const char* file, int line) {
-#ifdef ENABLE_CUDA_ERROR
-	cudaDeviceSynchronize();
-    cudaError_t err = cudaGetLastError();
-    if (cudaSuccess == err) {
-        return;
-    }
-
-    fprintf(stderr, "CUDA error");
-    if (file) {
-        fprintf(stderr, " (%s:%d)", file, line);
-    }
-    fprintf(stderr, ": %s: %s\n", msg, cudaGetErrorString(err));
-    exit(EXIT_FAILURE);
-#endif
-}
-
 __host__ __device__ void Particle::reset() {
     U   = vpmvec3{ 0.0f };
     J   = vpmmat3{ 0.0f };
@@ -43,79 +26,12 @@ __host__ __device__ void Particle::resetSFS() {
 
 struct ParticleBuffer;
 
-
-void cpyParticleBuffer(ParticleBuffer destBuffer, ParticleBuffer srcBuffer, 
-    unsigned int destIndex, unsigned int srcNumParticles, int bufferMask, cudaMemcpyKind cpyDirection) {
-
-    if (bufferMask & BUFFER_X) {
-        cudaMemcpy(destBuffer.X + destIndex, srcBuffer.X, srcNumParticles * sizeof(vpmvec3), cpyDirection);
-    }
-    if (bufferMask & BUFFER_U) {
-        cudaMemcpy(destBuffer.U + destIndex, srcBuffer.U, srcNumParticles * sizeof(vpmvec3), cpyDirection);
-    }
-    if (bufferMask & BUFFER_J) {
-        cudaMemcpy(destBuffer.J + destIndex, srcBuffer.J, srcNumParticles * sizeof(vpmmat3), cpyDirection);
-    }
-    if (bufferMask & BUFFER_GAMMA) {
-        cudaMemcpy(destBuffer.Gamma + destIndex, srcBuffer.Gamma, srcNumParticles * sizeof(vpmvec3), cpyDirection);
-    }
-    if (bufferMask & BUFFER_SIGMA) {
-        cudaMemcpy(destBuffer.sigma + destIndex, srcBuffer.sigma, srcNumParticles * sizeof(vpmfloat), cpyDirection);
-    }
-    if (bufferMask & BUFFER_SFS) {
-        cudaMemcpy(destBuffer.SFS + destIndex, srcBuffer.SFS, srcNumParticles * sizeof(vpmvec3), cpyDirection);
-    }
-    if (bufferMask & BUFFER_C) {
-        cudaMemcpy(destBuffer.C + destIndex, srcBuffer.C, srcNumParticles * sizeof(vpmvec3), cpyDirection);
-    }
-    if (bufferMask & BUFFER_M) {
-        cudaMemcpy(destBuffer.M + destIndex, srcBuffer.M, srcNumParticles * sizeof(vpmmat3), cpyDirection);
-    }
-    if (bufferMask & BUFFER_INDEX) {
-        cudaMemcpy(destBuffer.index + destIndex, srcBuffer.index, srcNumParticles * sizeof(int), cpyDirection);
-    }
-    /*if (bufferMask & BUFFER_PSE) {
-        cudaMemcpy(destBuffer.PSE + destIndex, srcBuffer.PSE, srcNumParticles * sizeof(vpmvec3), cpyDirection);
-    }
-    if (bufferMask & BUFFER_IS_STATIC) {
-        cudaMemcpy(destBuffer.isStatic + destIndex, srcBuffer.isStatic, srcNumParticles * sizeof(bool), cpyDirection);
-    }
-    if (bufferMask & BUFFER_VOL) {
-    cudaMemcpy(destBuffer.vol + destIndex, srcBuffer.vol, srcNumParticles * sizeof(vpmfloat), cpyDirection);
-    }
-    if (bufferMask & BUFFER_CIRC) {
-        cudaMemcpy(destBuffer.circulation + destIndex, srcBuffer.circulation, srcNumParticles * sizeof(vpmfloat), cpyDirection);
-    }*/
-}
-
-unsigned int cpyParticleBuffer(ParticleBuffer destBuffer, ParticleBuffer srcBuffer, unsigned int destNumParticles,
-    unsigned int destMaxParticles, unsigned int srcNumParticles, unsigned int destIndex, int bufferMask, cudaMemcpyKind cpyDirection) {
-
-    // Start index exceeds maximum number of particles
-    if (destIndex >= destMaxParticles) return destNumParticles;
-
-    // Do not leave undefined particles between existing and copied
-    if (destIndex > destNumParticles) destIndex = destNumParticles;
-
-    // Number of particles to be copied is limited by destMaxParticles
-    srcNumParticles = min(srcNumParticles, destMaxParticles - destIndex);
-
-    cpyParticleBuffer(destBuffer, srcBuffer, destIndex, srcNumParticles, bufferMask, cpyDirection);
-
-    // Calculate new number of particles
-    if (destIndex + srcNumParticles >= destNumParticles) {
-        destNumParticles = destIndex + srcNumParticles;
-    }
-
-    return destNumParticles;
-}
-
 template <typename R, typename S, typename K>
 void ParticleField<R, S, K>::cpyParticlesDeviceToDevice(ParticleBuffer inParticles, unsigned int inNumParticles, 
     unsigned int startIndex, int bufferMask) {
 
     numParticles = cpyParticleBuffer(dev_particles, inParticles, numParticles,
-        maxParticles, inNumParticles, startIndex, bufferMask, cudaMemcpyDeviceToDevice);
+        maxParticles, inNumParticles, startIndex, bufferMask);
 }
 
 template <typename R, typename S, typename K>
@@ -206,63 +122,14 @@ void ParticleField<R, S, K>::removeParticleDevice(unsigned int index) {
 }
 
 template <typename R, typename S, typename K>
-void ParticleField<R, S, K>::initParticlesDevice() {
-    // Declare device particle buffers
-    cudaMalloc((void**)&dev_particles.X, maxParticles * sizeof(vpmvec3));
-    checkCUDAError("cudaMalloc of dev_particles.X failed!");
-
-    cudaMalloc((void**)&dev_particles.U, maxParticles * sizeof(vpmvec3));
-    checkCUDAError("cudaMalloc of dev_particles.U failed!");
-
-    cudaMalloc((void**)&dev_particles.J, maxParticles * sizeof(vpmmat3));
-    checkCUDAError("cudaMalloc of dev_particles.J failed!");
-
-    cudaMalloc((void**)&dev_particles.Gamma, maxParticles * sizeof(vpmvec3));
-    checkCUDAError("cudaMalloc of dev_particles.Gamma failed!");
-
-    cudaMalloc((void**)&dev_particles.sigma, maxParticles * sizeof(vpmfloat));
-    checkCUDAError("cudaMalloc of dev_particles.sigma failed!");
-
-    cudaMalloc((void**)&dev_particles.SFS, maxParticles * sizeof(vpmvec3));
-    checkCUDAError("cudaMalloc of dev_particles.SFS failed!");
-
-    cudaMalloc((void**)&dev_particles.C, maxParticles * sizeof(vpmvec3));
-    checkCUDAError("cudaMalloc of dev_particles.C failed!");
-
-    cudaMalloc((void**)&dev_particles.M, maxParticles * sizeof(vpmmat3));
-    checkCUDAError("cudaMalloc of dev_particles.M failed!");
-
-    cudaMalloc((void**)&dev_particles.index, maxParticles * sizeof(int));
-    checkCUDAError("cudaMalloc of dev_particles.index failed!");
-
-    /*cudaMalloc((void**)&dev_particles.PSE, maxParticles * sizeof(vpmvec3));
-    checkCUDAError("cudaMalloc of dev_particles.PSE failed!");
-
-    cudaMalloc((void**)&dev_particles.isStatic, maxParticles * sizeof(bool));
-    checkCUDAError("cudaMalloc of dev_particles.isStatic failed!");
-
-    cudaMalloc((void**)&dev_particles.vol, maxParticles * sizeof(vpmfloat));
-    checkCUDAError("cudaMalloc of dev_particles.vol failed!");
-
-    cudaMalloc((void**)&dev_particles.circulation, maxParticles * sizeof(vpmfloat));
-    checkCUDAError("cudaMalloc of dev_particles.circulation failed!");*/
-
-    synchronized = 0;
-}
-
-template <typename R, typename S, typename K>
 void ParticleField<R, S, K>::syncParticlesDeviceToHost(int bufferMask) {
-
-    cpyParticleBuffer(particles, dev_particles, 0, numParticles, bufferMask & (~synchronized), cudaMemcpyDeviceToHost);
-
+    cpyParticleBuffer(particles, dev_particles, 0, numParticles, bufferMask & (~synchronized));
     synchronized |= bufferMask;
 }
 
 template <typename R, typename S, typename K>
 void ParticleField<R, S, K>::syncParticlesHostToDevice(int bufferMask) {
-
-    cpyParticleBuffer(dev_particles, particles, 0, numParticles, bufferMask & (~synchronized), cudaMemcpyHostToDevice);
-
+    cpyParticleBuffer(dev_particles, particles, 0, numParticles, bufferMask & (~synchronized));
     synchronized |= bufferMask;
 } 
 
@@ -288,7 +155,8 @@ ParticleField<R, S, K>::ParticleField(
     relaxation(relaxation),
     synchronized(0) {
 
-	initParticlesDevice();
+    dev_particles.mallocFields(maxParticles, BUFFER_ALL);
+    synchronized = 0;
 
 	syncParticlesHostToDevice(bufferMask);
 };
@@ -296,19 +164,7 @@ ParticleField<R, S, K>::ParticleField(
 template <typename R, typename S, typename K>
 ParticleField<R, S, K>::~ParticleField() {
     // free device memory
-    cudaFree(dev_particles.X);
-	cudaFree(dev_particles.U);
-	cudaFree(dev_particles.J);
-	cudaFree(dev_particles.Gamma);
-	cudaFree(dev_particles.sigma);
-	cudaFree(dev_particles.SFS);
-	cudaFree(dev_particles.C);
-	cudaFree(dev_particles.M);
-	cudaFree(dev_particles.index);
-	/*cudaFree(dev_particles.PSE);
-	cudaFree(dev_particles.isStatic);
-	cudaFree(dev_particles.vol);
-	cudaFree(dev_particles.circulation);*/
+    dev_particles.freeFields(BUFFER_ALL);
 }
 
 // *************************************************************
@@ -761,12 +617,6 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
     static std::vector<double> particleOmega;
     static std::vector<double> particleSigma;
     static std::vector<double> particleIdx;
-    particleX.reserve(field.maxParticles * dim);
-    particleU.reserve(field.maxParticles * dim);
-    particleGamma.reserve(field.maxParticles * dim);
-    particleOmega.reserve(field.maxParticles * dim);
-    particleSigma.reserve(field.maxParticles);
-    particleIdx.reserve(field.maxParticles);
 
     if (outputMask & OUTPUT_X) {
         particleX.insert(
@@ -774,6 +624,9 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
             (vpmfloat*)field.particles.X,
             (vpmfloat*)(field.particles.X + field.numParticles)
         );
+
+        writer.add_vector_field("position", particleX, dim);
+        particleX.clear();
     }
     if (outputMask & OUTPUT_U) {
         particleU.insert(
@@ -781,6 +634,9 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
             (vpmfloat*)field.particles.U,
             (vpmfloat*)(field.particles.U + field.numParticles)
         );
+
+        writer.add_vector_field("velocity", particleU, dim);
+        particleU.clear();
     }
     if (outputMask & OUTPUT_GAMMA) {
         particleGamma.insert(
@@ -788,6 +644,9 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
             (vpmfloat*)field.particles.Gamma,
             (vpmfloat*)(field.particles.Gamma + field.numParticles)
         );
+
+        writer.add_vector_field("circulation", particleGamma, dim);
+        particleGamma.clear();
     }
     if (outputMask & OUTPUT_SIGMA) {
         particleSigma.insert(
@@ -795,42 +654,35 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
             field.particles.sigma,
             field.particles.sigma + field.numParticles
         );
+
+        writer.add_scalar_field("sigma", particleSigma);
+        particleSigma.clear();
     }
-    //if (outputMask & OUTPUT_INDEX) {
-    //    particleIdx.insert(
-    //        particleIdx.end(),
-    //        field.particles.index,
-    //        field.particles.index + field.numParticles
-    //    );
-    //}
     if (outputMask & OUTPUT_INDEX) {
-        for (int i = 0; i < field.numParticles; ++i) {
-            particleIdx.push_back(i);
-        }
+        particleIdx.insert(
+            particleIdx.end(),
+            field.particles.index,
+            field.particles.index + field.numParticles
+        );
+
+        writer.add_scalar_field("index", particleIdx);
+        particleIdx.clear();
     }
     if (outputMask & OUTPUT_OMEGA) {
+        particleOmega.reserve(field.maxParticles * dim);
+
         vpmvec3 omega;
         for (int i = 0; i < field.numParticles; ++i) {
             omega = nablaCrossX(field.particles.J[i]);
             particleOmega.insert(particleOmega.end(), (vpmfloat*)&omega, (vpmfloat*)&omega + 3);
         }
+
+        writer.add_vector_field("vorticity", particleOmega, dim);
+        particleOmega.clear();
     }
-
-    writer.add_scalar_field("index", particleIdx);
-    writer.add_scalar_field("sigma", particleSigma);
-    writer.add_vector_field("position", particleX, dim);
-    writer.add_vector_field("velocity", particleU, dim);
-    writer.add_vector_field("circulation", particleGamma, dim);
-    writer.add_vector_field("vorticity", particleOmega, dim);
+ 
     writer.write_point_cloud("../output/" + filename + "_" + std::to_string(field.timeStep) + ".vtu", dim, particleX);
-
     writer.clear();
-    particleX.clear();
-    particleU.clear();
-    particleGamma.clear();
-    particleOmega.clear();
-    particleSigma.clear();
-    particleIdx.clear();
 }
 
 template <typename R, typename S, typename K>
@@ -930,18 +782,31 @@ void runVPM(
         relaxation
     };
 
+#ifdef MEMCPY_ASYNC
+    cudaStream_t streamKernel;
+    cudaStream_t streamCopy;
+    cudaStreamCreate(&streamKernel);
+    cudaStreamCreate(&streamCopy);
+
+    int outputType = OUTPUT_GAMMA | OUTPUT_X | OUTPUT_U;
+
+    ParticleBuffer outputBuffer{ BUFFER_DEVICE };
+    outputBuffer.mallocFields(maxParticles, outputType);
+#endif
+
     for (int i = 0; i < numTimeSteps + 1; ++i) {
         //calcVortexRingMetrics(field, i, "test");
 
         if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
             writeVTK(field, filename, OUTPUT_ALL);
-            //std::cout << field.particles[0].U[0] << std::endl;
+            std::cout << field.particles.U[0].x << std::endl;
         }
 
         rungeKutta(field, dt, true, numBlocks, blockSize);
+        cudaDeviceSynchronize();
 
-        field.syncParticlesDeviceToHost(BUFFER_U);
-        std::cout << field.particles.U[0].x << std::endl;
+        //field.syncParticlesDeviceToHost(BUFFER_U);
+        //std::cout << field.particles.U[0].x << std::endl;
     }
 }
 
@@ -955,7 +820,7 @@ void runBoundaryVPM(
     unsigned int fileSaveSteps,
     vpmvec3 uInf,
     ParticleBuffer particleBuffer,
-    ParticleBuffer boundaryBuffer,
+    const ParticleBuffer boundaryBuffer,
     R relaxation,
     S sfs,
     K kernel,
@@ -964,15 +829,12 @@ void runBoundaryVPM(
 
     int numBlocks = (numParticles + blockSize - 1) / blockSize;
 
-    ParticleBuffer dev_boundaryBuffer;
-    cudaMalloc((void**)&dev_boundaryBuffer.X, numBoundary * sizeof(vpmvec3));
-    cudaMalloc((void**)&dev_boundaryBuffer.sigma, numBoundary * sizeof(vpmvec3));
-    cudaMalloc((void**)&dev_boundaryBuffer.Gamma, numBoundary * sizeof(vpmvec3));
-    cudaMalloc((void**)&dev_boundaryBuffer.index, numBoundary * sizeof(int));
+    ParticleBuffer dev_boundaryBuffer{ BUFFER_DEVICE };
+    dev_boundaryBuffer.mallocFields(BUFFER_X | BUFFER_SIGMA | BUFFER_GAMMA | BUFFER_INDEX);
 
     // Copy boundary particle buffer from host to device
     cpyParticleBuffer(dev_boundaryBuffer, boundaryBuffer, numBoundary, numBoundary, numBoundary, 0,
-        BUFFER_X | BUFFER_SIGMA | BUFFER_GAMMA | BUFFER_INDEX, cudaMemcpyHostToDevice);
+        BUFFER_X | BUFFER_SIGMA | BUFFER_GAMMA | BUFFER_INDEX);
 
     ParticleField<R, S, K> field{
         maxParticles,
@@ -1014,31 +876,26 @@ void runBoundaryVPM(
         field.syncParticlesDeviceToHost(BUFFER_U);
         //std::cout << field.particles.U[0].x << std::endl;
     }
-
-    cudaFree(dev_boundaryBuffer.X);
-    cudaFree(dev_boundaryBuffer.sigma);
-    cudaFree(dev_boundaryBuffer.Gamma);
-    cudaFree(dev_boundaryBuffer.index);
 }
 
 void runSimulation() {
     // Define basic parameters
-    unsigned int maxParticles = 100000;
+    unsigned int maxParticles = 50000;
     unsigned int numTimeSteps = 100;
-    vpmfloat dt = 1e-5f;
-    unsigned int numStepsVTK = 1;
+    vpmfloat dt = 1e-2;
+    unsigned int numStepsVTK = 0;
     vpmvec3 uInf{ 0, 0, 0 };
     int blockSize = 64;
-    const int simulationType = 1;
+    const int simulationType = 0;
 
     // Create host particle buffer
-    ParticleBuffer particleBuffer;
-    particleBuffer.X = new vpmvec3[maxParticles];
-    particleBuffer.U = new vpmvec3[maxParticles];
-    particleBuffer.J = new vpmmat3[maxParticles];
-    particleBuffer.index = new int[maxParticles];
-    particleBuffer.Gamma = new vpmvec3[maxParticles];
-    particleBuffer.sigma = new vpmfloat[maxParticles];
+#ifdef PINNED_MEMORY
+    ParticleBuffer particleBuffer{ BUFFER_HOST_PINNED };
+#else
+    ParticleBuffer particleBuffer{ BUFFER_HOST };
+#endif
+    int inputBufferMask = BUFFER_X | BUFFER_U | BUFFER_J | BUFFER_INDEX | BUFFER_GAMMA | BUFFER_SIGMA;
+    particleBuffer.mallocFields(maxParticles, inputBufferMask);
 
     int numParticles;
     switch (simulationType)
@@ -1048,11 +905,8 @@ void runSimulation() {
         break;
     case 1: {
         // Create host boundary buffer
-        ParticleBuffer boundaryBuffer;
-        boundaryBuffer.X = new vpmvec3[maxParticles];
-        boundaryBuffer.Gamma = new vpmvec3[maxParticles];
-        boundaryBuffer.sigma = new vpmfloat[maxParticles];
-        boundaryBuffer.index = new int[maxParticles];
+        ParticleBuffer boundaryBuffer{ BUFFER_HOST_PINNED };
+        boundaryBuffer.mallocFields(maxParticles, BUFFER_X | BUFFER_GAMMA | BUFFER_SIGMA | BUFFER_INDEX);
 
         std::pair<unsigned int, unsigned int> numbers = initRoundJet(particleBuffer, boundaryBuffer, maxParticles);
         numParticles = numbers.first;
@@ -1075,20 +929,7 @@ void runSimulation() {
             blockSize,
             "test"
         );
-        delete[] boundaryBuffer.X;
-        delete[] boundaryBuffer.Gamma;
-        delete[] boundaryBuffer.sigma;
-        delete[] boundaryBuffer.index;
     }
-    default:
-        // Free host particle buffer
-        delete[] particleBuffer.X;
-        delete[] particleBuffer.U;
-        delete[] particleBuffer.J;
-        delete[] particleBuffer.Gamma;
-        delete[] particleBuffer.sigma;
-        delete[] particleBuffer.index;
-        return;
     }
 
     // Run VPM method
@@ -1106,14 +947,6 @@ void runSimulation() {
         blockSize,
         "test"
     );
-
-    // Free host particle buffer
-    delete[] particleBuffer.X;
-    delete[] particleBuffer.U;
-    delete[] particleBuffer.J;
-    delete[] particleBuffer.Gamma;
-    delete[] particleBuffer.sigma;
-    delete[] particleBuffer.index;
 }
 
 //void timeKernel(int repetitions) {
