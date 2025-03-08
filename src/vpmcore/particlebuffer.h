@@ -46,7 +46,6 @@ struct ParticleBuffer {
     vpmvec3* PSE = NULL;            // Particle-strength exchange*/
 
     ParticleBuffer(ParticleBufferType bufferType) : bufferType(bufferType) {};
-    ~ParticleBuffer() { freeFields(bufferFields); };
 
     void mallocFields(unsigned int numParticles, int bufferMask);
     void freeFields(int bufferMask);

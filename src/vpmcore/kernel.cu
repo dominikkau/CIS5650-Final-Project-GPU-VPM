@@ -138,7 +138,6 @@ ParticleField<R, S, K>::ParticleField(
     unsigned int maxParticles,
     ParticleBuffer particles,
     unsigned int numParticles,
-    int bufferMask,
     unsigned int timeStep,
     K kernel,
     vpmvec3 uInf,
@@ -156,7 +155,6 @@ ParticleField<R, S, K>::ParticleField(
     synchronized(0) {
 
     dev_particles.mallocFields(maxParticles, BUFFER_ALL);
-    synchronized = 0;
 
     // Minimum requirement for initialization
     if (!(particles.bufferFields & (BUFFER_X | BUFFER_GAMMA | BUFFER_SIGMA))) {
@@ -496,7 +494,7 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, ParticleBuffer targetP
             targetU += g_dgdr[0] * crossProd;
 
             // Compute Jacobian
-            dX *= (g_dgdr[1] * invSourceSigma - 3.0f * g_dgdr[0]) * (invR *invR);
+            dX *= (g_dgdr[1] * invSourceSigma - 3.0f * g_dgdr[0]) * (invR * invR);
 
             targetJ += glm::outerProduct(crossProd, dX);
             sourceGamma *= tmp * g_dgdr[0];
@@ -779,7 +777,6 @@ void runVPM(
         maxParticles,
         particleBuffer,
         numParticles,
-    	BUFFER_X | BUFFER_GAMMA | BUFFER_SIGMA | BUFFER_INDEX,
         0,
         kernel,
         uInf,
@@ -806,6 +803,9 @@ void runVPM(
             writeVTK(field, filename, OUTPUT_ALL);
             std::cout << field.particles.U[0].x << std::endl;
         }
+
+        field.syncParticlesDeviceToHost(BUFFER_U);
+        std::cout << field.particles.U[0].x << std::endl;
 
         rungeKutta(field, dt, true, numBlocks, blockSize);
         cudaDeviceSynchronize();
@@ -845,7 +845,6 @@ void runBoundaryVPM(
         maxParticles,
         particleBuffer,
         numParticles,
-        BUFFER_X | BUFFER_GAMMA | BUFFER_SIGMA | BUFFER_INDEX,
         0,
         kernel,
         uInf,
@@ -906,8 +905,9 @@ void runSimulation() {
     switch (simulationType)
     {
     case 0:
-        numParticles =  initVortexRings(particleBuffer, maxParticles);
+        numParticles = initVortexRings(particleBuffer, maxParticles);
         break;
+
     case 1: {
         // Create host boundary buffer
         ParticleBuffer boundaryBuffer{ BUFFER_HOST_PINNED };
@@ -934,6 +934,10 @@ void runSimulation() {
             blockSize,
             "test"
         );
+
+        boundaryBuffer.freeFields(boundaryBuffer.bufferFields);
+        particleBuffer.freeFields(particleBuffer.bufferFields);
+        return;
     }
     }
 
@@ -952,6 +956,8 @@ void runSimulation() {
         blockSize,
         "test"
     );
+
+    particleBuffer.freeFields(particleBuffer.bufferFields);
 }
 
 //void timeKernel(int repetitions) {

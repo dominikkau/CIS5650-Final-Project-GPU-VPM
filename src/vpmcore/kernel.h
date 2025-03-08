@@ -188,7 +188,6 @@ struct ParticleField {
         unsigned int maxParticles,
         ParticleBuffer particles,
         unsigned int numParticles,
-        int bufferMask,
         unsigned int timeStep = 0,
         K kernel = GaussianErfKernel(),
         vpmvec3 uInf = vpmvec3(0, 0, 0),
