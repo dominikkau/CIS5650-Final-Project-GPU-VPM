@@ -2,11 +2,11 @@
 
 #include <glm/glm.hpp>
 
-#define ENABLE_CUDA_ERROR
+//#define ENABLE_CUDA_ERROR
 #define TRANSPOSED
 //#define DOUBLE_PRECISION
 //#define CLASSIC_VPM
-//#define PINNED_MEMORY
+#define PINNED_MEMORY
 //#define MEMCPY_ASYNC
 
 #ifdef DOUBLE_PRECISION
