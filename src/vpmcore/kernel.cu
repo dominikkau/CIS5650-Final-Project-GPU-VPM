@@ -777,8 +777,6 @@ void runVPM(
 
         rungeKutta(field, dt, true, numBlocks, blockSize);
 
-        cudaDeviceSynchronize();
-
         if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
             writeVTK(field, filename, outputMask);
             
