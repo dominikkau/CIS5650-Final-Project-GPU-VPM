@@ -7,7 +7,6 @@
 //#define DOUBLE_PRECISION
 //#define CLASSIC_VPM
 #define PINNED_MEMORY
-//#define MEMCPY_ASYNC
 
 #ifdef DOUBLE_PRECISION
 	#define EPS 1e-9

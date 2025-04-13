@@ -166,7 +166,7 @@ void ParticleBuffer::freeFields(int bufferMask) {
 }
 
 void _cpyParticleBuffer(ParticleBuffer destBuffer, ParticleBuffer srcBuffer,
-    unsigned int destIndex, unsigned int srcNumParticles, int bufferMask) {
+    unsigned int destIndex, unsigned int srcNumParticles, int bufferMask, cudaStream_t stream) {
 
     // Determine cudaMemcpy direction
     cudaMemcpyKind cpyDirection;
@@ -183,48 +183,48 @@ void _cpyParticleBuffer(ParticleBuffer destBuffer, ParticleBuffer srcBuffer,
     bufferMask &= (destBuffer.bufferFields & srcBuffer.bufferFields);
 
     if (bufferMask & BUFFER_X) {
-        cudaMemcpy(destBuffer.X + destIndex, srcBuffer.X, srcNumParticles * sizeof(vpmvec3), cpyDirection);
+        cudaMemcpyAsync(destBuffer.X + destIndex, srcBuffer.X, srcNumParticles * sizeof(vpmvec3), cpyDirection, stream);
     }
     if (bufferMask & BUFFER_U) {
-        cudaMemcpy(destBuffer.U + destIndex, srcBuffer.U, srcNumParticles * sizeof(vpmvec3), cpyDirection);
+        cudaMemcpyAsync(destBuffer.U + destIndex, srcBuffer.U, srcNumParticles * sizeof(vpmvec3), cpyDirection, stream);
     }
     if (bufferMask & BUFFER_J) {
-        cudaMemcpy(destBuffer.J + destIndex, srcBuffer.J, srcNumParticles * sizeof(vpmmat3), cpyDirection);
+        cudaMemcpyAsync(destBuffer.J + destIndex, srcBuffer.J, srcNumParticles * sizeof(vpmmat3), cpyDirection, stream);
     }
     if (bufferMask & BUFFER_GAMMA) {
-        cudaMemcpy(destBuffer.Gamma + destIndex, srcBuffer.Gamma, srcNumParticles * sizeof(vpmvec3), cpyDirection);
+        cudaMemcpyAsync(destBuffer.Gamma + destIndex, srcBuffer.Gamma, srcNumParticles * sizeof(vpmvec3), cpyDirection, stream);
     }
     if (bufferMask & BUFFER_SIGMA) {
-        cudaMemcpy(destBuffer.sigma + destIndex, srcBuffer.sigma, srcNumParticles * sizeof(vpmfloat), cpyDirection);
+        cudaMemcpyAsync(destBuffer.sigma + destIndex, srcBuffer.sigma, srcNumParticles * sizeof(vpmfloat), cpyDirection, stream);
     }
     if (bufferMask & BUFFER_SFS) {
-        cudaMemcpy(destBuffer.SFS + destIndex, srcBuffer.SFS, srcNumParticles * sizeof(vpmvec3), cpyDirection);
+        cudaMemcpyAsync(destBuffer.SFS + destIndex, srcBuffer.SFS, srcNumParticles * sizeof(vpmvec3), cpyDirection, stream);
     }
     if (bufferMask & BUFFER_C) {
-        cudaMemcpy(destBuffer.C + destIndex, srcBuffer.C, srcNumParticles * sizeof(vpmvec3), cpyDirection);
+        cudaMemcpyAsync(destBuffer.C + destIndex, srcBuffer.C, srcNumParticles * sizeof(vpmvec3), cpyDirection, stream);
     }
     if (bufferMask & BUFFER_M) {
-        cudaMemcpy(destBuffer.M + destIndex, srcBuffer.M, srcNumParticles * sizeof(vpmmat3), cpyDirection);
+        cudaMemcpyAsync(destBuffer.M + destIndex, srcBuffer.M, srcNumParticles * sizeof(vpmmat3), cpyDirection, stream);
     }
     if (bufferMask & BUFFER_INDEX) {
-        cudaMemcpy(destBuffer.index + destIndex, srcBuffer.index, srcNumParticles * sizeof(int), cpyDirection);
+        cudaMemcpyAsync(destBuffer.index + destIndex, srcBuffer.index, srcNumParticles * sizeof(int), cpyDirection, stream);
     }
     /*if (bufferMask & BUFFER_PSE) {
-        cudaMemcpy(destBuffer.PSE + destIndex, srcBuffer.PSE, srcNumParticles * sizeof(vpmvec3), cpyDirection);
+        cudaMemcpyAsync(destBuffer.PSE + destIndex, srcBuffer.PSE, srcNumParticles * sizeof(vpmvec3), cpyDirection, stream);
     }
     if (bufferMask & BUFFER_IS_STATIC) {
-        cudaMemcpy(destBuffer.isStatic + destIndex, srcBuffer.isStatic, srcNumParticles * sizeof(bool), cpyDirection);
+        cudaMemcpyAsync(destBuffer.isStatic + destIndex, srcBuffer.isStatic, srcNumParticles * sizeof(bool), cpyDirection, stream);
     }
     if (bufferMask & BUFFER_VOL) {
-        cudaMemcpy(destBuffer.vol + destIndex, srcBuffer.vol, srcNumParticles * sizeof(vpmfloat), cpyDirection);
+        cudaMemcpyAsync(destBuffer.vol + destIndex, srcBuffer.vol, srcNumParticles * sizeof(vpmfloat), cpyDirection, stream);
     }
     if (bufferMask & BUFFER_CIRC) {
-        cudaMemcpy(destBuffer.circulation + destIndex, srcBuffer.circulation, srcNumParticles * sizeof(vpmfloat), cpyDirection);
+        cudaMemcpyAsync(destBuffer.circulation + destIndex, srcBuffer.circulation, srcNumParticles * sizeof(vpmfloat), cpyDirection, stream);
     }*/
 }
 
 unsigned int cpyParticleBuffer(ParticleBuffer destBuffer, ParticleBuffer srcBuffer, unsigned int destNumParticles,
-    unsigned int destMaxParticles, unsigned int srcNumParticles, unsigned int destIndex, int bufferMask) {
+    unsigned int destMaxParticles, unsigned int srcNumParticles, unsigned int destIndex, int bufferMask, cudaStream_t stream) {
 
     // Start index exceeds maximum number of particles
     if (destIndex >= destMaxParticles) return destNumParticles;
@@ -235,7 +235,7 @@ unsigned int cpyParticleBuffer(ParticleBuffer destBuffer, ParticleBuffer srcBuff
     // Number of particles to be copied is limited by destMaxParticles
     srcNumParticles = min(srcNumParticles, destMaxParticles - destIndex);
 
-    _cpyParticleBuffer(destBuffer, srcBuffer, destIndex, srcNumParticles, bufferMask);
+    _cpyParticleBuffer(destBuffer, srcBuffer, destIndex, srcNumParticles, bufferMask, stream);
 
     // Calculate new number of particles
     if (destIndex + srcNumParticles >= destNumParticles) {

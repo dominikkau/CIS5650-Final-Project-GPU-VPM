@@ -52,6 +52,6 @@ struct ParticleBuffer {
 };
 
 void _cpyParticleBuffer(ParticleBuffer destBuffer, ParticleBuffer srcBuffer,
-    unsigned int destIndex, unsigned int srcNumParticles, int bufferMask);
+    unsigned int destIndex, unsigned int srcNumParticles, int bufferMask, cudaStream_t stream = 0);
 unsigned int cpyParticleBuffer(ParticleBuffer destBuffer, ParticleBuffer srcBuffer, unsigned int destNumParticles,
-    unsigned int destMaxParticles, unsigned int srcNumParticles, unsigned int destIndex, int bufferMask);
+    unsigned int destMaxParticles, unsigned int srcNumParticles, unsigned int destIndex, int bufferMask, cudaStream_t stream = 0);

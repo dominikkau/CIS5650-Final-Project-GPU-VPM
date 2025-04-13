@@ -120,14 +120,14 @@ void ParticleField<R, S, K>::removeParticleDevice(unsigned int index) {
 }
 
 template <typename R, typename S, typename K>
-void ParticleField<R, S, K>::syncParticlesDeviceToHost(int bufferMask) {
-    _cpyParticleBuffer(particles, dev_particles, 0, numParticles, bufferMask & (~synchronized));
+void ParticleField<R, S, K>::syncParticlesDeviceToHost(int bufferMask, cudaStream_t stream) {
+    _cpyParticleBuffer(particles, dev_particles, 0, numParticles, bufferMask & (~synchronized), stream);
     synchronized |= bufferMask;
 }
 
 template <typename R, typename S, typename K>
-void ParticleField<R, S, K>::syncParticlesHostToDevice(int bufferMask) {
-    _cpyParticleBuffer(dev_particles, particles, 0, numParticles, bufferMask & (~synchronized));
+void ParticleField<R, S, K>::syncParticlesHostToDevice(int bufferMask, cudaStream_t stream) {
+    _cpyParticleBuffer(dev_particles, particles, 0, numParticles, bufferMask & (~synchronized), stream);
     synchronized |= bufferMask;
 } 
 
@@ -173,11 +173,11 @@ ParticleField<R, S, K>::~ParticleField() {
 // *************************************************************
 
 template <typename R, typename S, typename K>
-void PedrizzettiRelaxation::operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize) {
-    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+void PedrizzettiRelaxation::operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize, cudaStream_t stream) {
+    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     checkCUDAError("calcVelJacNaive (PedrizzettiRelaxation) failed!");
 
-    pedrizzettiRelax<<<numBlocks, blockSize>>>(N, field.dev_particles, relaxFactor);
+    pedrizzettiRelax<<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, relaxFactor);
     checkCUDAError("PedrizzettiRelaxation failed!");
 }
 
@@ -193,11 +193,11 @@ __global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relax
 }
 
 template <typename R, typename S, typename K>
-void CorrectedPedrizzettiRelaxation::operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize) {
-    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+void CorrectedPedrizzettiRelaxation::operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize, cudaStream_t stream) {
+    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     checkCUDAError("calcVelJacNaive (CorrectedPedrizzettiRelaxation) failed!");
 
-    correctedPedrizzettiRelax<<<numBlocks, blockSize>>>(N, field.dev_particles, relaxFactor);
+    correctedPedrizzettiRelax<<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, relaxFactor);
     checkCUDAError("CorrectedPedrizzettiRelaxation failed!");
 }
 
@@ -287,71 +287,55 @@ __global__ void calculateCoefficient(int N, ParticleBuffer particles, vpmfloat z
 }
 
 template <typename R, typename S, typename K>
-void DynamicSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize) {
+void DynamicSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize, cudaStream_t stream) {
     K& kernel = field.kernel;
     ParticleBuffer& particles = field.dev_particles;
     const int N = field.numParticles;
 
     if (a == 1.0f || a == 0.0f) {
         // CALCULATIONS WITH TEST FILTER
-        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(N, N, particles, particles, kernel, true, alpha);
+        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true, alpha);
         checkCUDAError("calcVelJacNaive (DynamicsSFS: test filter) failed!");
 
-        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat)>>>(N, N, particles, particles, kernel, true, alpha);
+        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true, alpha);
         checkCUDAError("calcEstrNaive (DynamicsSFS: test filter) failed!");
 
-        calculateTemporary<<<numBlocks, blockSize>>>(N, particles, true);
+        calculateTemporary<<<numBlocks, blockSize, 0, stream>>>(N, particles, true);
         checkCUDAError("calculateTemporary (DynamicsSFS: test filter) failed!");
 
         // CALCULATIONS WITH DOMAIN FILTER
-        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(N, N, particles, particles, kernel, true);
+        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true);
         checkCUDAError("calcVelJacNaive (DynamicsSFS: domain filter) failed!");
 
-        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat)>>>(N, N, particles, particles, kernel, true);
+        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true);
         checkCUDAError("calcEstrNaive (DynamicsSFS: domain filter) failed!");
 
-        calculateTemporary<<<numBlocks, blockSize>>>(N, particles, false);
+        calculateTemporary<<<numBlocks, blockSize, 0, stream>>>(N, particles, false);
         checkCUDAError("calculateTemporary (DynamicsSFS: domain filter) failed!");
 
         // CALCULATE COEFFICIENT
-        calculateCoefficient<<<numBlocks, blockSize>>>(N, particles, kernel.zeta(0.0), alpha,
+        calculateCoefficient<<<numBlocks, blockSize, 0, stream>>>(N, particles, kernel.zeta(0.0), alpha,
             relaxFactor, forcePositive, minC, maxC);
         checkCUDAError("calculateCoefficient failed!");
     }
     else {
-        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(N, N, particles, particles, kernel, true);
+        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true);
         checkCUDAError("calcVelJacNaive (DynamicsSFS: 2nd step) failed!");
 
-        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat)>>>(N, N, particles, particles, kernel, true);
+        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true);
         checkCUDAError("calcEstrNaive (DynamicsSFS: 2nd step) failed!");
     }
 }
 
 template <typename R, typename S, typename K>
-void NoSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize) {
+void NoSFS::operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize, cudaStream_t stream) {
     const int N = field.numParticles;
 
-    resetParticlesSFS<<<numBlocks, blockSize>>>(N, field.dev_particles);
-    checkCUDAError("resetParticlesSFS (NoSFS) failed!");
+    cudaMemset(field.dev_particles.SFS, 0, N * sizeof(vpmvec3));
+    checkCUDAError("cudaMemset (SFS reset) failed!");
 
-    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     checkCUDAError("calcVelJacNaive (NoSFS) failed!");
-}
-
-__global__ void resetParticles(int N, ParticleBuffer particles) {
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    if (index >= N) return;
-
-    particles.U[index] = vpmvec3{ 0.0f };
-    particles.J[index] = vpmmat3{ 0.0f };
-    //particles.PSE[index] = vpmvec3{ 0.0f };
-}
-
-__global__ void resetParticlesSFS(int N, ParticleBuffer particles) {
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    if (index >= N) return;
-
-    particles.SFS[index] = vpmvec3{ 0.0f };
 }
 
 template <typename K>
@@ -551,7 +535,7 @@ __global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpmfloat a, vpmf
 }
 
 template <typename R, typename S, typename K>
-void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int numBlocks, int blockSize) {
+void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int numBlocks, int blockSize, cudaStream_t stream) {
 
     const vpmfloat rungeKuttaCoefs[3][2] = {
         {0.0, 1.0 / 3.0},
@@ -568,13 +552,13 @@ void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int n
         vpmfloat b = rungeKuttaCoefs[i][1];
 
         // RUN SFS
-        field.sfs(field, a, b, numBlocks, blockSize);
+        field.sfs(field, a, b, numBlocks, blockSize, stream);
 
-        rungeKuttaStep<<<numBlocks, blockSize>>>(N, field.dev_particles, a, b, dt, kernel.zeta(0.0), field.uInf);
+        rungeKuttaStep<<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, a, b, dt, kernel.zeta(0.0), field.uInf);
         checkCUDAError("rungeKuttaStep failed!");
     }
 
-    field.relaxation(N, field, numBlocks, blockSize);
+    field.relaxation(N, field, numBlocks, blockSize, stream);
 
     ++field.timeStep;
     field.synchronized = false;
@@ -592,8 +576,88 @@ int outputMaskToBufferMask(int outputMask) {
     return bufferMask;
 }
 
-template <typename R, typename S, typename K>
-void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int outputMask) {
+//template <typename R, typename S, typename K>
+//void writeVTK(ParticleField<R, S, K>& field, const std::string& filename, int outputMask) {
+//    const int dim = 3;
+//
+//    static leanvtk::VTUWriter writer;
+//
+//    static std::vector<double> particleX;
+//    static std::vector<double> particleU;
+//    static std::vector<double> particleGamma;
+//    static std::vector<double> particleOmega;
+//    static std::vector<double> particleSigma;
+//    static std::vector<double> particleIdx;
+//
+//    if (outputMask & OUTPUT_X) {
+//        particleX.insert(
+//            particleX.end(),
+//            (vpmfloat*)field.particles.X,
+//            (vpmfloat*)(field.particles.X + field.numParticles)
+//        );
+//
+//        writer.add_vector_field("position", particleX, dim);
+//    }
+//    if (outputMask & OUTPUT_U) {
+//        particleU.insert(
+//            particleU.end(),
+//            (vpmfloat*)field.particles.U,
+//            (vpmfloat*)(field.particles.U + field.numParticles)
+//        );
+//
+//        writer.add_vector_field("velocity", particleU, dim);
+//    }
+//    if (outputMask & OUTPUT_GAMMA) {
+//        particleGamma.insert(
+//            particleGamma.end(),
+//            (vpmfloat*)field.particles.Gamma,
+//            (vpmfloat*)(field.particles.Gamma + field.numParticles)
+//        );
+//
+//        writer.add_vector_field("circulation", particleGamma, dim);
+//    }
+//    if (outputMask & OUTPUT_SIGMA) {
+//        particleSigma.insert(
+//            particleSigma.end(),
+//            field.particles.sigma,
+//            field.particles.sigma + field.numParticles
+//        );
+//
+//        writer.add_scalar_field("sigma", particleSigma);
+//    }
+//    if (outputMask & OUTPUT_INDEX) {
+//        particleIdx.insert(
+//            particleIdx.end(),
+//            field.particles.index,
+//            field.particles.index + field.numParticles
+//        );
+//
+//        writer.add_scalar_field("index", particleIdx);
+//    }
+//    if (outputMask & OUTPUT_OMEGA) {
+//        particleOmega.reserve(field.maxParticles * dim);
+//
+//        vpmvec3 omega;
+//        for (int i = 0; i < field.numParticles; ++i) {
+//            omega = nablaCrossX(field.particles.J[i]);
+//            particleOmega.insert(particleOmega.end(), (vpmfloat*)&omega, (vpmfloat*)&omega + 3);
+//        }
+//
+//        writer.add_vector_field("vorticity", particleOmega, dim);
+//    }
+// 
+//    writer.write_point_cloud("../output/" + filename + "_" + std::to_string(field.timeStep) + ".vtu", dim, particleX);
+//    writer.clear();
+//
+//    particleX.clear();
+//    particleU.clear();
+//    particleGamma.clear();
+//    particleSigma.clear();
+//    particleIdx.clear();
+//    particleOmega.clear();
+//}
+
+void writeVTK(ParticleBuffer &particles, int N, const std::string& filename, int outputMask) {
     const int dim = 3;
 
     static leanvtk::VTUWriter writer;
@@ -608,8 +672,8 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
     if (outputMask & OUTPUT_X) {
         particleX.insert(
             particleX.end(),
-            (vpmfloat*)field.particles.X,
-            (vpmfloat*)(field.particles.X + field.numParticles)
+            (vpmfloat*)particles.X,
+            (vpmfloat*)(particles.X + N)
         );
 
         writer.add_vector_field("position", particleX, dim);
@@ -617,8 +681,8 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
     if (outputMask & OUTPUT_U) {
         particleU.insert(
             particleU.end(),
-            (vpmfloat*)field.particles.U,
-            (vpmfloat*)(field.particles.U + field.numParticles)
+            (vpmfloat*)particles.U,
+            (vpmfloat*)(particles.U + N)
         );
 
         writer.add_vector_field("velocity", particleU, dim);
@@ -626,8 +690,8 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
     if (outputMask & OUTPUT_GAMMA) {
         particleGamma.insert(
             particleGamma.end(),
-            (vpmfloat*)field.particles.Gamma,
-            (vpmfloat*)(field.particles.Gamma + field.numParticles)
+            (vpmfloat*)particles.Gamma,
+            (vpmfloat*)(particles.Gamma + N)
         );
 
         writer.add_vector_field("circulation", particleGamma, dim);
@@ -635,8 +699,8 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
     if (outputMask & OUTPUT_SIGMA) {
         particleSigma.insert(
             particleSigma.end(),
-            field.particles.sigma,
-            field.particles.sigma + field.numParticles
+            particles.sigma,
+            particles.sigma + N
         );
 
         writer.add_scalar_field("sigma", particleSigma);
@@ -644,25 +708,25 @@ void writeVTK(ParticleField<R, S, K>& field, const std::string filename, int out
     if (outputMask & OUTPUT_INDEX) {
         particleIdx.insert(
             particleIdx.end(),
-            field.particles.index,
-            field.particles.index + field.numParticles
+            particles.index,
+            particles.index + N
         );
 
         writer.add_scalar_field("index", particleIdx);
     }
     if (outputMask & OUTPUT_OMEGA) {
-        particleOmega.reserve(field.maxParticles * dim);
+        particleOmega.reserve(N * dim);
 
         vpmvec3 omega;
-        for (int i = 0; i < field.numParticles; ++i) {
-            omega = nablaCrossX(field.particles.J[i]);
+        for (int i = 0; i < N; ++i) {
+            omega = nablaCrossX(particles.J[i]);
             particleOmega.insert(particleOmega.end(), (vpmfloat*)&omega, (vpmfloat*)&omega + 3);
         }
 
         writer.add_vector_field("vorticity", particleOmega, dim);
     }
- 
-    writer.write_point_cloud("../output/" + filename + "_" + std::to_string(field.timeStep) + ".vtu", dim, particleX);
+
+    writer.write_point_cloud("../output/" + filename + ".vtu", dim, particleX);
     writer.clear();
 
     particleX.clear();
@@ -772,17 +836,22 @@ void runVPM(
     int outputMask = OUTPUT_ALL;
     int bufferMask = outputMaskToBufferMask(outputMask);
 
+    ParticleBuffer outputBufferHost{ BUFFER_HOST_PINNED };
+    outputBufferHost.mallocFields(maxParticles, bufferMask);
+
     for (int i = 0; i < numTimeSteps + 1; ++i) {
-        //calcVortexRingMetrics(field, i, "test");
+        // calcVortexRingMetrics(field, i, "test");
 
         rungeKutta(field, dt, true, numBlocks, blockSize);
 
         if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
-            writeVTK(field, filename, outputMask);
-            
-            std::cout << field.particles.U[0].x << std::endl;
+            writeVTK(outputBufferHost, field.numParticles, filename + "_" + std::to_string(field.timeStep), outputMask);
 
-            field.syncParticlesDeviceToHost(bufferMask);
+            std::cout << outputBufferHost.U[0].x << std::endl;
+
+            _cpyParticleBuffer(outputBufferHost, field.dev_particles, 0, field.numParticles, bufferMask);
+
+            cudaDeviceSynchronize();
         }
     }
 }
@@ -806,12 +875,15 @@ void runBoundaryVPM(
 
     int numBlocks = (numParticles + blockSize - 1) / blockSize;
 
+    int outputMask = OUTPUT_ALL;
+    int bufferMask = outputMaskToBufferMask(outputMask);
+    int boundaryMask = BUFFER_X | BUFFER_SIGMA | BUFFER_GAMMA | BUFFER_INDEX;
+
     ParticleBuffer dev_boundaryBuffer{ BUFFER_DEVICE };
-    dev_boundaryBuffer.mallocFields(numBoundary, BUFFER_X | BUFFER_SIGMA | BUFFER_GAMMA | BUFFER_INDEX);
+    dev_boundaryBuffer.mallocFields(numBoundary, boundaryMask);
 
     // Copy boundary particle buffer from host to device
-    cpyParticleBuffer(dev_boundaryBuffer, boundaryBuffer, numBoundary, numBoundary, numBoundary, 0,
-        BUFFER_X | BUFFER_SIGMA | BUFFER_GAMMA | BUFFER_INDEX);
+    cpyParticleBuffer(dev_boundaryBuffer, boundaryBuffer, numBoundary, numBoundary, numBoundary, 0, boundaryMask);
 
     ParticleField<R, S, K> field{
         maxParticles,
@@ -829,35 +901,30 @@ void runBoundaryVPM(
     for (int i = 0; i < numTimeSteps; ++i) {
         std::cout << field.numParticles << " " << boundaryIndex << " " << field.particles.U[0].x << std::endl;
 
-        if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
-            writeVTK(field, filename, OUTPUT_ALL);
-        }
-
         rungeKutta(field, dt, true, numBlocks, blockSize);
 
-        //if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
-        //    writeVTK(field, filename, OUTPUT_ALL);
-        //}
+        if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
+            // writeVTK(field, filename, outputMask);
+
+            std::cout << field.particles.U[0].x << std::endl;
+
+            field.syncParticlesDeviceToHost(bufferMask);
+        }
 
         if (boundaryIndex + numBoundary >= field.maxParticles) boundaryIndex = 0;
 
-        field.cpyParticlesDeviceToDevice(dev_boundaryBuffer, numBoundary, boundaryIndex,
-            BUFFER_X | BUFFER_SIGMA | BUFFER_GAMMA | BUFFER_INDEX);
-        cudaDeviceSynchronize();
+        field.cpyParticlesDeviceToDevice(dev_boundaryBuffer, numBoundary, boundaryIndex, boundaryMask);
 
         numBlocks = (field.numParticles + blockSize - 1) / blockSize;
 
         boundaryIndex += numBoundary;
-
-        field.syncParticlesDeviceToHost(BUFFER_U);
-        //std::cout << field.particles.U[0].x << std::endl;
     }
 }
 
 void runSimulation() {
     // Define basic parameters
     unsigned int maxParticles = 50000;
-    unsigned int numTimeSteps = 10;
+    unsigned int numTimeSteps = 50;
     vpmfloat dt = 1e-2;
     unsigned int numStepsVTK = 1;
     vpmvec3 uInf{ 0, 0, 0 };
@@ -931,122 +998,3 @@ void runSimulation() {
 
     particleBuffer.freeFields(particleBuffer.bufferFields);
 }
-
-//void timeKernel(int repetitions) {
-//    // Define basic parameters
-//    unsigned int maxParticles{ 100000 };
-//    int maxParticlesOld = static_cast<int>(maxParticles);
-//    vpmvec3 uInf{ 0, 0, 0 };
-//    int blockSize{ 64 };
-//
-//    // Create host particle buffer
-//    CoalescedParticle particles;
-//    particles.X = new vpmvec3[maxParticles];
-//    particles.Gamma = new vpmvec3[maxParticles];
-//    particles.sigma = new vpmfloat[maxParticles];
-//    particles.index = new int[maxParticles];
-//	particles.U = new vpmvec3[maxParticles];
-//    particles.J = new vpmmat3[maxParticles];
-//
-//    Particle* particleBufferOld = new Particle[maxParticles];
-//    int numParticlesOld = initVortexRings(particleBufferOld, maxParticlesOld);
-//
-//    // Initialize particle buffer
-//    unsigned int numParticles = initVortexRingsCoal(particles, maxParticles);
-//
-//    int numBlocks = (numParticles + blockSize - 1) / blockSize;
-//    int numBlocksOld = (numParticlesOld + blockSize - 1) / blockSize;
-//
-//    CoalescedParticleField<CorrectedPedrizzettiRelaxation, NoSFS, WinckelmansKernel> field{
-//        maxParticles,
-//        particles,
-//        numParticles,
-//		BUFFER_X | BUFFER_GAMMA | BUFFER_SIGMA | BUFFER_INDEX,
-//        0,
-//        WinckelmansKernel(),
-//        uInf,
-//        NoSFS(),
-//        CorrectedPedrizzettiRelaxation(0.3)
-//    };
-//
-//    ParticleField<CorrectedPedrizzettiRelaxation, NoSFS, WinckelmansKernel> fieldOld{
-//        maxParticlesOld,
-//        particleBufferOld,
-//        numParticlesOld,
-//        0,
-//        WinckelmansKernel(),
-//        uInf,
-//        NoSFS(),
-//        CorrectedPedrizzettiRelaxation(0.3)
-//    };
-//
-//    calcVelJacNaiveCoal << <numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat) >> > (field.numParticles, field.numParticles, field.dev_particles, field.dev_particles, field.kernel, true);
-//
-//    // Create CUDA events
-//    cudaEvent_t start, stop;
-//    cudaEventCreate(&start);
-//    cudaEventCreate(&stop);
-//
-//    // Record the start event
-//    cudaEventRecord(start);
-//
-//    int testIndex = 0;
-//    vpmfloat testValue;
-//
-////#define OLD
-//
-//	for (int i = 0; i < repetitions; ++i) {
-//#ifdef OLD
-//        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat)>>>(fieldOld.numParticles, fieldOld.numParticles, fieldOld.dev_particles, fieldOld.dev_particles, fieldOld.kernel, true);
-//#else
-//        calcEstrNaiveCoal<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat)>>>(field.numParticles, field.numParticles, field.dev_particles, field.dev_particles, field.kernel, true, 1.0f);
-//#endif
-//
-////#ifdef SHARED_MEMORY
-////#ifndef OLD
-////        calcVelJacNaiveCoal<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat)>>>(field.numParticles, field.numParticles, field.dev_particles, field.dev_particles, field.kernel, true);
-////#else
-////        calcVelJacNaive << <numBlocksOld, blockSize, 7 * blockSize * sizeof(vpmfloat) >> > (fieldOld.numParticles, fieldOld.numParticles, fieldOld.dev_particles, fieldOld.dev_particles, fieldOld.kernel, true);
-////#endif
-////#else
-////#ifndef OLD
-////        calcVelJacNaiveCoal<<<numBlocks, blockSize>>>(field.numParticles, field.numParticles, field.dev_particles, field.dev_particles, field.kernel, true);
-////#else
-////        calcVelJacNaive << <numBlocksOld, blockSize >> > (fieldOld.numParticles, fieldOld.numParticles, fieldOld.dev_particles, fieldOld.dev_particles, fieldOld.kernel, true);
-////#endif
-////#endif
-//        //field.copyDevParticlesToHost(BUFFER_U | BUFFER_J);
-//        //std::cout << field.particles.J[0][0][2] << std::endl;
-//		cudaDeviceSynchronize();
-//
-////#ifndef OLD
-////        cudaMemcpy(&testValue, &field.dev_particles.J[testIndex][0][2], sizeof(vpmfloat), cudaMemcpyDeviceToHost);
-////#else
-////        cudaMemcpy(&testValue, &fieldOld.dev_particles[testIndex].J[0][2], sizeof(vpmfloat), cudaMemcpyDeviceToHost);
-////#endif
-////        std::cout << testValue << std::endl;
-//	}
-//
-//    // Record the stop event
-//    cudaEventRecord(stop);
-//    cudaEventSynchronize(stop);
-//
-//    // Calculate the elapsed time
-//    float milliseconds = 0;
-//    cudaEventElapsedTime(&milliseconds, start, stop);
-//
-//    // Output the duration
-//    std::cout << "Kernel execution took " << milliseconds << " milliseconds for " << repetitions << " repetitions." << std::endl;
-//
-//    // Destroy CUDA events
-//    cudaEventDestroy(start);
-//    cudaEventDestroy(stop);
-//
-//    // Free host particle buffer
-//    delete[] particles.X;
-//    delete[] particles.U;
-//    delete[] particles.J;
-//    delete[] particles.Gamma;
-//    delete[] particles.sigma;
-//    delete[] particles.index;
-//}

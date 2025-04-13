@@ -94,7 +94,7 @@ struct DynamicSFS {
         : minC(minC), maxC(maxC), alpha(alpha), relaxFactor(relaxFactor), forcePositive(forcePositive) {}
 
     template <typename R, typename S, typename K>
-    void operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize);
+    void operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize, cudaStream_t stream = 0);
 };
 
 __global__ void calculateTemporary(int N, ParticleBuffer particles, bool testFilter);
@@ -104,7 +104,7 @@ __global__ void calculateCoefficient(int N, ParticleBuffer particles, vpmfloat z
 
 struct NoSFS {
     template <typename R, typename S, typename K>
-    void operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize);
+    void operator()(ParticleField<R, S, K>& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize, cudaStream_t stream = 0);
 };
 
 struct PedrizzettiRelaxation {
@@ -112,7 +112,7 @@ struct PedrizzettiRelaxation {
     PedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
 
     template <typename R, typename S, typename K>
-    void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize);
+    void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize, cudaStream_t stream = 0);
 };
 
 __global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relaxFactor);
@@ -122,14 +122,14 @@ struct CorrectedPedrizzettiRelaxation {
     CorrectedPedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
 
     template <typename R, typename S, typename K>
-    void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize);
+    void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize, cudaStream_t stream = 0);
 };
 
 __global__ void correctedPedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relaxFactor);
 
 struct NoRelaxation {
     template <typename R, typename S, typename K>
-    inline void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize) {}
+    inline void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize, cudaStream_t stream = 0) {}
 };
 
 struct Particle {
@@ -197,8 +197,8 @@ struct ParticleField {
     // Destructor
     ~ParticleField();
 
-	void syncParticlesDeviceToHost(int bufferMask);
-	void syncParticlesHostToDevice(int bufferMask);
+	void syncParticlesDeviceToHost(int bufferMask, cudaStream_t stream = 0);
+	void syncParticlesHostToDevice(int bufferMask, cudaStream_t stream = 0);
 
     void addParticleDevice(Particle& particle);
     void overwriteParticleDevice(Particle& particle, unsigned int index);
@@ -206,9 +206,6 @@ struct ParticleField {
     void cpyParticlesDeviceToDevice(ParticleBuffer inParticles, unsigned int inNumParticles,
         unsigned int startIndex, int bufferMask);
 };
-
-__global__ void resetParticles(int N, ParticleBuffer particles);
-__global__ void resetParticlesSFS(int N, ParticleBuffer particles);
 
 template <typename K>
 __global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetParticles,
@@ -222,7 +219,7 @@ __global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpmfloat a, vpmf
     vpmfloat zeta0, vpmvec3 Uinf);
 
 template <typename R, typename S, typename K>
-void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int numBlocks, int blockSize);
+void rungeKutta(ParticleField<R, S, K>& field, vpmfloat dt, bool useRelax, int numBlocks, int blockSize, cudaStream_t stream=0);
 
 void runSimulation();
 
