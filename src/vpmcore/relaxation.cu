@@ -1,15 +1,15 @@
 #include "relaxation.h"
-#include "kernel.h"
+#include "vpmmain.h"
 
 void PedrizzettiRelaxation::operator()(int N, ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream) {
     calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     checkCUDAError("calcVelJacNaive (PedrizzettiRelaxation) failed!");
 
-    this->relax<<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, relaxFactor);
+    pedrizzettiRelax <<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, relaxFactor);
     checkCUDAError("PedrizzettiRelaxation failed!");
 }
 
-static __global__ void PedrizzettiRelaxation::relax(int N, ParticleBuffer particles, vpmfloat relaxFactor) {
+__global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relaxFactor) {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
@@ -24,11 +24,11 @@ void CorrectedPedrizzettiRelaxation::operator()(int N, ParticleField& field, int
     calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     checkCUDAError("calcVelJacNaive (CorrectedPedrizzettiRelaxation) failed!");
 
-    this->relax<<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, relaxFactor);
+    correctedPedrizzettiRelaxation <<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, relaxFactor);
     checkCUDAError("CorrectedPedrizzettiRelaxation failed!");
 }
 
-static __global__ void CorrectedPedrizzettiRelaxation::relax(int N, ParticleBuffer particles, vpmfloat relaxFactor) {
+__global__ void correctedPedrizzettiRelaxation(int N, ParticleBuffer particles, vpmfloat relaxFactor) {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 

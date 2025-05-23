@@ -7,15 +7,43 @@
 #include "sfs.h"
 #include "relaxation.h"
 
-enum class OutputType {
-    NONE = 0,
-    X = 1 << 0,
-    U = 1 << 1,
-    OMEGA = 1 << 2,
-    GAMMA = 1 << 3,
-    SIGMA = 1 << 4,
-    INDEX = 1 << 5,
-    ALL = 0xFFFF
+struct OutputType {
+    enum Type {
+        NONE = 0,
+        X = 1 << 0,
+        U = 1 << 1,
+        OMEGA = 1 << 2,
+        GAMMA = 1 << 3,
+        SIGMA = 1 << 4,
+        INDEX = 1 << 5,
+        ALL = 0xFFFF
+    };
+};
+
+struct Particle {
+    vpmvec3 X;          // Position
+    vpmvec3 Gamma;      // Vectorial circulation
+    vpmfloat sigma;     // Smoothing radius
+    int index;          // Indices of particles
+    vpmvec3 U;          // Velocity at particle
+    vpmmat3 J;          // Jacobian at particle
+    vpmmat3 M;          // Auxiliary memory
+    vpmvec3 C;          // SFS coefficient, numerator, denominator
+    vpmvec3 SFS;
+
+    /*vpmfloat vol;            // Volume
+    vpmfloat circulation;    // Scalar circulation
+    bool isStatic;           // Indicates if particle is static
+    vpmvec3 PSE;             // Particle-strength exchange*/
+
+    // Constructor
+    Particle()
+        : X(0.0f), Gamma(0.0f), sigma(0.0f),
+        U(0.0f), J(0.0f), M(0.0f), C(0.0f), SFS(0.0f), index(0) {}
+    //PSE(0.0f), vol(0.0f), circulation(0.0f), isStatic(false), 
+
+    __host__ __device__ void Particle::reset();    // Reset particle U, J and PSE
+    __host__ __device__ void Particle::resetSFS(); // Reset particle SFS
 };
 
 // ParticleField definition

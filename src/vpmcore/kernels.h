@@ -9,7 +9,7 @@ struct Kernel {
     virtual __host__ __device__ inline vpmfloat g(vpmfloat r) = 0;
     virtual __host__ __device__ inline vpmfloat dgdr(vpmfloat r) = 0;
     virtual __host__ __device__ inline vpmvec2 g_dgdr(vpmfloat r) = 0;
-}
+};
 
 struct SingularKernel : Kernel {
     __host__ __device__ inline vpmfloat zeta(vpmfloat r) { return (r == 0.0f) ? 1.0f : 0.0f; }

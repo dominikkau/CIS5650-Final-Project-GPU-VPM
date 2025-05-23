@@ -4,21 +4,21 @@
 #include <utility>
 #include <random>
 #include <memory>
-#include "kernel.h"
+#include "vpmmain.h"
 #include "../lean_vtk.hpp"
 #include "../vortexringsimulation.hpp"
 #include "../roundjetsimulation.hpp"
 #include <device_launch_parameters.h>
 
-__host__ __device__ void Particle::reset() {
-    U   = vpmvec3{ 0.0f };
-    J   = vpmmat3{ 0.0f };
-    //PSE = vpmvec3{ 0.0f };
-}
-
-__host__ __device__ void Particle::resetSFS() {
-    SFS = vpmvec3{ 0.0f };
-}
+//__host__ __device__ void Particle::reset() {
+//    U   = vpmvec3{ 0.0f };
+//    J   = vpmmat3{ 0.0f };
+//    //PSE = vpmvec3{ 0.0f };
+//}
+//
+//__host__ __device__ void Particle::resetSFS() {
+//    SFS = vpmvec3{ 0.0f };
+//}
 
 // *************************************************************
 // *            PARTICLE FIELD IMPLEMENTATION                  *

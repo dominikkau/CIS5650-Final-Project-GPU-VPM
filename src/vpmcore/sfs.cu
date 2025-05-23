@@ -1,8 +1,9 @@
 #include "common.h"
 #include "sfs.h"
 #include "kernels.h"
+#include "vpmmain.h"
 
-static __global__ void DynamicSFS::calculateTemporary(int N, ParticleBuffer particles, bool testFilter) {
+__global__ void calculateTemporary(int N, ParticleBuffer particles, bool testFilter) {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
@@ -16,7 +17,7 @@ static __global__ void DynamicSFS::calculateTemporary(int N, ParticleBuffer part
     }
 }
 
-static __global__ void DynamicSFS::calculateCoefficient(int N, ParticleBuffer particles, vpmfloat zeta0,
+__global__ void calculateCoefficient(int N, ParticleBuffer particles, vpmfloat zeta0,
     vpmfloat alpha, vpmfloat relaxFactor, bool forcePositive, vpmfloat minC, vpmfloat maxC) {
 
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -74,20 +75,20 @@ void DynamicSFS::operator()(ParticleField& field, vpmfloat a, vpmfloat b, int nu
 
     if (a == 1.0f || a == 0.0f) {
         // CALCULATIONS WITH TEST FILTER
-        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true, alpha);
+        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, *kernel, true, alpha);
         checkCUDAError("calcVelJacNaive (DynamicsSFS: test filter) failed!");
 
-        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true, alpha);
+        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, *kernel, true, alpha);
         checkCUDAError("calcEstrNaive (DynamicsSFS: test filter) failed!");
 
         calculateTemporary<<<numBlocks, blockSize, 0, stream>>>(N, particles, true);
         checkCUDAError("calculateTemporary (DynamicsSFS: test filter) failed!");
 
         // CALCULATIONS WITH DOMAIN FILTER
-        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true);
+        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, *kernel, true);
         checkCUDAError("calcVelJacNaive (DynamicsSFS: domain filter) failed!");
 
-        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true);
+        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, *kernel, true);
         checkCUDAError("calcEstrNaive (DynamicsSFS: domain filter) failed!");
 
         calculateTemporary<<<numBlocks, blockSize, 0, stream>>>(N, particles, false);

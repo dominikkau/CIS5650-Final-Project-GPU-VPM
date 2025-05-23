@@ -3,18 +3,17 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include "common.h"
+#include "particlebuffer.h"
 
 struct ParticleField;
 
 struct RelaxationScheme {
-    void operator()(int N, ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0);
+    virtual void operator()(int N, ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0) = 0;
 };
 
 class PedrizzettiRelaxation {
 private:
     vpmfloat relaxFactor;
-
-    static __global__ void relax(int N, ParticleBuffer particles, vpmfloat relaxFactor);
 
 public:
     PedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
@@ -27,8 +26,6 @@ __global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relax
 class CorrectedPedrizzettiRelaxation {
 private:
     vpmfloat relaxFactor;
-
-    static __global__ void relax(int N, ParticleBuffer particles, vpmfloat relaxFactor);
 
 public:
     CorrectedPedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}

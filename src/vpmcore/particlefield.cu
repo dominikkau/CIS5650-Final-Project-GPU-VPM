@@ -1,5 +1,15 @@
 #include "particlefield.h"
 
+__host__ __device__ void Particle::reset() {
+    U = vpmvec3{ 0.0f };
+    J = vpmmat3{ 0.0f };
+    //PSE = vpmvec3{ 0.0f };
+}
+
+__host__ __device__ void Particle::resetSFS() {
+    SFS = vpmvec3{ 0.0f };
+}
+
 void ParticleField::cpyParticlesDeviceToDevice(ParticleBuffer inParticles, unsigned int inNumParticles, 
     unsigned int startIndex, int bufferMask) {
 

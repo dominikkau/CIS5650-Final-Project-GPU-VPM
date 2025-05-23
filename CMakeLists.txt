@@ -36,6 +36,7 @@ set(headers
     src/vpmcore/common.h
     src/vpmcore/vpmmain.h
     src/vpmcore/particlebuffer.h
+    src/vpmcore/particlefield.h
     src/vpmcore/kernels.h
     src/vpmcore/relaxation.h
     src/vpmcore/sfs.h
@@ -48,6 +49,7 @@ set(sources
     src/main.cpp
     src/vpmcore/vpmmain.cu
     src/vpmcore/particlebuffer.cu
+    src/vpmcore/particlefield.cu
     src/vpmcore/relaxation.cu
     src/vpmcore/sfs.cu
     src/lean_vtk.cpp

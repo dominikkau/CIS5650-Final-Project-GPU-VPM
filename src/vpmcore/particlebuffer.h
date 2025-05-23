@@ -2,33 +2,37 @@
 
 #include "common.h"
 
-enum class BufferField {
-    NONE = 0,
-    X = 1 << 0,
-    U = 1 << 1,
-    J = 1 << 2,
-    GAMMA = 1 << 3,
-    SIGMA = 1 << 4,
-    SFS = 1 << 5,
-    C = 1 << 6,
-    M = 1 << 7,
-    INDEX = 1 << 8,
-    PSE = 1 << 9,
-    VOL = 1 << 10,
-    CIRCULATION = 1 << 11,
-    ISSTATIC = 1 << 12,
-    ALL = 0xFFFF
-    // Add other buffers as needed
+struct BufferField {
+    enum Type {
+        NONE = 0,
+        X = 1 << 0,
+        U = 1 << 1,
+        J = 1 << 2,
+        GAMMA = 1 << 3,
+        SIGMA = 1 << 4,
+        SFS = 1 << 5,
+        C = 1 << 6,
+        M = 1 << 7,
+        INDEX = 1 << 8,
+        PSE = 1 << 9,
+        VOL = 1 << 10,
+        CIRCULATION = 1 << 11,
+        ISSTATIC = 1 << 12,
+        ALL = 0xFFFF
+        // Add other buffers as needed
+    };
 };
 
-enum class ParticleBufferType {
-    DEVICE,
-    HOST,
-    HOST_PINNED
+struct ParticleBufferType {
+    enum Type {
+        DEVICE,
+        HOST,
+        HOST_PINNED
+    };
 };
 
 struct ParticleBuffer {
-    const ParticleBufferType bufferType;
+    const ParticleBufferType::Type bufferType;
     int bufferFields = 0;
     vpmvec3* X = NULL;          // Position
     vpmvec3* Gamma = NULL;      // Vectorial circulation
@@ -45,7 +49,7 @@ struct ParticleBuffer {
     bool* isStatic = NULL;          // Indicates if particle is static
     vpmvec3* PSE = NULL;            // Particle-strength exchange*/
 
-    ParticleBuffer(ParticleBufferType bufferType) : bufferType(bufferType) {};
+    ParticleBuffer(ParticleBufferType::Type bufferType) : bufferType(bufferType) {};
 
     void mallocFields(unsigned int numParticles, int bufferMask);
     void freeFields(int bufferMask);

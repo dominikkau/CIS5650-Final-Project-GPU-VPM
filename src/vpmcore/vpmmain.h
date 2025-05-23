@@ -9,6 +9,7 @@
 #include "kernels.h"
 #include "sfs.h"
 #include "particlebuffer.h"
+#include "particlefield.h"
 
 __host__ __device__ inline vpmvec3 xDotNablaY(const vpmvec3& x, const vpmmat3& jacobianY) {
 #ifdef TRANSPOSED
@@ -83,10 +84,10 @@ __host__ __device__ inline vpmvec3 nablaCrossX(const vpmmat3& jacobianX) {
 // };
 
 // template <typename R, typename S, typename K>
-struct ParticleField;
-
-struct Particle;
-struct ParticleBuffer;
+//struct ParticleField;
+//
+//struct Particle;
+//struct ParticleBuffer;
 
 // struct DynamicSFS {
 //     vpmfloat minC;
@@ -137,31 +138,31 @@ struct ParticleBuffer;
 //     inline void operator()(int N, ParticleField<R, S, K>& field, int numBlocks, int blockSize, cudaStream_t stream = 0) {}
 // };
 
-struct Particle {
-    vpmvec3 X;          // Position
-    vpmvec3 Gamma;      // Vectorial circulation
-    vpmfloat sigma;     // Smoothing radius
-    int index;          // Indices of particles
-    vpmvec3 U;          // Velocity at particle
-    vpmmat3 J;          // Jacobian at particle
-    vpmmat3 M;          // Auxiliary memory
-    vpmvec3 C;          // SFS coefficient, numerator, denominator
-    vpmvec3 SFS;
-
-    /*vpmfloat vol;            // Volume
-    vpmfloat circulation;    // Scalar circulation
-    bool isStatic;           // Indicates if particle is static
-    vpmvec3 PSE;             // Particle-strength exchange*/
-
-    // Constructor
-    Particle()
-        : X(0.0f), Gamma(0.0f), sigma(0.0f), 
-        U(0.0f), J(0.0f),  M(0.0f), C(0.0f), SFS(0.0f), index(0) {}
-        //PSE(0.0f), vol(0.0f), circulation(0.0f), isStatic(false), 
- 
-    __host__ __device__ void Particle::reset();    // Reset particle U, J and PSE
-    __host__ __device__ void Particle::resetSFS(); // Reset particle SFS
-};
+//struct Particle {
+//    vpmvec3 X;          // Position
+//    vpmvec3 Gamma;      // Vectorial circulation
+//    vpmfloat sigma;     // Smoothing radius
+//    int index;          // Indices of particles
+//    vpmvec3 U;          // Velocity at particle
+//    vpmmat3 J;          // Jacobian at particle
+//    vpmmat3 M;          // Auxiliary memory
+//    vpmvec3 C;          // SFS coefficient, numerator, denominator
+//    vpmvec3 SFS;
+//
+//    /*vpmfloat vol;            // Volume
+//    vpmfloat circulation;    // Scalar circulation
+//    bool isStatic;           // Indicates if particle is static
+//    vpmvec3 PSE;             // Particle-strength exchange*/
+//
+//    // Constructor
+//    Particle()
+//        : X(0.0f), Gamma(0.0f), sigma(0.0f), 
+//        U(0.0f), J(0.0f),  M(0.0f), C(0.0f), SFS(0.0f), index(0) {}
+//        //PSE(0.0f), vol(0.0f), circulation(0.0f), isStatic(false), 
+// 
+//    __host__ __device__ void Particle::reset();    // Reset particle U, J and PSE
+//    __host__ __device__ void Particle::resetSFS(); // Reset particle SFS
+//};
 
 // enum class OutputType {
 //     NONE = 0,
