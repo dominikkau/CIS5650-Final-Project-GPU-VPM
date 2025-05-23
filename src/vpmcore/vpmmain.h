@@ -226,7 +226,6 @@ void rungeKutta(ParticleField& field, vpmfloat dt, bool useRelax, int numBlocks,
 
 void runSimulation();
 
-template <typename R, typename S, typename K>
 void runVPM(
     unsigned int maxParticles,
     unsigned int numParticles,
@@ -235,11 +234,9 @@ void runVPM(
     unsigned int fileSaveSteps,
     vpmvec3 uInf,
     ParticleBuffer particleBuffer,
-    R relaxation,
-    S sfs,
-    K kernel,
+    RelaxationScheme *relaxation,
+    SFSScheme *sfs,
+    Kernel *kernel,
     int blockSize,
     std::string filename
 );
-
-//void timeKernel(int repetitions);
