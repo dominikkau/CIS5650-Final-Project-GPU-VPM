@@ -69,7 +69,7 @@ __global__ void calculateCoefficient(int N, ParticleBuffer particles, vpmfloat z
 }
 
 void DynamicSFS::operator()(ParticleField& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize, cudaStream_t stream) {
-    Kernel kernel = field.kernel;
+    Kernel *kernel = field.kernel.get();
     ParticleBuffer& particles = field.dev_particles;
     const int N = field.numParticles;
 
@@ -95,7 +95,7 @@ void DynamicSFS::operator()(ParticleField& field, vpmfloat a, vpmfloat b, int nu
         checkCUDAError("calculateTemporary (DynamicsSFS: domain filter) failed!");
 
         // CALCULATE COEFFICIENT
-        calculateCoefficient<<<numBlocks, blockSize, 0, stream>>>(N, particles, kernel.zeta(0.0), alpha,
+        calculateCoefficient<<<numBlocks, blockSize, 0, stream>>>(N, particles, kernel->zeta(0.0), alpha,
             relaxFactor, forcePositive, minC, maxC);
         checkCUDAError("calculateCoefficient failed!");
     }

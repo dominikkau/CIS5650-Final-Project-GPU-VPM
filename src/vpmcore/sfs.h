@@ -3,14 +3,18 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include "common.h"
-#include "particlebuffer.h"
-#include "particlefield.h"
+
+//#include "particlebuffer.h"
+//#include "particlefield.h"
+
+class ParticleField;
+class ParticleBuffer;
 
 struct SFSScheme {
-    virtual void operator()(int N, ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0) = 0;
+    virtual void operator()(ParticleField& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize, cudaStream_t stream = 0) = 0;
 };
 
-class DynamicSFS : SFSScheme {
+class DynamicSFS : public SFSScheme {
 private:
     vpmfloat minC;
     vpmfloat maxC;
@@ -30,6 +34,6 @@ __global__ void calculateTemporary(int N, ParticleBuffer particles, bool testFil
 __global__ void calculateCoefficient(int N, ParticleBuffer particles, vpmfloat zeta0,
     vpmfloat alpha, vpmfloat relaxFactor, bool forcePositive, vpmfloat minC, vpmfloat maxC);
 
-struct NoSFS : SFSScheme {
+class NoSFS : public SFSScheme {
     void operator()(ParticleField& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize, cudaStream_t stream = 0);
 };

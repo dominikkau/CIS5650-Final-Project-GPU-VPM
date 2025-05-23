@@ -1,3 +1,4 @@
+#include <iostream>
 #include "particlefield.h"
 
 __host__ __device__ void Particle::reset() {
@@ -48,7 +49,7 @@ void ParticleField::addParticleDevice(Particle& particle) {
 
 void ParticleField::overwriteParticleDevice(Particle& particle, unsigned int index) {
     if (index > numParticles) {
-        addParticle(particle);
+        addParticleDevice(particle);
         return;
     }
 
@@ -123,10 +124,10 @@ ParticleField::ParticleField(
     particles(particles),
     numParticles(numParticles),
     timeStep(timeStep),
-    kernel(kernel),
+    kernel(std::move(kernel)),
     uInf(uInf),
-    sfs(sfs),
-    relaxation(relaxation),
+    sfs(std::move(sfs)),
+    relaxation(std::move(relaxation)),
     synchronized(0) {
 
     dev_particles.mallocFields(maxParticles, BufferField::ALL);

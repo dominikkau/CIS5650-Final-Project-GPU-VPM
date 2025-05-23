@@ -5,36 +5,36 @@
 #include "common.h"
 #include "particlebuffer.h"
 
-struct ParticleField;
+class ParticleField;
 
 struct RelaxationScheme {
-    virtual void operator()(int N, ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0) = 0;
+    virtual void operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0) = 0;
 };
 
-class PedrizzettiRelaxation {
+class PedrizzettiRelaxation : public RelaxationScheme {
 private:
     vpmfloat relaxFactor;
 
 public:
     PedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
 
-    void operator()(int N, ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0);
+    void operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0);
 };
 
 __global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relaxFactor);
 
-class CorrectedPedrizzettiRelaxation {
+class CorrectedPedrizzettiRelaxation : public RelaxationScheme {
 private:
     vpmfloat relaxFactor;
 
 public:
     CorrectedPedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
 
-    void operator()(int N, ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0);
+    void operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0);
 };
 
 __global__ void correctedPedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relaxFactor);
 
-struct NoRelaxation {
-    inline void operator()(int N, ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0) {}
+class NoRelaxation : public RelaxationScheme {
+    inline void operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0) {}
 };

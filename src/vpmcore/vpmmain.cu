@@ -543,13 +543,13 @@ void rungeKutta(ParticleField& field, vpmfloat dt, bool useRelax, int numBlocks,
         vpmfloat b = rungeKuttaCoefs[i][1];
 
         // RUN SFS
-        field->sfs(field, a, b, numBlocks, blockSize, stream);
+        (*field.sfs)(field, a, b, numBlocks, blockSize, stream);
 
         rungeKuttaStep<<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, a, b, dt, field.kernel->zeta(0.0f), field.uInf);
         checkCUDAError("rungeKuttaStep failed!");
     }
 
-    field->relaxation(N, field, numBlocks, blockSize, stream);
+    (*field.relaxation)(field, numBlocks, blockSize, stream);
 
     ++field.timeStep;
     field.synchronized = false;
@@ -844,7 +844,6 @@ void runVPM(
     }
 }
 
-template <typename R, typename S, typename K>
 void runBoundaryVPM(
     unsigned int maxParticles,
     unsigned int numParticles,
