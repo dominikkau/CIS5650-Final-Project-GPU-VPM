@@ -3,7 +3,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include "vortexringsimulation.hpp"
-#include "vpmcore/kernel.h"
+#include "vpmcore/vpmmain.h"
 
 // Function to calculate the number of particles
 int numberParticles(int Nphi, int nc, int extra_nc) {

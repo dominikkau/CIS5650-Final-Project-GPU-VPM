@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vpmcore/kernel.h"
+#include "vpmcore/vpmmain.h"
 
 int numberParticles(int Nphi, int nc, int extra_nc = 0);
 

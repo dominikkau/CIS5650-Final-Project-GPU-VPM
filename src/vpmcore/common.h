@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <cuda.h>
 
 //#define ENABLE_CUDA_ERROR
 #define TRANSPOSED
@@ -53,3 +54,10 @@ inline void checkCUDAErrorFn(const char* msg, const char* file, int line) {
 	exit(EXIT_FAILURE);
 #endif
 }
+
+struct CUDAKernelParams {
+	int numBlocks;
+	int blockSize;
+	size_t sharedBytes;
+	cudaStream_t stream;
+};
