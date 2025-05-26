@@ -91,6 +91,10 @@ inline Kernel* getKernel(KernelType kernel)
     case KernelType::WINCKELMAN:
         kernelPointer = new WinckelmansKernel();
         break;
+    default:
+        // Default to GaussianKernel if unknown type
+        kernelPointer = new GaussianKernel(); 
+        break;
     }
 
     return kernelPointer;

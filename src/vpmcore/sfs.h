@@ -4,9 +4,6 @@
 #include <cuda_runtime.h>
 #include "common.h"
 
-//#include "particlebuffer.h"
-//#include "particlefield.h"
-
 class ParticleField;
 class ParticleBuffer;
 
