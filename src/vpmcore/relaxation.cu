@@ -3,10 +3,11 @@
 
 void PedrizzettiRelaxation::operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream) {
     const int N = field.numParticles;
-    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+    const CUDAKernelParams params{ numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream };
+    calcVelJacNaiveWrapper(params, N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     checkCUDAError("calcVelJacNaive (PedrizzettiRelaxation) failed!");
 
-    pedrizzettiRelax <<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, relaxFactor);
+    pedrizzettiRelax<<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, relaxFactor);
     checkCUDAError("PedrizzettiRelaxation failed!");
 }
 
@@ -23,7 +24,8 @@ __global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relax
 
 void CorrectedPedrizzettiRelaxation::operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream) {
     const int N = field.numParticles;
-    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+    const CUDAKernelParams params{ numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream };
+    calcVelJacNaiveWrapper(params, N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     checkCUDAError("calcVelJacNaive (CorrectedPedrizzettiRelaxation) failed!");
 
     correctedPedrizzettiRelax<<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, relaxFactor);

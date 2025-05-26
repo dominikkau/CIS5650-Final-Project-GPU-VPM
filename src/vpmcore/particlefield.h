@@ -53,7 +53,7 @@ struct ParticleField {
     ParticleBuffer dev_particles{ ParticleBufferType::DEVICE }; // Pointer to device particle buffer
     unsigned int numParticles;           // Number of particles in the field
     unsigned int timeStep;               // Current time step
-    std::unique_ptr<Kernel> kernel;                   // Vortex particle kernel
+    KernelType kernel;                   // Vortex particle kernel
     vpmvec3 uInf;               // Uniform freestream function
     std::unique_ptr<SFSScheme> sfs;                      // Subfilter-scale contributions scheme
     std::unique_ptr<RelaxationScheme> relaxation;               // Relaxation scheme
@@ -65,7 +65,7 @@ struct ParticleField {
         ParticleBuffer particles,
         unsigned int numParticles,
         unsigned int timeStep = 0,
-        std::unique_ptr<Kernel> kernel = std::make_unique<GaussianErfKernel>(),
+        KernelType kernel = KernelType::GAUSSIAN_ERF,
         vpmvec3 uInf = vpmvec3(0, 0, 0),
         std::unique_ptr<SFSScheme> sfs = std::make_unique<NoSFS>(),
         std::unique_ptr<RelaxationScheme> relaxation = std::make_unique<PedrizzettiRelaxation>(0.005f)

@@ -4,7 +4,7 @@
 #include <utility>
 #include <glm/glm.hpp>
 #include "roundjetsimulation.hpp"
-#include "vpmcore/kernel.h"
+#include "vpmcore/vpmmain.h"
 
 unsigned int addAnnulus(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat R,
     int Nphi, vpmfloat sigma, vpmfloat area, vpmvec3 jetOrigin,

@@ -214,11 +214,17 @@ __host__ __device__ inline vpmvec3 nablaCrossX(const vpmmat3& jacobianX) {
 
 template <typename K>
 __global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetParticles,
-    ParticleBuffer sourceParticles, K kernel, bool reset=false, vpmfloat testFilterFactor=1.0f);
+    ParticleBuffer sourceParticles, K kernel, bool reset = false, vpmfloat testFilterFactor = 1.0f);
+
+void calcEstrNaiveWrapper(CUDAKernelParams params, int targetN, int sourceN, ParticleBuffer targetParticles,
+    ParticleBuffer sourceParticles, KernelType kernel, bool reset = false, vpmfloat testFilterFactor = 1.0f);
 
 template <typename K>
 __global__ void calcVelJacNaive(int targetN, int sourceN, ParticleBuffer targetParticles,
-    ParticleBuffer sourceParticles, K kernel, bool reset=false, vpmfloat testFilterFactor=1.0f);
+    ParticleBuffer sourceParticles, K kernel, bool reset = false, vpmfloat testFilterFactor = 1.0f);
+
+void calcVelJacNaiveWrapper(CUDAKernelParams params, int targetN, int sourceN, ParticleBuffer targetParticles,
+    ParticleBuffer sourceParticles, KernelType kernel, bool reset = false, vpmfloat testFilterFactor = 1.0f);
 
 __global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpmfloat a, vpmfloat b, vpmfloat dt,
     vpmfloat zeta0, vpmvec3 Uinf);
@@ -237,7 +243,7 @@ void runVPM(
     ParticleBuffer particleBuffer,
     RelaxationScheme *relaxation,
     SFSScheme *sfs,
-    Kernel *kernel,
+    KernelType kernel,
     int blockSize,
     std::string filename
 );

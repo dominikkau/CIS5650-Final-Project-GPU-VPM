@@ -115,7 +115,7 @@ ParticleField::ParticleField(
     ParticleBuffer particles,
     unsigned int numParticles,
     unsigned int timeStep,
-    std::unique_ptr<Kernel> kernel,
+    KernelType kernel,
     vpmvec3 uInf,
     std::unique_ptr<SFSScheme> sfs,
     std::unique_ptr<RelaxationScheme> relaxation)
@@ -124,7 +124,7 @@ ParticleField::ParticleField(
     particles(particles),
     numParticles(numParticles),
     timeStep(timeStep),
-    kernel(std::move(kernel)),
+    kernel(kernel),
     uInf(uInf),
     sfs(std::move(sfs)),
     relaxation(std::move(relaxation)),

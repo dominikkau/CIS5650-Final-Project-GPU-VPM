@@ -1,5 +1,5 @@
 #include "main.hpp"
-#include "vpmcore/kernel.h"
+#include "vpmcore/vpmmain.h"
 #include <chrono>
 #include <iostream>
 

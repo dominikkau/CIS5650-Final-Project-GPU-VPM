@@ -331,6 +331,26 @@
 //     checkCUDAError("calcVelJacNaive (NoSFS) failed!");
 // }
 
+void calcEstrNaiveWrapper(CUDAKernelParams params, int targetN, int sourceN, ParticleBuffer targetParticles,
+    ParticleBuffer sourceParticles, KernelType kernel, bool reset, vpmfloat testFilterFactor)
+{
+    switch (kernel)
+    {
+    case KernelType::SINGULAR:
+        calcEstrNaive << <params.numBlocks, params.blockSize, params.sharedBytes, params.stream >> > (targetN, sourceN, targetParticles, sourceParticles, SingularKernel(), reset, testFilterFactor);
+        break;
+    case KernelType::GAUSSIAN:
+        calcEstrNaive << <params.numBlocks, params.blockSize, params.sharedBytes, params.stream >> > (targetN, sourceN, targetParticles, sourceParticles, GaussianKernel(), reset, testFilterFactor);
+        break;
+    case KernelType::GAUSSIAN_ERF:
+        calcEstrNaive << <params.numBlocks, params.blockSize, params.sharedBytes, params.stream >> > (targetN, sourceN, targetParticles, sourceParticles, GaussianErfKernel(), reset, testFilterFactor);
+        break;
+    case KernelType::WINCKELMAN:
+        calcEstrNaive << <params.numBlocks, params.blockSize, params.sharedBytes, params.stream >> > (targetN, sourceN, targetParticles, sourceParticles, WinckelmansKernel(), reset, testFilterFactor);
+        break;
+    }
+}
+
 template <typename K>
 __global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetParticles,
     ParticleBuffer sourceParticles, K kernel, bool reset, vpmfloat testFilterFactor) {
@@ -388,6 +408,26 @@ __global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetPar
     // Copy variables back to global memory
     if (index < targetN) {
         targetParticles.SFS[index] = targetSFS;
+    }
+}
+
+void calcVelJacNaiveWrapper(CUDAKernelParams params, int targetN, int sourceN, ParticleBuffer targetParticles,
+    ParticleBuffer sourceParticles, KernelType kernel, bool reset, vpmfloat testFilterFactor)
+{
+    switch (kernel)
+    {
+    case KernelType::SINGULAR:
+        calcVelJacNaive << <params.numBlocks, params.blockSize, params.sharedBytes, params.stream >> > (targetN, sourceN, targetParticles, sourceParticles, SingularKernel(), reset, testFilterFactor);
+        break;
+    case KernelType::GAUSSIAN:
+        calcVelJacNaive << <params.numBlocks, params.blockSize, params.sharedBytes, params.stream >> > (targetN, sourceN, targetParticles, sourceParticles, GaussianKernel(), reset, testFilterFactor);
+        break;
+    case KernelType::GAUSSIAN_ERF:
+        calcVelJacNaive << <params.numBlocks, params.blockSize, params.sharedBytes, params.stream >> > (targetN, sourceN, targetParticles, sourceParticles, GaussianErfKernel(), reset, testFilterFactor);
+        break;
+    case KernelType::WINCKELMAN:
+        calcVelJacNaive << <params.numBlocks, params.blockSize, params.sharedBytes, params.stream >> > (targetN, sourceN, targetParticles, sourceParticles, WinckelmansKernel(), reset, testFilterFactor);
+        break;
     }
 }
 
@@ -536,6 +576,7 @@ void rungeKutta(ParticleField& field, vpmfloat dt, bool useRelax, int numBlocks,
     };
 
     const int N = field.numParticles;
+    const Kernel* kernelPointer = getKernel(field.kernel);
 
     // Loop over the pairs
     for (int i = 0; i < 3; ++i) {
@@ -545,7 +586,7 @@ void rungeKutta(ParticleField& field, vpmfloat dt, bool useRelax, int numBlocks,
         // RUN SFS
         (*field.sfs)(field, a, b, numBlocks, blockSize, stream);
 
-        rungeKuttaStep<<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, a, b, dt, field.kernel->zeta(0.0f), field.uInf);
+        rungeKuttaStep<<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles, a, b, dt, kernelPointer->zeta(0.0f), field.uInf);
         checkCUDAError("rungeKuttaStep failed!");
     }
 
@@ -553,6 +594,7 @@ void rungeKutta(ParticleField& field, vpmfloat dt, bool useRelax, int numBlocks,
 
     ++field.timeStep;
     field.synchronized = false;
+    delete kernelPointer;
 }
 
 int outputMaskToBufferMask(int outputMask) {
@@ -804,7 +846,7 @@ void runVPM(
     ParticleBuffer particleBuffer,
     RelaxationScheme *relaxation,
     SFSScheme *sfs,
-    Kernel *kernel,
+    KernelType kernel,
     int blockSize,
     std::string filename) {
 
@@ -815,7 +857,7 @@ void runVPM(
         particleBuffer,
         numParticles,
         0,
-        std::unique_ptr<Kernel>(kernel),
+        kernel,
         uInf,
         std::unique_ptr<SFSScheme>(sfs),
         std::unique_ptr<RelaxationScheme>(relaxation)
@@ -856,7 +898,7 @@ void runBoundaryVPM(
     const ParticleBuffer boundaryBuffer,
     RelaxationScheme *relaxation,
     SFSScheme *sfs,
-    Kernel *kernel,
+    KernelType kernel,
     int blockSize,
     std::string filename) {
 
@@ -877,7 +919,7 @@ void runBoundaryVPM(
         particleBuffer,
         numParticles,
         0,
-        std::unique_ptr<Kernel>(kernel),
+        kernel,
         uInf,
         std::unique_ptr<SFSScheme>(sfs),
         std::unique_ptr<RelaxationScheme>(relaxation)
@@ -956,7 +998,7 @@ void runSimulation() {
             boundaryBuffer,
             new PedrizzettiRelaxation(0.3),
             new DynamicSFS(),
-            new GaussianErfKernel(),
+            KernelType::GAUSSIAN_ERF,
             blockSize,
             "test"
         );
@@ -978,7 +1020,7 @@ void runSimulation() {
         particleBuffer,
         new CorrectedPedrizzettiRelaxation(0.3),
         new DynamicSFS(),
-        new WinckelmansKernel(),
+        KernelType::WINCKELMAN,
         blockSize,
         "test"
     );

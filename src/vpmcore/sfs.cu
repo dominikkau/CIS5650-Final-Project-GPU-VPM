@@ -69,51 +69,56 @@ __global__ void calculateCoefficient(int N, ParticleBuffer particles, vpmfloat z
 }
 
 void DynamicSFS::operator()(ParticleField& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize, cudaStream_t stream) {
-    Kernel *kernel = field.kernel.get();
+    KernelType kernel = field.kernel;
     ParticleBuffer& particles = field.dev_particles;
     const int N = field.numParticles;
+    const CUDAKernelParams velParams{ numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream };
+    const CUDAKernelParams estrParams{ numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat), stream };
 
     if (a == 1.0f || a == 0.0f) {
         // CALCULATIONS WITH TEST FILTER
-        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, *kernel, true, alpha);
+        calcVelJacNaiveWrapper(velParams, N, N, particles, particles, kernel, true, alpha);
         checkCUDAError("calcVelJacNaive (DynamicsSFS: test filter) failed!");
 
-        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, *kernel, true, alpha);
+        calcEstrNaiveWrapper(estrParams, N, N, particles, particles, kernel, true, alpha);
         checkCUDAError("calcEstrNaive (DynamicsSFS: test filter) failed!");
 
         calculateTemporary<<<numBlocks, blockSize, 0, stream>>>(N, particles, true);
         checkCUDAError("calculateTemporary (DynamicsSFS: test filter) failed!");
 
         // CALCULATIONS WITH DOMAIN FILTER
-        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, *kernel, true);
+        calcVelJacNaiveWrapper(velParams, N, N, particles, particles, kernel, true);
         checkCUDAError("calcVelJacNaive (DynamicsSFS: domain filter) failed!");
 
-        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, *kernel, true);
+        calcEstrNaiveWrapper(estrParams, N, N, particles, particles, kernel, true);
         checkCUDAError("calcEstrNaive (DynamicsSFS: domain filter) failed!");
 
         calculateTemporary<<<numBlocks, blockSize, 0, stream>>>(N, particles, false);
         checkCUDAError("calculateTemporary (DynamicsSFS: domain filter) failed!");
 
         // CALCULATE COEFFICIENT
-        calculateCoefficient<<<numBlocks, blockSize, 0, stream>>>(N, particles, kernel->zeta(0.0), alpha,
+        const Kernel* kernelPointer = getKernel(kernel);
+        calculateCoefficient<<<numBlocks, blockSize, 0, stream>>>(N, particles, kernelPointer->zeta(0.0), alpha,
             relaxFactor, forcePositive, minC, maxC);
         checkCUDAError("calculateCoefficient failed!");
+        delete kernelPointer;
     }
     else {
-        calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true);
+        calcVelJacNaiveWrapper(velParams, N, N, particles, particles, kernel, true);
         checkCUDAError("calcVelJacNaive (DynamicsSFS: 2nd step) failed!");
 
-        calcEstrNaive<<<numBlocks, blockSize, 16 * blockSize * sizeof(vpmfloat), stream>>>(N, N, particles, particles, kernel, true);
+        calcEstrNaiveWrapper(estrParams, N, N, particles, particles, kernel, true);
         checkCUDAError("calcEstrNaive (DynamicsSFS: 2nd step) failed!");
     }
 }
 
 void NoSFS::operator()(ParticleField& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize, cudaStream_t stream) {
     const int N = field.numParticles;
+    const CUDAKernelParams params{ numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream };
 
     cudaMemset(field.dev_particles.SFS, 0, N * sizeof(vpmvec3));
     checkCUDAError("cudaMemset (SFS reset) failed!");
 
-    calcVelJacNaive<<<numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream>>>(N, N, field.dev_particles, field.dev_particles, field.kernel, true);
+    calcVelJacNaiveWrapper(params, N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     checkCUDAError("calcVelJacNaive (NoSFS) failed!");
 }
