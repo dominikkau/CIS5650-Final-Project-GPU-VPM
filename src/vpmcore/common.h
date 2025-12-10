@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <cuda.h>
 
-//#define ENABLE_CUDA_ERROR
+#define ENABLE_CUDA_ERROR
 #define TRANSPOSED
 //#define DOUBLE_PRECISION
 //#define CLASSIC_VPM
@@ -11,6 +11,7 @@
 
 #ifdef DOUBLE_PRECISION
 	#define EPS 1e-9
+	typedef glm::dvec4 vpmvec4;
 	typedef glm::dvec3 vpmvec3;
 	typedef glm::dvec2 vpmvec2;
 	typedef glm::dmat3 vpmmat3;
@@ -23,6 +24,7 @@
 	#define sqrt2  1.4142135623730951
 #else
 	#define EPS 1e-6f
+	typedef glm::fvec4 vpmvec4;
 	typedef glm::fvec3 vpmvec3;
 	typedef glm::fvec2 vpmvec2;
 	typedef glm::fmat3 vpmmat3;

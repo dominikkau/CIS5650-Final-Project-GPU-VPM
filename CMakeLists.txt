@@ -40,6 +40,8 @@ set(headers
     src/vpmcore/kernels.h
     src/vpmcore/relaxation.h
     src/vpmcore/sfs.h
+	src/vpmfmm/fmm_p2m.h
+	src/vpmfmm/fmm_utils.h
     src/lean_vtk.hpp
     src/vortexringsimulation.hpp
     src/roundjetsimulation.hpp
@@ -52,6 +54,7 @@ set(sources
     src/vpmcore/particlefield.cu
     src/vpmcore/relaxation.cu
     src/vpmcore/sfs.cu
+	src/vpmfmm/fmm_p2m.cu
     src/lean_vtk.cpp
     src/vortexringsimulation.cpp
     src/roundjetsimulation.cpp
@@ -70,7 +73,7 @@ if(CMAKE_VERSION VERSION_LESS "3.23.0")
 elseif(CMAKE_VERSION VERSION_LESS "3.24.0")
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES all-major)
 else()
-    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES native)
+    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES 75)
 endif()
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE "$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CMAKE_PROJECT_NAME})

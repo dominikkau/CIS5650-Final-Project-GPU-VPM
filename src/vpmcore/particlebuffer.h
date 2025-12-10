@@ -52,6 +52,7 @@ struct ParticleBuffer {
     ParticleBuffer(ParticleBufferType::Type bufferType) : bufferType(bufferType) {};
 
     void mallocFields(unsigned int numParticles, int bufferMask);
+    void freeFields();
     void freeFields(int bufferMask);
 };
 

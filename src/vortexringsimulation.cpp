@@ -10,6 +10,11 @@ int numberParticles(int Nphi, int nc, int extra_nc) {
     return Nphi * (1 + 4 * (nc + extra_nc) * (nc + extra_nc + 1));
 }
 
+// Function to calculate the number of particles
+int numberParticles(const VortexRing const &ring) {
+    return ring.Nphi * (1 + 4 * (ring.nc + ring.extra_nc) * (ring.nc + ring.extra_nc + 1));
+}
+
 int addVortexRing(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat R, vpmfloat Rcross,
     int Nphi, int nc, vpmfloat sigma, int extra_nc, vpmvec3 ringPosition,
     vpmmat3 ringOrientation, int startingIndex, int maxParticles) {

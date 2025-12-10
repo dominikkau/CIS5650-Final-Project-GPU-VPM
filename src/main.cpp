@@ -1,35 +1,39 @@
 #include "main.hpp"
 #include "vpmcore/vpmmain.h"
-#include <chrono>
+#include "vpmfmm/fmm_p2m.h"
+//#include <chrono>
 #include <iostream>
 
 int main(int argc, char* argv[]) {
     
-    // Create CUDA events
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    //// Create CUDA events
+    //cudaEvent_t start, stop;
+    //cudaEventCreate(&start);
+    //cudaEventCreate(&stop);
 
-    // Record the start event
-    cudaEventRecord(start);
+    //// Record the start event
+    //cudaEventRecord(start);
 
-    //timeKernel(500);
-    runSimulation();
+    ////timeKernel(500);
+    ////runSimulation();
 
-    // Record the stop event
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
 
-    // Calculate the elapsed time
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
+    //// Record the stop event
+    //cudaEventRecord(stop);
+    //cudaEventSynchronize(stop);
 
-    // Output the duration
-    std::cout << "Kernel execution took " << milliseconds << " milliseconds." << std::endl;
+    //// Calculate the elapsed time
+    //float milliseconds = 0;
+    //cudaEventElapsedTime(&milliseconds, start, stop);
 
-    // Destroy CUDA events
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    //// Output the duration
+    //std::cout << "Kernel execution took " << milliseconds << " ms" << std::endl;
+
+    //// Destroy CUDA events
+    //cudaEventDestroy(start);
+    //cudaEventDestroy(stop);
+
+    testP2MKernel();
 
     return 0;
 }

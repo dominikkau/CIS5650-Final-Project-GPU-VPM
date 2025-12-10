@@ -113,6 +113,11 @@ void ParticleBuffer::mallocFields(unsigned int numParticles, int bufferMask) {
     bufferFields |= bufferMask;
 }
 
+// Frees memory for all allocated fields
+void ParticleBuffer::freeFields() {
+	freeFields(bufferFields);
+}
+
 // Frees memory for fields in bufferMask
 // Ignores fields that have not been allocated
 void ParticleBuffer::freeFields(int bufferMask) {
