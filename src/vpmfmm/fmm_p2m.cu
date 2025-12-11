@@ -1,31 +1,37 @@
 #include <cuda.h>
-#include <cuda_runtime.h>
 #include <iostream>
 #include <vector>
 #include "../vortexringsimulation.hpp"
 #include "fmm_p2m.h"
 #include <device_launch_parameters.h>
 
-#define MAXP 32
-#define THREADS_PER_CELL 32
-#define THREADS_PER_CELL_B 5
+#ifdef __INTELLISENSE__
+#define __CUDACC__
+#endif // __INTELLISENSE__
+
+#include <cooperative_groups.h>
+#include <cooperative_groups/reduce.h>
+#include <cuda_runtime.h>
+
+#ifdef __INTELLISENSE__
+#undef __CUDACC__
+#endif // __INTELLISENSE__
+
+namespace cg = cooperative_groups;
 
 // Set up P2M kernel testing environment
 void testP2MKernel()
 {
 	// Define the number of repetitions for timing
-    constexpr int REPETITIONS = 100;
-    int blockSize = 32;
+    const unsigned int REPETITIONS = 10000;
+	// Define block size
+    const unsigned int blockSize = 128;
+	// Define threads per cell
+	const unsigned int threadsPerCell = 32;
 	// Number of multipole expansion terms
-    int p = 10;
+    const int p = 10;
     // Number of FMM levels
-    int depth = 8;
-
-	if (p > MAXP)
-	{
-		std::cerr << "Error: p exceeds MAXP" << std::endl;
-		return;
-	}
+    const int depth = 8;
 
 	// Define vortex rings properties
     unsigned int numParticles = 0;
@@ -48,10 +54,9 @@ void testP2MKernel()
     // Particles per cell at the deepest level
     int numCells = 1 << depth;
 	int particlesPerCell = (numParticles + numCells - 1) / numCells;
-    int threadsPerCell = 2;
     
     // Compute size of required shared memory
-	size_t sharedMemSize = blockSize/THREADS_PER_CELL * p * p * sizeof(float);
+	size_t sharedMemSize = blockSize/threadsPerCell * p * p * sizeof(float);
 	// Calculate grid size
 	int numBlocks = (numParticles + blockSize - 1) / blockSize;
 
@@ -103,7 +108,7 @@ void testP2MKernel()
     for (int i = 0; i < REPETITIONS; i++)
     {
 		// Your kernel launch code here
-		fmm_P2M<<<numBlocks, blockSize, sharedMemSize>>>(reinterpret_cast<vpmvec4*>(d_fmm_buffer), numParticles, d_fmm_M_buffer, p, depth);
+        fmmP2M<threadsPerCell><<<numBlocks, blockSize, sharedMemSize>>>(reinterpret_cast<vpmvec4*>(d_fmm_buffer), numParticles, d_fmm_M_buffer, p, depth);
         checkCUDAError("fmm_P2M failed!");
         cudaDeviceSynchronize();
     }
@@ -121,7 +126,7 @@ void testP2MKernel()
 
     cudaMemcpy(fmm_M_buffer, d_fmm_M_buffer, numCells * p * p * sizeof(float), cudaMemcpyDeviceToHost);
 
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 16; i++)
     {
 		printf("M[%d]: %f\n", i, fmm_M_buffer[i]);
     }
@@ -143,104 +148,137 @@ __host__ __device__ int point_index_analytic(int index, int level, int point_cou
     return (int)floorf((float)point_count * index / (1 << level));
 }
 
-__device__ void inline addToM(float* buffer, float q, float* M, int n)
-{
-    float value;	
-    for (int m = MAXP - 1 - n; m <= MAXP - 1 + n; m++)
-	{
-        value = q * buffer[m];
-        #pragma unroll
-        for (int i = 1; i < THREADS_PER_CELL; i *= 2)
-        {
-            value += __shfl_xor_sync(0xFFFFFFFF, value, i);
-        }
-        M[n * n + m - (MAXP - 1 - n)] += value;
-	}
+__device__ __forceinline__ int ilog2(unsigned int x) {
+    return 31 - __clz(x);
 }
 
 // Computes Multipole expansion of particles
 // Evaluates regular spherical basis function
-__global__ void fmm_P2M(vpmvec4* xqs, int N, float* Rout, int p, int depth)
+template<unsigned int threads_per_cell>
+__global__ void fmmP2M(vpmvec4* xqs, int N, float* Rout, int p, int depth)
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= N) return;
+    auto block = cg::this_thread_block();
+    auto cell = cg::tiled_partition<threads_per_cell>(block);
 
-    const int globalCellIdx = idx >> THREADS_PER_CELL_B;
-	const int cellThreadIdx = idx & (THREADS_PER_CELL - 1);
-    const int blockCellIdx = threadIdx.x >> THREADS_PER_CELL_B;
+    //const int idx = block.group_index().x * block.size() + block.thread_rank();
+    //if (idx >= threads_per_cell * (1 << depth)) return;
 
-    const int ptsIdxStart = point_index_analytic(  globalCellIdx, depth, N);
-    const int ptsIdxEnd   = point_index_analytic(1+globalCellIdx, depth, N);
+	const int globalCellIdx = block.group_index().x * cell.meta_group_size() + cell.meta_group_rank();
+    const int coefsPerBlock = p * p * cell.meta_group_size();
 
+	// Zero initialize shared memory
     extern __shared__ float sh[];
-    float* s_M = sh + p * p * blockCellIdx;
-
-    float Rm1Buffer[2 * MAXP - 1];
-    float Rm2Buffer[2 * MAXP - 1];
-    float *Rm1BufferPtr = Rm1Buffer;
-	float *Rm2BufferPtr = Rm2Buffer;
-
-    for (int i = idx; i < p * p * blockDim.x / THREADS_PER_CELL; i += blockDim.x)
+    for (int i = threadIdx.x; i < coefsPerBlock; i += block.size())
     {
         sh[i] = 0.0f;
-	}
+    }
 
-    __syncthreads();
+    if (globalCellIdx >= (1 << depth)) return; // Out of range
 
-    for (int ptsIdx = ptsIdxStart; ptsIdx < ptsIdxEnd + THREADS_PER_CELL - 1; ptsIdx += THREADS_PER_CELL)
-	{
-		// Load xq
-		vpmvec4 xq;
-        if ((ptsIdx + cellThreadIdx >= ptsIdxEnd) || (ptsIdx >= N))
-			xq = vpmvec4(0.0f); // Dummy point does not contribute to sum
+	// Pointer to expansion coefficients of this cell in shared memory
+    float* s_M = sh + p * p * cell.meta_group_rank();
+
+	// Synchronize block to ensure shared memory is initialized
+    block.sync();
+
+
+    const int cellPtsIdxStart = point_index_analytic(globalCellIdx, depth, N);
+    const int cellPtsIdxEnd = point_index_analytic(globalCellIdx + 1, depth, N);
+
+    for (int cellPtsIdx = cellPtsIdxStart; cellPtsIdx < cellPtsIdxEnd; cellPtsIdx += threads_per_cell)
+    {
+        // Load position and charge data
+		const int ptsIdx = cellPtsIdx + cell.thread_rank();
+        vpmvec4 xq;
+        if (ptsIdx < cellPtsIdxEnd)
+            xq = xqs[ptsIdx];
         else
-        {
-            xq = xqs[ptsIdx + cellThreadIdx];
-        }
+			xq = vpmvec4{ 0.0f, 0.0f, 0.0f, 0.0f };
+
         vpmfloat x = xq.x;
         vpmfloat y = xq.y;
         vpmfloat z = xq.z;
         vpmfloat q = xq.w;
-
         vpmfloat r2 = x * x + y * y + z * z;
 
-        Rm2BufferPtr[MAXP - 1] = 1.0f;      // R_0^0
-		addToM(Rm2BufferPtr, q, s_M, 0);
+        float Rnm1mm1pos =      1.0f; // R_{n-1}^{m-1}
+        float Rnmneg     =  0.5f * y; // R_{n}^{-m}
+        float Rnmm1pos   =        -z; // R_{n}^{m-1}
+        float Rnmpos     = -0.5f * x; // R_{n}^{m}
 
-        Rm1BufferPtr[MAXP - 2] = 0.5f * y;  // R_1^{-1}
-        Rm1BufferPtr[MAXP - 1] = -z;        // R_1^0  
-        Rm1BufferPtr[MAXP    ] = -0.5f * x; // R_1^1
-        addToM(Rm1BufferPtr, q, s_M, 1);
+		float Rnm1mm1neg;   // R_{n-1}^{-(m-1)}
+		float Rnmm1neg;     // R_{n}^{-(m-1)}  
+		float Rnp1mm1neg;   // R_{n+1}^{-(m-1)}
+		float Rnp1mm1pos;   // R_{n+1}^{m-1}
+
+        s_M[0] += cg::reduce(cell, q * Rnm1mm1pos, cg::plus<float>());
+        s_M[1] += cg::reduce(cell, q * Rnmneg, cg::plus<float>());
+        s_M[2] += cg::reduce(cell, q * Rnmm1pos, cg::plus<float>());
+        s_M[3] += cg::reduce(cell, q * Rnmpos, cg::plus<float>());
+
+        for (int n_ = 2; n_ < p; n_++)
+        {
+            float facz = z * (2.0f * n_ - 1.0f);
+            Rnp1mm1pos = -(facz * Rnmm1pos + r2 * Rnm1mm1pos) / (n_ * n_);
+            s_M[n_ * n_ + n_] += cg::reduce(cell, q * Rnp1mm1pos, cg::plus<float>());
+            Rnm1mm1pos = Rnmm1pos;
+            Rnmm1pos = Rnp1mm1pos;
+        }
+
+        Rnm1mm1neg = Rnmneg;
+        Rnm1mm1pos = Rnmpos;
 
         for (int n = 2; n < p; n++)
         {
             float div = -0.5f / n;
-            Rm2BufferPtr[MAXP - 1 + n] = div * (x * Rm1BufferPtr[MAXP + n - 2] + y * Rm1BufferPtr[MAXP - n    ]);
-            Rm2BufferPtr[MAXP - 1 - n] = div * (x * Rm1BufferPtr[MAXP - n    ] - y * Rm1BufferPtr[MAXP + n - 2]);
+            Rnmneg = div * (x * Rnm1mm1neg - y * Rnm1mm1pos);
+			Rnmpos = div * (x * Rnm1mm1pos + y * Rnm1mm1neg);
 
-            Rm2BufferPtr[MAXP + n - 2] = -z * Rm1BufferPtr[MAXP + n - 2];
-            Rm2BufferPtr[MAXP - n    ] = -z * Rm1BufferPtr[MAXP - n    ];
+			// Save to shared memory
+            s_M[n * n] += cg::reduce(cell, q * Rnmneg, cg::plus<float>());
+            s_M[n * n + 2 * n] += cg::reduce(cell, q * Rnmpos, cg::plus<float>());
 
-            float facz = z * (2.0f * n - 1.0f);
-            Rm2BufferPtr[MAXP - 1] = -(facz * Rm1BufferPtr[MAXP - 1] + r2 * Rm2BufferPtr[MAXP - 1]) / (n * n);
-            for (int m = 1; m < n - 1; m++)
-            {
-                div = -1.0f / ((n - m) * (n + m));
-                Rm2BufferPtr[MAXP - 1 + m] = (facz * Rm1BufferPtr[MAXP - 1 + m] + r2 * Rm2BufferPtr[MAXP - 1 + m]) * div;
-                Rm2BufferPtr[MAXP - 1 - m] = (facz * Rm1BufferPtr[MAXP - 1 - m] + r2 * Rm2BufferPtr[MAXP - 1 - m]) * div;
-            }
+            Rnmm1neg = -z * Rnm1mm1neg;
+            Rnmm1pos = -z * Rnm1mm1pos;
 
-			addToM(Rm2Buffer, q, s_M, n);
-            d_swap(Rm1BufferPtr, Rm2BufferPtr);
+            // Save to shared memory
+            s_M[n * n + 1] += cg::reduce(cell, q * Rnmm1neg, cg::plus<float>());
+            s_M[n * n + 2 * n - 1] += cg::reduce(cell, q * Rnmm1pos, cg::plus<float>());
+
+            int m = n - 1;
+            int m2 = m * m;
+			for (int n_ = n + 1; n_ < p; n_++)
+			{
+                float facz = z * (2 * n_ - 1);
+				div = -1.0f / (n_ * n_ - m2);
+				Rnp1mm1neg = (facz * Rnmm1neg + r2 * Rnm1mm1neg) * div;
+                Rnp1mm1pos = (facz * Rnmm1pos + r2 * Rnm1mm1pos) * div;
+
+                // Save to shared memory
+                s_M[n_ * n_ + 2] += cg::reduce(cell, q * Rnp1mm1neg, cg::plus<float>());
+                s_M[n_ * n_ + 2 * n_ - 2] += cg::reduce(cell, q * Rnp1mm1pos, cg::plus<float>());
+
+                Rnm1mm1neg = Rnmm1neg;
+                Rnm1mm1pos = Rnmm1pos;
+                Rnmm1neg = Rnp1mm1neg;
+                Rnmm1pos = Rnp1mm1pos;
+			}
+
+            Rnm1mm1neg = Rnmneg;
+            Rnm1mm1pos = Rnmpos;
         }
-	}
+    }
 
-    __syncthreads();
+    block.sync();
 
-	const int cellsPerBlock = blockDim.x / THREADS_PER_CELL;
-	const int coefsPerBlock = p * p * cellsPerBlock;
+	// Write back to global memory
+    // Only use active threads
+    const int validCellsInBlock = min(cell.meta_group_size(),
+        (1 << depth) - block.group_index().x * cell.meta_group_size());
+    const int coefsToWrite = p * p * validCellsInBlock;
+	const int activeThreads = threads_per_cell * validCellsInBlock;
 
-    for (int i = idx; i < p * p * blockDim.x / THREADS_PER_CELL; i += blockDim.x)
+    for (int i = threadIdx.x; i < coefsToWrite; i += activeThreads)
     {
         Rout[blockIdx.x * coefsPerBlock + i] = sh[i];
     }
