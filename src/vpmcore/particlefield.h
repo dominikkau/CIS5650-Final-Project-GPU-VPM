@@ -42,16 +42,15 @@ struct Particle {
         U(0.0f), J(0.0f), M(0.0f), C(0.0f), SFS(0.0f), index(0) {}
     //PSE(0.0f), vol(0.0f), circulation(0.0f), isStatic(false), 
 
-    __host__ __device__ void Particle::reset();    // Reset particle U, J and PSE
-    __host__ __device__ void Particle::resetSFS(); // Reset particle SFS
+    __host__ __device__ void reset();    // Reset particle U, J and PSE
+    __host__ __device__ void resetSFS(); // Reset particle SFS
 };
 
 // ParticleField definition
 struct ParticleField {
-    unsigned int maxParticles;           // Maximum number of particles
-    ParticleBuffer particles;        // Pointer to host particle buffer
-    ParticleBuffer dev_particles{ ParticleBufferType::DEVICE }; // Pointer to device particle buffer
-    unsigned int numParticles;           // Number of particles in the field
+    ParticleBuffer particles;        // Host particle buffer
+    ParticleBuffer dev_particles;   // Device particle buffer
+    size_t numParticles;           // Number of particles in the field
     unsigned int timeStep;               // Current time step
     KernelType kernel;                   // Vortex particle kernel
     vpmvec3 uInf;               // Uniform freestream function
@@ -61,9 +60,8 @@ struct ParticleField {
 
     // Constructor
     ParticleField(
-        unsigned int maxParticles,
         ParticleBuffer particles,
-        unsigned int numParticles,
+        size_t numParticles,
         unsigned int timeStep = 0,
         KernelType kernel = KernelType::GAUSSIAN_ERF,
         vpmvec3 uInf = vpmvec3(0, 0, 0),
@@ -77,8 +75,8 @@ struct ParticleField {
 	void syncParticlesHostToDevice(int bufferMask, cudaStream_t stream = 0);
 
     void addParticleDevice(Particle& particle);
-    void overwriteParticleDevice(Particle& particle, unsigned int index);
-    void removeParticleDevice(unsigned int index);
-    void cpyParticlesDeviceToDevice(ParticleBuffer inParticles, unsigned int inNumParticles,
-        unsigned int startIndex, int bufferMask);
+    void overwriteParticleDevice(Particle& particle, size_t index);
+    void removeParticleDevice(size_t index);
+    void cpyParticlesDeviceToDevice(ParticleBuffer srcBuffer, size_t srcIndex, size_t count,
+        int bufferMask);
 };

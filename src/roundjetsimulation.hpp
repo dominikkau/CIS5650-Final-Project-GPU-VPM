@@ -2,8 +2,9 @@
 
 #include "vpmcore/vpmmain.h"
 
-unsigned int addAnnulus(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat R,
+size_t addAnnulus(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat R,
     int Nphi, vpmfloat sigma, vpmfloat area, vpmvec3 jetOrigin,
-    vpmmat3 jetOrientation, bool isStatic, unsigned int startingIndex, unsigned int maxParticles);
+    vpmmat3 jetOrientation, bool isStatic, size_t startingIndex, size_t maxParticles);
 
-std::pair<unsigned int, unsigned int> initRoundJet(ParticleBuffer particleBuffer, ParticleBuffer boundaryBuffer, unsigned int maxParticles);
+std::pair<size_t, size_t> initRoundJet(ParticleBuffer particleBuffer,
+    ParticleBuffer boundaryBuffer, size_t maxParticles);

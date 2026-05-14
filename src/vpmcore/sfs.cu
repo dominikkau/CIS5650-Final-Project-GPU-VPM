@@ -8,12 +8,12 @@ __global__ void calculateTemporary(int N, ParticleBuffer particles, bool testFil
     if (index >= N) return;
 
     if (testFilter) {
-        particles.M[index][0] = xDotNablaY(particles.Gamma[index], particles.J[index]);
-        particles.M[index][1] = particles.SFS[index];
+        particles.M()[index][0] = xDotNablaY(particles.Gamma()[index], particles.J()[index]);
+        particles.M()[index][1] = particles.SFS()[index];
     }
     else {
-        particles.M[index][0] -= xDotNablaY(particles.Gamma[index], particles.J[index]);
-        particles.M[index][1] -= particles.SFS[index];
+        particles.M()[index][0] -= xDotNablaY(particles.Gamma()[index], particles.J()[index]);
+        particles.M()[index][1] -= particles.SFS()[index];
     }
 }
 
@@ -23,12 +23,12 @@ __global__ void calculateCoefficient(int N, ParticleBuffer particles, vpmfloat z
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
-    const vpmvec3 particleGamma  = particles.Gamma[index];
-    const vpmvec3 particleSFS    = particles.SFS[index];
-    const vpmmat3 particleM      = particles.M[index];
-    const vpmfloat particleSigma = particles.sigma[index];
+    const vpmvec3 particleGamma  = particles.Gamma()[index];
+    const vpmvec3 particleSFS    = particles.SFS()[index];
+    const vpmmat3 particleM      = particles.M()[index];
+    const vpmfloat particleSigma = particles.sigma()[index];
 
-    vpmvec3 particleC = particles.C[index];
+    vpmvec3 particleC = particles.C()[index];
 
     vpmfloat numerator = glm::dot(particleM[0], particleGamma);
     numerator *= 3.0f * alpha - 2.0f;
@@ -65,7 +65,7 @@ __global__ void calculateCoefficient(int N, ParticleBuffer particles, vpmfloat z
     if (particleC[0] * glm::dot(particleGamma, particleSFS) < 0) particleC[0] = 0;
 
     // Copy result to global memory
-    particles.C[index] = particleC;
+    particles.C()[index] = particleC;
 }
 
 void DynamicSFS::operator()(ParticleField& field, vpmfloat a, vpmfloat b, int numBlocks, int blockSize, cudaStream_t stream) {
@@ -116,7 +116,7 @@ void NoSFS::operator()(ParticleField& field, vpmfloat a, vpmfloat b, int numBloc
     const int N = field.numParticles;
     const CUDAKernelParams params{ numBlocks, blockSize, 7 * blockSize * sizeof(vpmfloat), stream };
 
-    cudaMemset(field.dev_particles.SFS, 0, N * sizeof(vpmvec3));
+    cudaMemset(field.dev_particles.SFS(), 0, N * sizeof(vpmvec3));
     checkCUDAError("cudaMemset (SFS reset) failed!");
 
     calcVelJacNaiveWrapper(params, N, N, field.dev_particles, field.dev_particles, field.kernel, true);

@@ -6,18 +6,26 @@
 #include "vpmcore/vpmmain.h"
 
 // Function to calculate the number of particles
-int numberParticles(int Nphi, int nc, int extra_nc) {
+size_t vortex_rings::numberParticles(int Nphi, int nc, int extra_nc) {
     return Nphi * (1 + 4 * (nc + extra_nc) * (nc + extra_nc + 1));
 }
 
 // Function to calculate the number of particles
-int numberParticles(const VortexRing const &ring) {
+size_t vortex_rings::numberParticles(const VortexRing &ring) {
     return ring.Nphi * (1 + 4 * (ring.nc + ring.extra_nc) * (ring.nc + ring.extra_nc + 1));
 }
 
-int addVortexRing(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat R, vpmfloat Rcross,
+// Function to calculate the number of particles
+size_t vortex_rings::numberParticles(const std::vector<VortexRing>& rings) {
+	size_t totalParticles = 0;
+	for (const auto& ring : rings)
+		totalParticles += numberParticles(ring);
+	return totalParticles;
+}
+
+size_t vortex_rings::addVortexRing(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat R, vpmfloat Rcross,
     int Nphi, int nc, vpmfloat sigma, int extra_nc, vpmvec3 ringPosition,
-    vpmmat3 ringOrientation, int startingIndex, int maxParticles) {
+    vpmmat3 ringOrientation, size_t startingIndex) {
     // Lambda function definition
     // Arclength corresponding to phi for circle with radius r
     auto fun_S = [](vpmfloat phi, vpmfloat r) { return r * phi; };
@@ -55,7 +63,7 @@ int addVortexRing(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat 
     vpmfloat ds = dS / Stot;
     vpmfloat omega = circulation / (PI * Rcross * Rcross);
 
-    int idx = startingIndex;
+    size_t idx = startingIndex;
     for (int N = 0; N < Nphi; ++N) {
         vpmfloat sc1 = ds * N;
         vpmfloat sc2 = ds * (N + 1);
@@ -85,14 +93,14 @@ int addVortexRing(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat 
                 // Circulation
                 vpmfloat crcltn = glm::length(Gamma) / length;
 
-                if (idx >= maxParticles - 1) return -1;
+                if (idx >= particleBuffer.size()) return 0;
 
-                particleBuffer.X[idx] = fun_X_global(X);
-                particleBuffer.Gamma[idx] = fun_Gamma_global(Gamma);
-                //particleBuffer.circulation[idx] = crcltn;
-                particleBuffer.sigma[idx] = sigma;
-                //particleBuffer.vol[idx] = vol;
-                particleBuffer.index[idx] = idx;
+                particleBuffer.X()[idx] = fun_X_global(X);
+                particleBuffer.Gamma()[idx] = fun_Gamma_global(Gamma);
+                //particleBuffer.circulation()[idx] = crcltn;
+                particleBuffer.sigma()[idx] = sigma;
+                //particleBuffer.vol()[idx] = vol;
+                particleBuffer.index()[idx] = idx;
                 ++idx;
             }
             else {
@@ -118,14 +126,14 @@ int addVortexRing(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat 
                     // Circulation
                     vpmfloat crcltn = glm::length(Gamma) / length;
 
-                    if (idx >= maxParticles - 1) return -1;
+                    if (idx >= particleBuffer.size()) return 0;
 
-                    particleBuffer.X[idx] = fun_X_global(X);
-                    particleBuffer.Gamma[idx] = fun_Gamma_global(Gamma);
-                    //particleBuffer.circulation[idx] = crcltn;
-                    particleBuffer.sigma[idx] = sigma;
-                    //particleBuffer.vol[idx] = vol;
-                    particleBuffer.index[idx] = idx;
+                    particleBuffer.X()[idx] = fun_X_global(X);
+                    particleBuffer.Gamma()[idx] = fun_Gamma_global(Gamma);
+                    //particleBuffer.circulation()[idx] = crcltn;
+                    particleBuffer.sigma()[idx] = sigma;
+                    //particleBuffer.vol()[idx] = vol;
+                    particleBuffer.index()[idx] = idx;
                     ++idx;
                 }
             }
@@ -135,13 +143,13 @@ int addVortexRing(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat 
     return idx;
 }
 
-int initVortexRings(ParticleBuffer particleBuffer, int maxParticles) {
+size_t vortex_rings::initVortexRings(ParticleBuffer particleBuffer) {
     // Number of rings
     const int nrings{ 2 };
     // Offset of rings
     vpmfloat dZ{ 0.7906f };
 
-    unsigned int numParticles{ 0 };
+    size_t numParticles{ 0 };
     vpmfloat circulations[nrings];
     vpmfloat Rs[nrings];
     vpmfloat Rcrosss[nrings];
@@ -166,20 +174,41 @@ int initVortexRings(ParticleBuffer particleBuffer, int maxParticles) {
         numParticles += numberParticles(Nphis[i], ncs[i], extra_ncs[i]);
     }
 
-    if (numParticles > maxParticles) {
+    if (numParticles > particleBuffer.size()) {
         std::cout << "Number of particles (" << numParticles;
-        std::cout << ") exceeds particleBuffer size (" << maxParticles << ")!" << std::endl;
-        numParticles = maxParticles;
+        std::cout << ") exceeds particleBuffer size (" << particleBuffer.size() << ")!" << std::endl;
+        numParticles = particleBuffer.size();
     }
 
-    int startingIndex{ 0 };
+    size_t startingIndex{ 0 };
     for (int i = 0; i < nrings; ++i) {
         startingIndex = addVortexRing(particleBuffer, circulations[i], Rs[i], Rcrosss[i],
             Nphis[i], ncs[i], sigmas[i], extra_ncs[i], ringPositions[i],
-            ringOrientations[i], startingIndex, maxParticles);
+            ringOrientations[i], startingIndex);
 
-        if (startingIndex == -1) break;
+        if (startingIndex == 0) break;
     }
+
+    return numParticles;
+}
+
+size_t vortex_rings::initParticleBuffer(ParticleBuffer particleBuffer, const std::vector<VortexRing> &rings) 
+{
+	size_t numParticles = numberParticles(rings);
+    if (numParticles > particleBuffer.size()) {
+        std::cout << "Number of particles (" << numParticles;
+        std::cout << ") exceeds particleBuffer size (" << particleBuffer.size() << ")!" << std::endl;
+        numParticles = particleBuffer.size();
+    }
+
+	size_t startingIndex{ 0 };
+	for (const auto &ring: rings) {
+		startingIndex = addVortexRing(particleBuffer, ring.circulation, ring.R, ring.Rcross,
+			ring.Nphi, ring.nc, ring.sigma, ring.extra_nc, ring.position,
+			ring.orientation, startingIndex);
+
+        if (startingIndex == 0) break;
+	}
 
     return numParticles;
 }

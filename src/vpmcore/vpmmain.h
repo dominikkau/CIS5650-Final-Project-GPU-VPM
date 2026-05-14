@@ -46,6 +46,8 @@ __global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpmfloat a, vpmf
 
 void rungeKutta(ParticleField& field, vpmfloat dt, bool useRelax, int numBlocks, int blockSize, cudaStream_t stream = 0);
 
+void writeVTK(ParticleBuffer& particles, size_t N, const std::string& filename, int outputMask);
+
 void runSimulation();
 
 void runVPM(

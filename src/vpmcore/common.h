@@ -3,6 +3,18 @@
 #include <glm/glm.hpp>
 #include <cuda.h>
 
+#ifdef __INTELLISENSE__
+#define __CUDACC__
+#endif // __INTELLISENSE__
+
+#include <cooperative_groups.h>
+#include <cooperative_groups/reduce.h>
+#include <cuda_runtime.h>
+
+#ifdef __INTELLISENSE__
+#undef __CUDACC__
+#endif // __INTELLISENSE__
+
 #define ENABLE_CUDA_ERROR
 #define TRANSPOSED
 //#define DOUBLE_PRECISION

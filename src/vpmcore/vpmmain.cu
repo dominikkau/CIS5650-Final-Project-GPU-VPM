@@ -53,13 +53,13 @@ __global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetPar
     vpmmat3 targetJ;
     vpmvec3 targetSFS;
     if (index < targetN) {
-        targetX = targetParticles.X[index];
-        targetJ = targetParticles.J[index];
+        targetX = targetParticles.X()[index];
+        targetJ = targetParticles.J()[index];
         if (reset) {
             targetSFS = vpmvec3{ 0.0f };
         }
         else {
-            targetSFS = targetParticles.SFS[index];
+            targetSFS = targetParticles.SFS()[index];
         }
     }
     else {
@@ -71,10 +71,10 @@ __global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetPar
     vpmvec3 targetXSigma{ 0.0f };
     for (int j = 0; j < sourceN; j += blockDim.x) {
         if (j + s_index < sourceN) {
-            s_sourceInvSigma[s_index] = 1.0f / (sourceParticles.sigma[s_index + j] * testFilterFactor);
-            s_sourceX[s_index] = sourceParticles.X[s_index + j] * s_sourceInvSigma[s_index];
-            s_sourceJ[s_index] = sourceParticles.J[s_index + j];
-            s_sourceGammaSigma[s_index] = sourceParticles.Gamma[s_index + j]
+            s_sourceInvSigma[s_index] = 1.0f / (sourceParticles.sigma()[s_index + j] * testFilterFactor);
+            s_sourceX[s_index] = sourceParticles.X()[s_index + j] * s_sourceInvSigma[s_index];
+            s_sourceJ[s_index] = sourceParticles.J()[s_index + j];
+            s_sourceGammaSigma[s_index] = sourceParticles.Gamma()[s_index + j]
                 * s_sourceInvSigma[s_index] * s_sourceInvSigma[s_index] * s_sourceInvSigma[s_index];
             targetXSigma = targetX * s_sourceInvSigma[s_index];
         }
@@ -90,7 +90,7 @@ __global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetPar
 
     // Copy variables back to global memory
     if (index < targetN) {
-        targetParticles.SFS[index] = targetSFS;
+        targetParticles.SFS()[index] = targetSFS;
     }
 }
 
@@ -136,15 +136,15 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, ParticleBuffer targetP
     vpmmat3 targetJ;
     if (index < targetN) {
         // Get target variables from global memory
-        targetX = targetParticles.X[index];
+        targetX = targetParticles.X()[index];
 
         if (reset) {
             targetU = vpmvec3{ 0.0f };
             targetJ = vpmmat3{ 0.0f };
         }
         else {
-            targetU = targetParticles.U[index];
-            targetJ = targetParticles.J[index];
+            targetU = targetParticles.U()[index];
+            targetJ = targetParticles.J()[index];
         }
     }
     else {
@@ -156,9 +156,9 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, ParticleBuffer targetP
     // Copy source variables into shared memory
     for (int j = 0; j < sourceN; j += blockDim.x) {
         if (j + s_index < sourceN) {
-            s_sourceX[s_index]     = sourceParticles.X[s_index + j];
-            s_sourceGamma[s_index] = sourceParticles.Gamma[s_index + j];
-            s_sourceInvSigma[s_index] = invTestFilterFactor / sourceParticles.sigma[s_index + j];
+            s_sourceX[s_index]     = sourceParticles.X()[s_index + j];
+            s_sourceGamma[s_index] = sourceParticles.Gamma()[s_index + j];
+            s_sourceInvSigma[s_index] = invTestFilterFactor / sourceParticles.sigma()[s_index + j];
         }
         __syncthreads();
 
@@ -200,8 +200,8 @@ __global__ void calcVelJacNaive(int targetN, int sourceN, ParticleBuffer targetP
 
     if (index < targetN) {
         // Copy variables back to global memory
-        targetParticles.U[index] = targetU;
-        targetParticles.J[index] = targetJ;
+        targetParticles.U()[index] = targetU;
+        targetParticles.J()[index] = targetJ;
     }
 }
 
@@ -209,26 +209,26 @@ __global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpmfloat a, vpmf
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
-    const vpmfloat particleC   = particles.C[index][0];
-    const vpmvec3  particleU   = particles.U[index];
-    const vpmvec3  particleSFS = particles.SFS[index];
-    const vpmmat3  particleJ   = particles.J[index];
+    const vpmfloat particleC   = particles.C()[index][0];
+    const vpmvec3  particleU   = particles.U()[index];
+    const vpmvec3  particleSFS = particles.SFS()[index];
+    const vpmmat3  particleJ   = particles.J()[index];
     
-    vpmfloat particleSigma = particles.sigma[index];
-    vpmvec3  particleGamma = particles.Gamma[index];
-    vpmvec3  particleX     = particles.X[index];
+    vpmfloat particleSigma = particles.sigma()[index];
+    vpmvec3  particleGamma = particles.Gamma()[index];
+    vpmvec3  particleX     = particles.X()[index];
     vpmmat3  particleM;
     if (a == 1.0f || a == 0.0f) {
         particleM = vpmmat3{ 0.0f };
     }
     else {
-        particleM = particles.M[index];
+        particleM = particles.M()[index];
     }
 
     // Position update
     particleM[0] = a * particleM[0] + dt * (particleU + Uinf);
     particleX += b * particleM[0];
-    particles.X[index] = particleX;
+    particles.X()[index] = particleX;
 
     vpmvec3 S = xDotNablaY(particleGamma, particleJ);
 #ifdef CLASSIC_VPM
@@ -241,17 +241,17 @@ __global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpmfloat a, vpmf
     particleM[1] = a * particleM[1] + dt * (S - 3.0f * Z * particleGamma
         - particleC * particleSFS * particleSigma * particleSigma * particleSigma / zeta0);
     particleGamma += b * particleM[1];
-    particles.Gamma[index] = particleGamma;
+    particles.Gamma()[index] = particleGamma;
 
 #ifndef CLASSIC_VPM
     // Sigma update
     particleM[2][1] = a * particleM[2][1] - dt * (particleSigma * Z);
     particleSigma += b * particleM[2][1];
 
-    particles.sigma[index] = particleSigma;
+    particles.sigma()[index] = particleSigma;
 #endif
 
-    particles.M[index] = particleM;
+    particles.M()[index] = particleM;
 }
 
 void rungeKutta(ParticleField& field, vpmfloat dt, bool useRelax, int numBlocks, int blockSize, cudaStream_t stream) {
@@ -296,7 +296,7 @@ int outputMaskToBufferMask(int outputMask) {
     return bufferMask;
 }
 
-void writeVTK(ParticleBuffer &particles, int N, const std::string& filename, int outputMask) {
+void writeVTK(ParticleBuffer &particles, size_t N, const std::string& filename, int outputMask) {
     const int dim = 3;
 
     static leanvtk::VTUWriter writer;
@@ -311,8 +311,8 @@ void writeVTK(ParticleBuffer &particles, int N, const std::string& filename, int
     if (outputMask & OutputType::X) {
         particleX.insert(
             particleX.end(),
-            (vpmfloat*)particles.X,
-            (vpmfloat*)(particles.X + N)
+            (vpmfloat*)particles.X(),
+            (vpmfloat*)(particles.X() + N)
         );
 
         writer.add_vector_field("position", particleX, dim);
@@ -320,8 +320,8 @@ void writeVTK(ParticleBuffer &particles, int N, const std::string& filename, int
     if (outputMask & OutputType::U) {
         particleU.insert(
             particleU.end(),
-            (vpmfloat*)particles.U,
-            (vpmfloat*)(particles.U + N)
+            (vpmfloat*)particles.U(),
+            (vpmfloat*)(particles.U() + N)
         );
 
         writer.add_vector_field("velocity", particleU, dim);
@@ -329,8 +329,8 @@ void writeVTK(ParticleBuffer &particles, int N, const std::string& filename, int
     if (outputMask & OutputType::GAMMA) {
         particleGamma.insert(
             particleGamma.end(),
-            (vpmfloat*)particles.Gamma,
-            (vpmfloat*)(particles.Gamma + N)
+            (vpmfloat*)particles.Gamma(),
+            (vpmfloat*)(particles.Gamma() + N)
         );
 
         writer.add_vector_field("circulation", particleGamma, dim);
@@ -338,8 +338,8 @@ void writeVTK(ParticleBuffer &particles, int N, const std::string& filename, int
     if (outputMask & OutputType::SIGMA) {
         particleSigma.insert(
             particleSigma.end(),
-            particles.sigma,
-            particles.sigma + N
+            particles.sigma(),
+            particles.sigma() + N
         );
 
         writer.add_scalar_field("sigma", particleSigma);
@@ -347,8 +347,8 @@ void writeVTK(ParticleBuffer &particles, int N, const std::string& filename, int
     if (outputMask & OutputType::INDEX) {
         particleIdx.insert(
             particleIdx.end(),
-            particles.index,
-            particles.index + N
+            particles.index(),
+            particles.index() + N
         );
 
         writer.add_scalar_field("index", particleIdx);
@@ -358,7 +358,7 @@ void writeVTK(ParticleBuffer &particles, int N, const std::string& filename, int
 
         vpmvec3 omega;
         for (int i = 0; i < N; ++i) {
-            omega = nablaCrossX(particles.J[i]);
+            omega = nablaCrossX(particles.J()[i]);
             particleOmega.insert(particleOmega.end(), (vpmfloat*)&omega, (vpmfloat*)&omega + 3);
         }
 
@@ -389,17 +389,17 @@ void calcVortexRingMetrics(ParticleField& field, int iteration, std::string file
         vpmvec3 ringCenter = vpmvec3{ 0 };
         vpmfloat totalGamma = 0;
         for (int i = offset; i < numParticlesRing + offset; ++i) {
-            vpmfloat Gamma = glm::length(field.particles.Gamma[i]);
+            vpmfloat Gamma = glm::length(field.particles.Gamma()[i]);
             totalGamma += Gamma;
-            ringCenter += Gamma * field.particles.X[i];
+            ringCenter += Gamma * field.particles.X()[i];
         }
         ringCenter /= totalGamma;
 
         // Calculate ring radius
         vpmfloat ringRadius = 0;
         for (int i = offset; i < numParticlesRing + offset; ++i) {
-            vpmfloat Gamma = glm::length(field.particles.Gamma[i]);
-            vpmfloat radius = glm::length(field.particles.X[i] - ringCenter);
+            vpmfloat Gamma = glm::length(field.particles.Gamma()[i]);
+            vpmfloat radius = glm::length(field.particles.X()[i] - ringCenter);
             ringRadius += Gamma * radius;
         }
         ringRadius /= totalGamma;
@@ -460,7 +460,6 @@ void runVPM(
     int numBlocks = (numParticles + blockSize - 1) / blockSize;
 
     ParticleField field{
-        maxParticles,
         particleBuffer,
         numParticles,
         0,
@@ -473,8 +472,8 @@ void runVPM(
     int outputMask = OutputType::ALL;
     int bufferMask = outputMaskToBufferMask(outputMask);
 
-    ParticleBuffer outputBufferHost{ ParticleBufferType::HOST_PINNED };
-    outputBufferHost.mallocFields(maxParticles, bufferMask);
+    ParticleBuffer outputBufferHost{ ParticleBufferType::HOST_PINNED, maxParticles };
+    outputBufferHost.mallocFields(bufferMask);
 
     for (int i = 0; i < numTimeSteps + 1; ++i) {
         // calcVortexRingMetrics(field, i, "test");
@@ -484,9 +483,9 @@ void runVPM(
         if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
             writeVTK(outputBufferHost, field.numParticles, filename + "_" + std::to_string(field.timeStep), outputMask);
 
-            std::cout << outputBufferHost.U[0].x << std::endl;
+            std::cout << outputBufferHost.U()[0].x << std::endl;
 
-            _cpyParticleBuffer(outputBufferHost, field.dev_particles, 0, field.numParticles, bufferMask);
+            cpyParticleBuffer(outputBufferHost, field.dev_particles, bufferMask);
 
             cudaDeviceSynchronize();
         }
@@ -515,14 +514,13 @@ void runBoundaryVPM(
     int bufferMask = outputMaskToBufferMask(outputMask);
     int boundaryMask = BufferField::X | BufferField::SIGMA | BufferField::GAMMA | BufferField::INDEX;
 
-    ParticleBuffer dev_boundaryBuffer{ ParticleBufferType::DEVICE };
-    dev_boundaryBuffer.mallocFields(numBoundary, boundaryMask);
+    ParticleBuffer dev_boundaryBuffer{ ParticleBufferType::DEVICE, numBoundary };
+    dev_boundaryBuffer.mallocFields(boundaryMask);
 
     // Copy boundary particle buffer from host to device
-    cpyParticleBuffer(dev_boundaryBuffer, boundaryBuffer, numBoundary, numBoundary, numBoundary, 0, boundaryMask);
+    cpyParticleBuffer(dev_boundaryBuffer, boundaryBuffer, boundaryMask);
 
     ParticleField field{
-        maxParticles,
         particleBuffer,
         numParticles,
         0,
@@ -535,19 +533,19 @@ void runBoundaryVPM(
     unsigned int boundaryIndex = numParticles;
 
     for (int i = 0; i < numTimeSteps; ++i) {
-        std::cout << field.numParticles << " " << boundaryIndex << " " << field.particles.U[0].x << std::endl;
+        std::cout << field.numParticles << " " << boundaryIndex << " " << field.particles.U()[0].x << std::endl;
 
         rungeKutta(field, dt, true, numBlocks, blockSize);
 
         if ((fileSaveSteps != 0) && (i % fileSaveSteps == 0)) {
             // writeVTK(field, filename, outputMask);
 
-            std::cout << field.particles.U[0].x << std::endl;
+            std::cout << field.particles.U()[0].x << std::endl;
 
             field.syncParticlesDeviceToHost(bufferMask);
         }
 
-        if (boundaryIndex + numBoundary >= field.maxParticles) boundaryIndex = 0;
+        if (boundaryIndex + numBoundary >= field.particles.size()) boundaryIndex = 0;
 
         field.cpyParticlesDeviceToDevice(dev_boundaryBuffer, numBoundary, boundaryIndex, boundaryMask);
 
@@ -569,24 +567,24 @@ void runSimulation() {
 
     // Create host particle buffer
 #ifdef PINNED_MEMORY
-    ParticleBuffer particleBuffer{ ParticleBufferType::HOST_PINNED };
+    ParticleBuffer particleBuffer{ ParticleBufferType::HOST_PINNED, maxParticles };
 #else
     ParticleBuffer particleBuffer{ ParticleBufferType::HOST };
 #endif
     int inputBufferMask = BufferField::X | BufferField::U | BufferField::J | BufferField::INDEX | BufferField::GAMMA | BufferField::SIGMA;
-    particleBuffer.mallocFields(maxParticles, inputBufferMask);
+    particleBuffer.mallocFields(inputBufferMask);
 
     int numParticles;
     switch (simulationType)
     {
     case 0:
-        numParticles = initVortexRings(particleBuffer, maxParticles);
+        numParticles = vortex_rings::initVortexRings(particleBuffer);
         break;
 
     case 1: {
         // Create host boundary buffer
-        ParticleBuffer boundaryBuffer{ ParticleBufferType::HOST_PINNED };
-        boundaryBuffer.mallocFields(maxParticles, BufferField::X | BufferField::GAMMA | BufferField::SIGMA | BufferField::INDEX);
+        ParticleBuffer boundaryBuffer{ ParticleBufferType::HOST_PINNED, maxParticles };
+        boundaryBuffer.mallocFields(BufferField::X | BufferField::GAMMA | BufferField::SIGMA | BufferField::INDEX);
 
         std::pair<unsigned int, unsigned int> numbers = initRoundJet(particleBuffer, boundaryBuffer, maxParticles);
         numParticles = numbers.first;
@@ -610,8 +608,8 @@ void runSimulation() {
             "test"
         );
 
-        boundaryBuffer.freeFields(boundaryBuffer.bufferFields);
-        particleBuffer.freeFields(particleBuffer.bufferFields);
+        boundaryBuffer.freeFields();
+        particleBuffer.freeFields();
         return;
     }
     }
@@ -632,5 +630,5 @@ void runSimulation() {
         "test"
     );
 
-    particleBuffer.freeFields(particleBuffer.bufferFields);
+    particleBuffer.freeFields();
 }

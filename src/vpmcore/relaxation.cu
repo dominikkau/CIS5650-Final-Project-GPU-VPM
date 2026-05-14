@@ -15,10 +15,10 @@ __global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relax
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
-    const vpmvec3 omega    = nablaCrossX(particles.J[index]);
-    const vpmvec3 oldGamma = particles.Gamma[index];
+    const vpmvec3 omega    = nablaCrossX(particles.J()[index]);
+    const vpmvec3 oldGamma = particles.Gamma()[index];
 
-    particles.Gamma[index] = (1.0f - relaxFactor) * oldGamma
+    particles.Gamma()[index] = (1.0f - relaxFactor) * oldGamma
         + relaxFactor * glm::length(oldGamma) / glm::length(omega) * omega;
 }
 
@@ -36,14 +36,14 @@ __global__ void correctedPedrizzettiRelax(int N, ParticleBuffer particles, vpmfl
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
-    const vpmvec3 omega      = nablaCrossX(particles.J[index]);
-    const vpmvec3 oldGamma   = particles.Gamma[index];
+    const vpmvec3 omega      = nablaCrossX(particles.J()[index]);
+    const vpmvec3 oldGamma   = particles.Gamma()[index];
     const vpmfloat omegaNorm = glm::length(omega);
     const vpmfloat gammaNorm = glm::length(oldGamma);
 
     const vpmfloat tmp = sqrt(1.0f - 2.0f * (1.0f - relaxFactor) * relaxFactor
         * (1.0f - glm::dot(oldGamma, omega) / (omegaNorm * gammaNorm)));
 
-    particles.Gamma[index] = ((1.0f - relaxFactor) * oldGamma
+    particles.Gamma()[index] = ((1.0f - relaxFactor) * oldGamma
         + relaxFactor * gammaNorm / omegaNorm * omega) / tmp;
 }

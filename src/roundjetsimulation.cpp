@@ -6,9 +6,9 @@
 #include "roundjetsimulation.hpp"
 #include "vpmcore/vpmmain.h"
 
-unsigned int addAnnulus(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat R,
+size_t addAnnulus(ParticleBuffer particleBuffer, vpmfloat circulation, vpmfloat R,
     int Nphi, vpmfloat sigma, vpmfloat area, vpmvec3 jetOrigin,
-    vpmmat3 jetOrientation, bool isStatic, unsigned int startingIndex, unsigned int maxParticles) {
+    vpmmat3 jetOrientation, bool isStatic, size_t startingIndex, size_t maxParticles) {
         
         // Arclength corresponding to phi for circle with radius r
         auto fun_S = [](vpmfloat phi, vpmfloat r) { return r * phi; };
@@ -42,7 +42,7 @@ unsigned int addAnnulus(ParticleBuffer particleBuffer, vpmfloat circulation, vpm
         // Non-dimensional perimeter spacing
         vpmfloat ds = dS / Stot;
 
-        int idx = startingIndex;
+        size_t idx = startingIndex;
         // Discretization of annulus into cross-sections
         for (int i = 0; i < Nphi; i++){
             
@@ -72,23 +72,23 @@ unsigned int addAnnulus(ParticleBuffer particleBuffer, vpmfloat circulation, vpm
             // Vortex strength
             vpmvec3 Gamma = circulation * length * T;
 
-            if (idx >= maxParticles - 1) return -1;
+            if (idx >= maxParticles - 1) return idx;
 
-            particleBuffer.X[idx] = fun_X_global(X);
-            particleBuffer.Gamma[idx] = fun_Gamma_global(Gamma);
-            //particleBuffer[idx].circulation[idx] = circulation;
-            particleBuffer.sigma[idx] = sigma;
-            //particleBuffer.vol[idx] = area * length;
-            particleBuffer.index[idx] = idx;
-            //particleBuffer.isStatic[idx] = isStatic;
+            particleBuffer.X()[idx] = fun_X_global(X);
+            particleBuffer.Gamma()[idx] = fun_Gamma_global(Gamma);
+            //particleBuffer[idx]().circulation[idx] = circulation;
+            particleBuffer.sigma()[idx] = sigma;
+            //particleBuffer.vol()[idx] = area * length;
+            particleBuffer.index()[idx] = idx;
+            //particleBuffer.isStatic()[idx] = isStatic;
             ++idx;
         }
         return idx;
 }
 
 
-std::pair<unsigned int, unsigned int> initRoundJet(ParticleBuffer particleBuffer, ParticleBuffer boundaryBuffer,
-    unsigned int maxParticles) {
+std::pair<size_t, size_t> initRoundJet(ParticleBuffer particleBuffer, ParticleBuffer boundaryBuffer,
+    size_t maxParticles) {
 
     // ------- SIMULATION PARAMETERS ------- 
     // (m) jet diameter
@@ -116,7 +116,7 @@ std::pair<unsigned int, unsigned int> initRoundJet(ParticleBuffer particleBuffer
     vpmfloat dxotheta = 0.5f;        // Distance Δx between particles over momentum thickness θ
     vpmfloat overlap = 2.4f;           // Overlap between particles
 
-    int numParticles{ 0 };
+    size_t numParticles{ 0 };
 
     // Define freestream (coflow) velocity
     vpmvec3 Vfreestream = vpmvec3{ 0, 0, U2 };
@@ -238,10 +238,10 @@ std::pair<unsigned int, unsigned int> initRoundJet(ParticleBuffer particleBuffer
     int j = 0;
     // BCi always the same in
     for (int i = 0; i < BCi.size(); i++){
-        boundaryBuffer.X[j] = particleBuffer.X[BCi[i]];
-        boundaryBuffer.Gamma[j] = particleBuffer.Gamma[BCi[i]];
-        boundaryBuffer.sigma[j] = particleBuffer.sigma[BCi[i]];
-        boundaryBuffer.index[j] = particleBuffer.index[BCi[i]];
+        boundaryBuffer.X()[j] = particleBuffer.X()[BCi[i]];
+        boundaryBuffer.Gamma()[j] = particleBuffer.Gamma()[BCi[i]];
+        boundaryBuffer.sigma()[j] = particleBuffer.sigma()[BCi[i]];
+        boundaryBuffer.index()[j] = particleBuffer.index()[BCi[i]];
         j++;
     }
     // remove all particles from particleBuffer that are not in the BCi array?
