@@ -21,20 +21,20 @@ struct OutputType {
 };
 
 struct Particle {
-    vpmvec3 X;          // Position
-    vpmvec3 Gamma;      // Vectorial circulation
-    vpmfloat sigma;     // Smoothing radius
+    vpm::vec3 X;          // Position
+    vpm::vec3 Gamma;      // Vectorial circulation
+    vpm::real sigma;     // Smoothing radius
     int index;          // Indices of particles
-    vpmvec3 U;          // Velocity at particle
-    vpmmat3 J;          // Jacobian at particle
-    vpmmat3 M;          // Auxiliary memory
-    vpmvec3 C;          // SFS coefficient, numerator, denominator
-    vpmvec3 SFS;
+    vpm::vec3 U;          // Velocity at particle
+    vpm::mat3 J;          // Jacobian at particle
+    vpm::mat3 M;          // Auxiliary memory
+    vpm::vec3 C;          // SFS coefficient, numerator, denominator
+    vpm::vec3 SFS;
 
-    /*vpmfloat vol;            // Volume
-    vpmfloat circulation;    // Scalar circulation
+    /*vpm::real vol;            // Volume
+    vpm::real circulation;    // Scalar circulation
     bool isStatic;           // Indicates if particle is static
-    vpmvec3 PSE;             // Particle-strength exchange*/
+    vpm::vec3 PSE;             // Particle-strength exchange*/
 
     // Constructor
     Particle()
@@ -53,7 +53,7 @@ struct ParticleField {
     size_t numParticles;           // Number of particles in the field
     unsigned int timeStep;               // Current time step
     KernelType kernel;                   // Vortex particle kernel
-    vpmvec3 uInf;               // Uniform freestream function
+    vpm::vec3 uInf;               // Uniform freestream function
     std::unique_ptr<SFSScheme> sfs;                      // Subfilter-scale contributions scheme
     std::unique_ptr<RelaxationScheme> relaxation;               // Relaxation scheme
     int synchronized;           // Flags if host buffers are synchronized with device
@@ -64,7 +64,7 @@ struct ParticleField {
         size_t numParticles,
         unsigned int timeStep = 0,
         KernelType kernel = KernelType::GAUSSIAN_ERF,
-        vpmvec3 uInf = vpmvec3(0, 0, 0),
+        vpm::vec3 uInf = vpm::vec3(0, 0, 0),
         std::unique_ptr<SFSScheme> sfs = std::make_unique<NoSFS>(),
         std::unique_ptr<RelaxationScheme> relaxation = std::make_unique<PedrizzettiRelaxation>(0.005f)
     );

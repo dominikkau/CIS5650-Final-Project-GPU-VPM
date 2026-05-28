@@ -13,42 +13,42 @@ void ParticleBuffer::mallocFields(int bufferMask) {
     switch (bufferType) {
     case ParticleBufferType::DEVICE:
         if (bufferMask & BufferField::X) {
-            cudaMalloc((void**)&X_, count * sizeof(vpmvec3));
+            cudaMalloc((void**)&X_, count * sizeof(vpm::vec3));
             checkCUDAError("cudaMalloc of X failed!");
         }
 
         if (bufferMask & BufferField::U) {
-            cudaMalloc((void**)&U_, count * sizeof(vpmvec3));
+            cudaMalloc((void**)&U_, count * sizeof(vpm::vec3));
             checkCUDAError("cudaMalloc of U failed!");
         }
 
         if (bufferMask & BufferField::J) {
-            cudaMalloc((void**)&J_, count * sizeof(vpmmat3));
+            cudaMalloc((void**)&J_, count * sizeof(vpm::mat3));
             checkCUDAError("cudaMalloc of J failed!");
         }
 
         if (bufferMask & BufferField::GAMMA) {
-            cudaMalloc((void**)&Gamma_, count * sizeof(vpmvec3));
+            cudaMalloc((void**)&Gamma_, count * sizeof(vpm::vec3));
             checkCUDAError("cudaMalloc of Gamma failed!");
         }
 
         if (bufferMask & BufferField::SIGMA) {
-            cudaMalloc((void**)&sigma_, count * sizeof(vpmfloat));
+            cudaMalloc((void**)&sigma_, count * sizeof(vpm::real));
             checkCUDAError("cudaMalloc of sigma failed!");
         }
 
         if (bufferMask & BufferField::SFS) {
-            cudaMalloc((void**)&SFS_, count * sizeof(vpmvec3));
+            cudaMalloc((void**)&SFS_, count * sizeof(vpm::vec3));
             checkCUDAError("cudaMalloc of SFS failed!");
         }
 
         if (bufferMask & BufferField::C) {
-            cudaMalloc((void**)&C_, count * sizeof(vpmvec3));
+            cudaMalloc((void**)&C_, count * sizeof(vpm::vec3));
             checkCUDAError("cudaMalloc of C failed!");
         }
 
         if (bufferMask & BufferField::M) {
-            cudaMalloc((void**)&M_, count * sizeof(vpmmat3));
+            cudaMalloc((void**)&M_, count * sizeof(vpm::mat3));
             checkCUDAError("cudaMalloc of M failed!");
         }
 
@@ -58,7 +58,7 @@ void ParticleBuffer::mallocFields(int bufferMask) {
         }
 
         /*if (bufferMask & BufferField::PSE) {
-            cudaMalloc((void**)&PSE_, count * sizeof(vpmvec3));
+            cudaMalloc((void**)&PSE_, count * sizeof(vpm::vec3));
             checkCUDAError("cudaMalloc of PSE failed!");
         }
 
@@ -68,46 +68,46 @@ void ParticleBuffer::mallocFields(int bufferMask) {
         }
 
         if (bufferMask & BufferField::VOL) {
-            cudaMalloc((void**)&vol_, count * sizeof(vpmfloat));
+            cudaMalloc((void**)&vol_, count * sizeof(vpm::real));
             checkCUDAError("cudaMalloc of vol failed!");
         }
 
         if (bufferMask & BufferField::CIRC) {
-            cudaMalloc((void**)&circulation_, count * sizeof(vpmfloat));
+            cudaMalloc((void**)&circulation_, count * sizeof(vpm::real));
             checkCUDAError("cudaMalloc of circulation failed!");
         }*/
         break;
 
     case ParticleBufferType::HOST:
-        if (bufferMask & BufferField::X) X_ = new vpmvec3[count];
-        if (bufferMask & BufferField::U) U_ = new vpmvec3[count];
-        if (bufferMask & BufferField::J) J_ = new vpmmat3[count];
-        if (bufferMask & BufferField::GAMMA) Gamma_ = new vpmvec3[count];
-        if (bufferMask & BufferField::SIGMA) sigma_ = new vpmfloat[count];
-        if (bufferMask & BufferField::SFS) SFS_ = new vpmvec3[count];
-        if (bufferMask & BufferField::C) C_ = new vpmvec3[count];
-        if (bufferMask & BufferField::M) M_ = new vpmmat3[count];
+        if (bufferMask & BufferField::X) X_ = new vpm::vec3[count];
+        if (bufferMask & BufferField::U) U_ = new vpm::vec3[count];
+        if (bufferMask & BufferField::J) J_ = new vpm::mat3[count];
+        if (bufferMask & BufferField::GAMMA) Gamma_ = new vpm::vec3[count];
+        if (bufferMask & BufferField::SIGMA) sigma_ = new vpm::real[count];
+        if (bufferMask & BufferField::SFS) SFS_ = new vpm::vec3[count];
+        if (bufferMask & BufferField::C) C_ = new vpm::vec3[count];
+        if (bufferMask & BufferField::M) M_ = new vpm::mat3[count];
         if (bufferMask & BufferField::INDEX) index_ = new size_t[count];
-        /*if (bufferMask & BufferField::PSE) PSE_ = new vpmvec3[count];
+        /*if (bufferMask & BufferField::PSE) PSE_ = new vpm::vec3[count];
         if (bufferMask & BufferField::IS_STATIC) isStatic_ = new bool[count];
-        if (bufferMask & BufferField::VOL) vol_ = new vpmfloat[count];
-        if (bufferMask & BufferField::CIRC) circulation_ = new vpmfloat[count];*/
+        if (bufferMask & BufferField::VOL) vol_ = new vpm::real[count];
+        if (bufferMask & BufferField::CIRC) circulation_ = new vpm::real[count];*/
         break;
 
     case ParticleBufferType::HOST_PINNED:
-        if (bufferMask & BufferField::X) cudaMallocHost((void**)&X_, count * sizeof(vpmvec3));
-        if (bufferMask & BufferField::U) cudaMallocHost((void**)&U_, count * sizeof(vpmvec3));
-        if (bufferMask & BufferField::J) cudaMallocHost((void**)&J_, count * sizeof(vpmmat3));
-        if (bufferMask & BufferField::GAMMA) cudaMallocHost((void**)&Gamma_, count * sizeof(vpmvec3));
-        if (bufferMask & BufferField::SIGMA) cudaMallocHost((void**)&sigma_, count * sizeof(vpmfloat));
-        if (bufferMask & BufferField::SFS) cudaMallocHost((void**)&SFS_, count * sizeof(vpmvec3));
-        if (bufferMask & BufferField::C) cudaMallocHost((void**)&C_, count * sizeof(vpmvec3));
-        if (bufferMask & BufferField::M) cudaMallocHost((void**)&M_, count * sizeof(vpmmat3));
+        if (bufferMask & BufferField::X) cudaMallocHost((void**)&X_, count * sizeof(vpm::vec3));
+        if (bufferMask & BufferField::U) cudaMallocHost((void**)&U_, count * sizeof(vpm::vec3));
+        if (bufferMask & BufferField::J) cudaMallocHost((void**)&J_, count * sizeof(vpm::mat3));
+        if (bufferMask & BufferField::GAMMA) cudaMallocHost((void**)&Gamma_, count * sizeof(vpm::vec3));
+        if (bufferMask & BufferField::SIGMA) cudaMallocHost((void**)&sigma_, count * sizeof(vpm::real));
+        if (bufferMask & BufferField::SFS) cudaMallocHost((void**)&SFS_, count * sizeof(vpm::vec3));
+        if (bufferMask & BufferField::C) cudaMallocHost((void**)&C_, count * sizeof(vpm::vec3));
+        if (bufferMask & BufferField::M) cudaMallocHost((void**)&M_, count * sizeof(vpm::mat3));
         if (bufferMask & BufferField::INDEX) cudaMallocHost((void**)&index_, count * sizeof(size_t));
-        /*if (bufferMask & BufferField::PSE) cudaMallocHost((void**)&PSE_, count * sizeof(vpmvec3));
+        /*if (bufferMask & BufferField::PSE) cudaMallocHost((void**)&PSE_, count * sizeof(vpm::vec3));
         if (bufferMask & BufferField::IS_STATIC) cudaMallocHost((void**)&isStatic_, count * sizeof(bool));
-        if (bufferMask & BufferField::VOL) cudaMallocHost((void**)&vol_, count * sizeof(vpmfloat));
-        if (bufferMask & BufferField::CIRC) cudaMallocHost((void**)&circulation_, count * sizeof(vpmfloat));*/
+        if (bufferMask & BufferField::VOL) cudaMallocHost((void**)&vol_, count * sizeof(vpm::real));
+        if (bufferMask & BufferField::CIRC) cudaMallocHost((void**)&circulation_, count * sizeof(vpm::real));*/
         break;
     }
 
@@ -223,13 +223,13 @@ void ParticleBuffer::freeFields(int bufferMask) {
     bufferFields &= ~bufferMask;
 }
 
-size_t cpyParticleBuffer(ParticleBuffer dstBuffer, ParticleBuffer srcBuffer, int bufferMask,
+size_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer, int bufferMask,
     cudaStream_t stream)
 {
 	return cpyParticleBuffer(dstBuffer, srcBuffer, 0, 0, std::min(dstBuffer.size(), srcBuffer.size()), bufferMask, stream);
 }
 
-size_t cpyParticleBuffer(ParticleBuffer dstBuffer, ParticleBuffer srcBuffer,
+size_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer,
     size_t dstIndex, size_t srcIndex, size_t count, int bufferMask, cudaStream_t stream) {
 
     // Determine cudaMemcpy direction
@@ -255,43 +255,43 @@ size_t cpyParticleBuffer(ParticleBuffer dstBuffer, ParticleBuffer srcBuffer,
     bufferMask &= (dstBuffer.fields() & srcBuffer.fields());
 
     if (bufferMask & BufferField::X) {
-        cudaMemcpyAsync(dstBuffer.X() + dstIndex, srcBuffer.X(), count * sizeof(vpmvec3), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.X() + dstIndex, srcBuffer.X(), count * sizeof(vpm::vec3), cpyDirection, stream);
     }
     if (bufferMask & BufferField::U) {
-        cudaMemcpyAsync(dstBuffer.U() + dstIndex, srcBuffer.U(), count * sizeof(vpmvec3), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.U() + dstIndex, srcBuffer.U(), count * sizeof(vpm::vec3), cpyDirection, stream);
     }
     if (bufferMask & BufferField::J) {
-        cudaMemcpyAsync(dstBuffer.J() + dstIndex, srcBuffer.J(), count * sizeof(vpmmat3), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.J() + dstIndex, srcBuffer.J(), count * sizeof(vpm::mat3), cpyDirection, stream);
     }
     if (bufferMask & BufferField::GAMMA) {
-        cudaMemcpyAsync(dstBuffer.Gamma() + dstIndex, srcBuffer.Gamma(), count * sizeof(vpmvec3), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.Gamma() + dstIndex, srcBuffer.Gamma(), count * sizeof(vpm::vec3), cpyDirection, stream);
     }
     if (bufferMask & BufferField::SIGMA) {
-        cudaMemcpyAsync(dstBuffer.sigma() + dstIndex, srcBuffer.sigma(), count * sizeof(vpmfloat), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.sigma() + dstIndex, srcBuffer.sigma(), count * sizeof(vpm::real), cpyDirection, stream);
     }
     if (bufferMask & BufferField::SFS) {
-        cudaMemcpyAsync(dstBuffer.SFS() + dstIndex, srcBuffer.SFS(), count * sizeof(vpmvec3), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.SFS() + dstIndex, srcBuffer.SFS(), count * sizeof(vpm::vec3), cpyDirection, stream);
     }
     if (bufferMask & BufferField::C) {
-        cudaMemcpyAsync(dstBuffer.C() + dstIndex, srcBuffer.C(), count * sizeof(vpmvec3), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.C() + dstIndex, srcBuffer.C(), count * sizeof(vpm::vec3), cpyDirection, stream);
     }
     if (bufferMask & BufferField::M) {
-        cudaMemcpyAsync(dstBuffer.M() + dstIndex, srcBuffer.M(), count * sizeof(vpmmat3), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.M() + dstIndex, srcBuffer.M(), count * sizeof(vpm::mat3), cpyDirection, stream);
     }
     if (bufferMask & BufferField::INDEX) {
-        cudaMemcpyAsync(dstBuffer.index() + dstIndex, srcBuffer.index(), count * sizeof(int), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.index() + dstIndex, srcBuffer.index(), count * sizeof(size_t), cpyDirection, stream);
     }
     /*if (bufferMask & BufferField::PSE) {
-        cudaMemcpyAsync(dstBuffer.PSE() + dstIndex, srcBuffer.PSE(), count * sizeof(vpmvec3), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.PSE() + dstIndex, srcBuffer.PSE(), count * sizeof(vpm::vec3), cpyDirection, stream);
     }
     if (bufferMask & BufferField::IS_STATIC) {
         cudaMemcpyAsync(dstBuffer.isStatic() + dstIndex, srcBuffer.isStatic(), count * sizeof(bool), cpyDirection, stream);
     }
     if (bufferMask & BufferField::VOL) {
-        cudaMemcpyAsync(dstBuffer.vol() + dstIndex, srcBuffer.vol(), count * sizeof(vpmfloat), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.vol() + dstIndex, srcBuffer.vol(), count * sizeof(vpm::real), cpyDirection, stream);
     }
     if (bufferMask & BufferField::CIRC) {
-        cudaMemcpyAsync(dstBuffer.circulation() + dstIndex, srcBuffer.circulation(), count * sizeof(vpmfloat), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.circulation() + dstIndex, srcBuffer.circulation(), count * sizeof(vpm::real), cpyDirection, stream);
     }*/
 
     return count;

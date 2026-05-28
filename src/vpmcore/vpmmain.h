@@ -11,7 +11,7 @@
 #include "particlebuffer.h"
 #include "particlefield.h"
 
-__host__ __device__ inline vpmvec3 xDotNablaY(const vpmvec3& x, const vpmmat3& jacobianY) {
+__host__ __device__ inline vpm::vec3 xDotNablaY(const vpm::vec3& x, const vpm::mat3& jacobianY) {
 #ifdef TRANSPOSED
     return jacobianY * x;
 #else
@@ -19,8 +19,8 @@ __host__ __device__ inline vpmvec3 xDotNablaY(const vpmvec3& x, const vpmmat3& j
 #endif
 }
 
-__host__ __device__ inline vpmvec3 nablaCrossX(const vpmmat3& jacobianX) {
-    return vpmvec3{
+__host__ __device__ inline vpm::vec3 nablaCrossX(const vpm::mat3& jacobianX) {
+    return vpm::vec3{
         jacobianX[1][2] - jacobianX[2][1],
         jacobianX[2][0] - jacobianX[0][2],
         jacobianX[0][1] - jacobianX[1][0]
@@ -29,22 +29,22 @@ __host__ __device__ inline vpmvec3 nablaCrossX(const vpmmat3& jacobianX) {
 
 template <typename K>
 __global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetParticles,
-    ParticleBuffer sourceParticles, K kernel, bool reset = false, vpmfloat testFilterFactor = 1.0f);
+    ParticleBuffer sourceParticles, K kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
 
 void calcEstrNaiveWrapper(CUDAKernelParams params, int targetN, int sourceN, ParticleBuffer targetParticles,
-    ParticleBuffer sourceParticles, KernelType kernel, bool reset = false, vpmfloat testFilterFactor = 1.0f);
+    ParticleBuffer sourceParticles, KernelType kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
 
 template <typename K>
 __global__ void calcVelJacNaive(int targetN, int sourceN, ParticleBuffer targetParticles,
-    ParticleBuffer sourceParticles, K kernel, bool reset = false, vpmfloat testFilterFactor = 1.0f);
+    ParticleBuffer sourceParticles, K kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
 
 void calcVelJacNaiveWrapper(CUDAKernelParams params, int targetN, int sourceN, ParticleBuffer targetParticles,
-    ParticleBuffer sourceParticles, KernelType kernel, bool reset = false, vpmfloat testFilterFactor = 1.0f);
+    ParticleBuffer sourceParticles, KernelType kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
 
-__global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpmfloat a, vpmfloat b, vpmfloat dt,
-    vpmfloat zeta0, vpmvec3 Uinf);
+__global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpm::real a, vpm::real b, vpm::real dt,
+    vpm::real zeta0, vpm::vec3 Uinf);
 
-void rungeKutta(ParticleField& field, vpmfloat dt, bool useRelax, int numBlocks, int blockSize, cudaStream_t stream = 0);
+void rungeKutta(ParticleField& field, vpm::real dt, bool useRelax, int numBlocks, int blockSize, cudaStream_t stream = 0);
 
 void writeVTK(ParticleBuffer& particles, size_t N, const std::string& filename, int outputMask);
 
@@ -54,9 +54,9 @@ void runVPM(
     unsigned int maxParticles,
     unsigned int numParticles,
     unsigned int numTimeSteps,
-    vpmfloat dt,
+    vpm::real dt,
     unsigned int fileSaveSteps,
-    vpmvec3 uInf,
+    vpm::vec3 uInf,
     ParticleBuffer particleBuffer,
     RelaxationScheme *relaxation,
     SFSScheme *sfs,

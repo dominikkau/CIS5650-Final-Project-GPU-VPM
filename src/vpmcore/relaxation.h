@@ -13,27 +13,27 @@ struct RelaxationScheme {
 
 class PedrizzettiRelaxation : public RelaxationScheme {
 private:
-    vpmfloat relaxFactor;
+    vpm::real relaxFactor;
 
 public:
-    PedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
+    PedrizzettiRelaxation(vpm::real relaxFactor) : relaxFactor(relaxFactor) {}
 
     void operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0);
 };
 
-__global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relaxFactor);
+__global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpm::real relaxFactor);
 
 class CorrectedPedrizzettiRelaxation : public RelaxationScheme {
 private:
-    vpmfloat relaxFactor;
+    vpm::real relaxFactor;
 
 public:
-    CorrectedPedrizzettiRelaxation(vpmfloat relaxFactor) : relaxFactor(relaxFactor) {}
+    CorrectedPedrizzettiRelaxation(vpm::real relaxFactor) : relaxFactor(relaxFactor) {}
 
     void operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0);
 };
 
-__global__ void correctedPedrizzettiRelax(int N, ParticleBuffer particles, vpmfloat relaxFactor);
+__global__ void correctedPedrizzettiRelax(int N, ParticleBuffer particles, vpm::real relaxFactor);
 
 class NoRelaxation : public RelaxationScheme {
     inline void operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0) {}

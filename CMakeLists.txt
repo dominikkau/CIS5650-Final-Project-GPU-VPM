@@ -9,10 +9,11 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Enable C++11 for host code
-set(CMAKE_CXX_STANDARD 11)
+# Enable C++20 for host code
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_REQUIRED ON)
 if(NOT DEFINED CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 11)
+    set(CMAKE_CUDA_STANDARD 20)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
 
@@ -33,6 +34,7 @@ include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
     src/main.hpp
+    src/vpmio.h
     src/vpmcore/common.h
     src/vpmcore/vpmmain.h
     src/vpmcore/particlebuffer.h
@@ -41,7 +43,9 @@ set(headers
     src/vpmcore/relaxation.h
     src/vpmcore/sfs.h
 	src/vpmfmm/fmm_p2m.h
+    src/vpmfmm/fmm_m2m.h
 	src/vpmfmm/fmm_utils.h
+	src/vpmfmm/tree.h
     src/lean_vtk.hpp
     src/vortexringsimulation.hpp
     src/roundjetsimulation.hpp
@@ -49,12 +53,16 @@ set(headers
 
 set(sources
     src/main.cpp
+    src/vpmio.cu
     src/vpmcore/vpmmain.cu
     src/vpmcore/particlebuffer.cu
     src/vpmcore/particlefield.cu
     src/vpmcore/relaxation.cu
     src/vpmcore/sfs.cu
 	src/vpmfmm/fmm_p2m.cu
+    src/vpmfmm/fmm_m2m.cu
+    src/vpmfmm/fmm_utils.cu
+	src/vpmfmm/tree.cu
     src/lean_vtk.cpp
     src/vortexringsimulation.cpp
     src/roundjetsimulation.cpp

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "common.h"
+#include "cuda.h"
+#include <cuda_runtime.h>
 #include <span>
 
 struct BufferField {
@@ -35,52 +37,54 @@ struct ParticleBufferType {
 class ParticleBuffer {
 	size_t count;                  // Maximum number of particles in the buffer
     int bufferFields = 0;
-    vpmvec3* X_ = nullptr;          // Position
-    vpmvec3* Gamma_ = nullptr;      // Vectorial circulation
-    vpmfloat* sigma_ = nullptr;     // Smoothing radius
+    vpm::vec3* X_ = nullptr;          // Position
+    vpm::vec3* Gamma_ = nullptr;      // Vectorial circulation
+    vpm::real* sigma_ = nullptr;     // Smoothing radius
     size_t* index_ = nullptr;          // Indices of particles
-    vpmvec3* U_ = nullptr;          // Velocity at particle
-    vpmmat3* J_ = nullptr;          // Jacobian at particle
-    vpmmat3* M_ = nullptr;          // Auxiliary memory
-    vpmvec3* C_ = nullptr;          // SFS coefficient, numerator, denominator
-    vpmvec3* SFS_ = nullptr;
+    vpm::vec3* U_ = nullptr;          // Velocity at particle
+    vpm::mat3* J_ = nullptr;          // Jacobian at particle
+    vpm::mat3* M_ = nullptr;          // Auxiliary memory
+    vpm::vec3* C_ = nullptr;          // SFS coefficient, numerator, denominator
+    vpm::vec3* SFS_ = nullptr;
 
-    /*vpmfloat* vol_ = nullptr;         // Volume
-    vpmfloat* circulation_ = nullptr;   // Scalar circulation
+    /*vpm::real* vol_ = nullptr;         // Volume
+    vpm::real* circulation_ = nullptr;   // Scalar circulation
     bool* isStatic_ = nullptr;          // Indicates if particle is static
-    vpmvec3* PSE_ = nullptr;            // Particle-strength exchange*/
+    vpm::vec3* PSE_ = nullptr;            // Particle-strength exchange*/
     
 public:
     const ParticleBufferType::Type bufferType;
 
     ParticleBuffer(ParticleBufferType::Type bufferType, size_t size) : bufferType(bufferType), count(size) {};
+    ~ParticleBuffer() { freeFields(); }
 
     __host__ __device__ size_t size() const { return count; }
     __host__ __device__ int fields() const { return bufferFields; }
-    __host__ __device__ vpmvec3* X() { return X_; }
-    __host__ __device__ vpmvec3* Gamma() { return Gamma_; }
-    __host__ __device__ vpmfloat* sigma() { return sigma_; }
+    __host__ __device__ vpm::vec3* X() { return X_; }
+    __host__ __device__ vpm::vec3* Gamma() { return Gamma_; }
+    __host__ __device__ vpm::real* sigma() { return sigma_; }
     __host__ __device__ size_t* index() { return index_; }
-    __host__ __device__ vpmvec3* U() { return U_; }
-    __host__ __device__ vpmmat3* J() { return J_; }
-    __host__ __device__ vpmmat3* M() { return M_; }
-    __host__ __device__ vpmvec3* C() { return C_; }
-    __host__ __device__ vpmvec3* SFS() { return SFS_; }
+    __host__ __device__ vpm::vec3* U() { return U_; }
+    __host__ __device__ vpm::mat3* J() { return J_; }
+    __host__ __device__ vpm::mat3* M() { return M_; }
+    __host__ __device__ vpm::vec3* C() { return C_; }
+    __host__ __device__ vpm::vec3* SFS() { return SFS_; }
+
 	// Const versions
-    __host__ __device__ const vpmvec3* X() const { return X_; }
-    __host__ __device__ const vpmvec3* Gamma() const { return Gamma_; }
-    __host__ __device__ const vpmfloat* sigma() const { return sigma_; }
+    __host__ __device__ const vpm::vec3* X() const { return X_; }
+    __host__ __device__ const vpm::vec3* Gamma() const { return Gamma_; }
+    __host__ __device__ const vpm::real* sigma() const { return sigma_; }
     __host__ __device__ const size_t* index() const { return index_; }
-    __host__ __device__ const vpmvec3* U() const { return U_; }
-    __host__ __device__ const vpmmat3* J() const { return J_; }
-    __host__ __device__ const vpmmat3* M() const { return M_; }
-    __host__ __device__ const vpmvec3* C() const { return C_; }
-    __host__ __device__ const vpmvec3* SFS() const { return SFS_; }
+    __host__ __device__ const vpm::vec3* U() const { return U_; }
+    __host__ __device__ const vpm::mat3* J() const { return J_; }
+    __host__ __device__ const vpm::mat3* M() const { return M_; }
+    __host__ __device__ const vpm::vec3* C() const { return C_; }
+    __host__ __device__ const vpm::vec3* SFS() const { return SFS_; }
     
-	/*vpmfloat* vol() { return vol_; }
-	vpmfloat* circulation() { return circulation_; }
+	/*vpm::real* vol() { return vol_; }
+	vpm::real* circulation() { return circulation_; }
 	bool* isStatic() { return isStatic_; }
-	vpmvec3* PSE() { return PSE_; }*/
+	vpm::vec3* PSE() { return PSE_; }*/
 
     void permute(std::span<const size_t> indices, int bufferMask);
     void mallocFields(int bufferMask);
@@ -88,8 +92,8 @@ public:
     void freeFields(int bufferMask);
 };
 
-size_t cpyParticleBuffer(ParticleBuffer dstBuffer, ParticleBuffer srcBuffer, 
+size_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer, 
     size_t dstIndex, size_t srcIndex, size_t count, int bufferMask,  cudaStream_t stream = 0);
 
-size_t cpyParticleBuffer(ParticleBuffer dstBuffer, ParticleBuffer srcBuffer, int bufferMask,
+size_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer, int bufferMask,
     cudaStream_t stream = 0);

@@ -1,18 +1,41 @@
 #pragma once
 
 #include <cuda.h>
-//#include <cuda_runtime.h>
+#include <vector>
+#include <array>
 #include "../vpmcore/common.h"
 
-void testP2MKernel();
+class P2MInfo
+{
+	std::vector<size_t> nodes_;
+	std::vector<int> depths_;
+	std::vector<size_t> pointsEnd_;
+	std::vector<vpm::vec3> centers_;
+	size_t* dev_nodes_ = nullptr;
+	size_t* dev_pointsEnd_ = nullptr;
+	vpm::vec3* dev_centers_ = nullptr;
 
-template <typename T>
-__device__ void inline d_swap(T& a, T& b) {
-    T temp = a;
-    a = b;
-    b = temp;
+public:
+	P2MInfo(size_t capacity);
+	~P2MInfo();
+
+	size_t size() const { return nodes_.size(); }
+	void add(size_t nodeIndex, int depth, size_t pointEndIndex, const vpm::vec3& nodeCenter);
+	void addOffsets(const std::array<size_t, MAX_DEPTH>& depthOffsets);
+	void toDevice() const;
+
+	const std::vector<size_t>& nodes() const { return nodes_; }
+	const std::vector<int>& depths() const { return depths_; }
+	const std::vector<size_t>& pointsEnd() const { return pointsEnd_; }
+	const std::vector<vpm::vec3>& centers() const { return centers_; }
+
+	size_t* dev_nodes() const { return dev_nodes_; }
+	size_t* dev_pointsEnd() const { return dev_pointsEnd_; }
+	vpm::vec3* dev_centers() const { return dev_centers_; }
+};
+
+namespace fmm
+{
+	__global__ void p2m(const size_t* nodes, const size_t* pointsEnd, const vpm::vec3* centers,
+		size_t count, const vpm::vec3* xs, const vpm::vec3* qs, float* Rout, int p);
 }
-
-__host__ __device__ int point_index_analytic(int index, int level, int point_count);
-template<unsigned int threads_per_cell>
-__global__ void fmmP2M(vpmvec4* xqs, int N, float* Rout, int p, int depth);

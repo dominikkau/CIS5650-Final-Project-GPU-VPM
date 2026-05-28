@@ -1,6 +1,7 @@
 #include "main.hpp"
 #include "vpmcore/vpmmain.h"
-#include "vpmfmm/fmm_p2m.h"
+//#include "vpmfmm/fmm_p2m.h"
+#include "vpmfmm/tree.h"
 //#include <chrono>
 #include <iostream>
 
@@ -33,7 +34,9 @@ int main(int argc, char* argv[]) {
     //cudaEventDestroy(start);
     //cudaEventDestroy(stop);
 
-    testP2MKernel();
+    //testP2MKernel();
+
+    testTree();
 
     return 0;
 }
