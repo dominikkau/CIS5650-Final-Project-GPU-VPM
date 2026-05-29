@@ -47,7 +47,8 @@ struct Particle {
 };
 
 // ParticleField definition
-struct ParticleField {
+struct ParticleField
+{
     ParticleBuffer particles;        // Host particle buffer
     ParticleBuffer dev_particles;   // Device particle buffer
     vpm::pidx_t numParticles;           // Number of particles in the field
@@ -60,7 +61,7 @@ struct ParticleField {
 
     // Constructor
     ParticleField(
-        ParticleBuffer particles,
+        ParticleBuffer&& particles,
         vpm::pidx_t numParticles,
         unsigned int timeStep = 0,
         KernelType kernel = KernelType::GAUSSIAN_ERF,
@@ -69,7 +70,7 @@ struct ParticleField {
         std::unique_ptr<RelaxationScheme> relaxation = std::make_unique<PedrizzettiRelaxation>(0.005f)
     );
     // Destructor
-    ~ParticleField();
+    ~ParticleField() {};
 
 	void syncParticlesDeviceToHost(int bufferMask, cudaStream_t stream = 0);
 	void syncParticlesHostToDevice(int bufferMask, cudaStream_t stream = 0);
@@ -77,6 +78,6 @@ struct ParticleField {
     void addParticleDevice(Particle& particle);
     void overwriteParticleDevice(Particle& particle, vpm::pidx_t index);
     void removeParticleDevice(vpm::pidx_t index);
-    void cpyParticlesDeviceToDevice(ParticleBuffer srcBuffer, vpm::pidx_t srcIndex, vpm::pidx_t count,
+    void cpyParticlesDeviceToDevice(ParticleBuffer& srcBuffer, vpm::pidx_t srcIndex, vpm::pidx_t count,
         int bufferMask);
 };

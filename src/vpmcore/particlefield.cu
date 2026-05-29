@@ -11,7 +11,7 @@ __host__ __device__ void Particle::resetSFS() {
     SFS = vpm::vec3{ 0.0f };
 }
 
-void ParticleField::cpyParticlesDeviceToDevice(ParticleBuffer srcBuffer, vpm::pidx_t srcIndex, vpm::pidx_t count,
+void ParticleField::cpyParticlesDeviceToDevice(ParticleBuffer& srcBuffer, vpm::pidx_t srcIndex, vpm::pidx_t count,
     int bufferMask) {
 
     numParticles += cpyParticleBuffer(dev_particles, srcBuffer, numParticles,
@@ -80,15 +80,24 @@ void ParticleField::overwriteParticleDevice(Particle& particle, vpm::pidx_t inde
 void ParticleField::removeParticleDevice(vpm::pidx_t index) {
     // not the last particle
     if (index != numParticles - 1) {
-        cudaMemcpy(dev_particles.X() + index, dev_particles.X() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(dev_particles.U() + index, dev_particles.U() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(dev_particles.J() + index, dev_particles.J() + numParticles - 1, sizeof(vpm::mat3), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(dev_particles.Gamma() + index, dev_particles.Gamma() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(dev_particles.sigma() + index, dev_particles.sigma() + numParticles - 1, sizeof(vpm::real), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(dev_particles.SFS() + index, dev_particles.SFS() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(dev_particles.C() + index, dev_particles.C() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(dev_particles.M() + index, dev_particles.M() + numParticles - 1, sizeof(vpm::mat3), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(dev_particles.index() + index, dev_particles.index() + numParticles - 1, sizeof(vpm::pidx_t), cudaMemcpyDeviceToDevice);
+
+        dev_particles.forEachFieldPair(dev_particles,
+            [index, this](auto* ptrA, const auto* ptrB)
+            {
+                cudaMemcpy(ptrA + index, ptrB + numParticles - 1, sizeof(*ptrA), cudaMemcpyDeviceToDevice);
+            }, dev_particles.fields()
+        );
+
+
+        //cudaMemcpy(dev_particles.X() + index, dev_particles.X() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
+        //cudaMemcpy(dev_particles.U() + index, dev_particles.U() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
+        //cudaMemcpy(dev_particles.J() + index, dev_particles.J() + numParticles - 1, sizeof(vpm::mat3), cudaMemcpyDeviceToDevice);
+        //cudaMemcpy(dev_particles.Gamma() + index, dev_particles.Gamma() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
+        //cudaMemcpy(dev_particles.sigma() + index, dev_particles.sigma() + numParticles - 1, sizeof(vpm::real), cudaMemcpyDeviceToDevice);
+        //cudaMemcpy(dev_particles.SFS() + index, dev_particles.SFS() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
+        //cudaMemcpy(dev_particles.C() + index, dev_particles.C() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
+        //cudaMemcpy(dev_particles.M() + index, dev_particles.M() + numParticles - 1, sizeof(vpm::mat3), cudaMemcpyDeviceToDevice);
+        //cudaMemcpy(dev_particles.index() + index, dev_particles.index() + numParticles - 1, sizeof(vpm::pidx_t), cudaMemcpyDeviceToDevice);
         /*cudaMemcpy(dev_particles.PSE() + index, dev_particles.PSE() + numParticles, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
         cudaMemcpy(dev_particles.isStatic() + index, dev_particles.isStatic() + numParticles, sizeof(bool), cudaMemcpyDeviceToDevice);
         cudaMemcpy(dev_particles.vol() + index, dev_particles.vol() + numParticles, sizeof(vpm::real), cudaMemcpyDeviceToDevice);
@@ -111,7 +120,7 @@ void ParticleField::syncParticlesHostToDevice(int bufferMask, cudaStream_t strea
 }
 
 ParticleField::ParticleField(
-    ParticleBuffer particles,
+    ParticleBuffer&& particles,
     vpm::pidx_t numParticles,
     unsigned int timeStep,
     KernelType kernel,
@@ -119,7 +128,7 @@ ParticleField::ParticleField(
     std::unique_ptr<SFSScheme> sfs,
     std::unique_ptr<RelaxationScheme> relaxation)
     :
-    particles(particles),
+    particles(std::move(particles)),
     numParticles(numParticles),
     timeStep(timeStep),
     kernel(kernel),
@@ -127,7 +136,7 @@ ParticleField::ParticleField(
     sfs(std::move(sfs)),
     relaxation(std::move(relaxation)),
     synchronized(0),
-    dev_particles(ParticleBuffer(ParticleBufferType::DEVICE, particles.size()))
+    dev_particles(ParticleBuffer( ParticleBufferType::DEVICE, particles.size() ))
 {
     // Minimum requirement for initialization
     if (!(particles.fields() & (BufferField::X | BufferField::GAMMA | BufferField::SIGMA))) {
@@ -138,8 +147,3 @@ ParticleField::ParticleField(
     dev_particles.mallocFields(BufferField::ALL);
 	syncParticlesHostToDevice(particles.fields());
 };
-
-ParticleField::~ParticleField() {
-    // free device memory
-    dev_particles.freeFields(BufferField::ALL);
-}

@@ -81,10 +81,10 @@ void testTree()
 	int inputBufferMask = BufferField::X | BufferField::INDEX | BufferField::GAMMA;
 	particles.mallocFields(inputBufferMask);
 	for (size_t i = 0; i < numParticles; ++i) {
-		particles.X()[i].x = disPos(gen);
-		particles.X()[i].y = disPos(gen);
-		particles.X()[i].z = disPos(gen);
-		particles.Gamma()[i].x = disGamma(gen);
+		particles.X(i).x = disPos(gen);
+		particles.X(i).y = disPos(gen);
+		particles.X(i).z = disPos(gen);
+		particles.Gamma(i).x = disGamma(gen);
 	}
 
 	std::cout << "Allocated and initialized particle buffer with " << numParticles << " particles." << std::endl;

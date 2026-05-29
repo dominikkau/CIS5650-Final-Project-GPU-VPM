@@ -4,9 +4,12 @@
 #include "cuda.h"
 #include <cuda_runtime.h>
 #include <span>
+#include <string>
 
-struct BufferField {
-    enum Type {
+struct BufferField
+{
+    enum Type
+    {
         NONE = 0,
         X = 1 << 0,
         U = 1 << 1,
@@ -26,18 +29,23 @@ struct BufferField {
     };
 };
 
-struct ParticleBufferType {
-    enum Type {
+struct ParticleBufferType
+{
+    enum Type
+    {
         DEVICE,
         HOST,
         HOST_PINNED
     };
 };
 
-class ParticleBuffer {
-    vpm::pidx_t count;                  // Maximum number of particles in the buffer
-    int bufferFields = 0;
+class ParticleBuffer
+{
+    ParticleBufferType::Type type_;
+    vpm::pidx_t size_;                  // Maximum number of particles in the buffer
+    int fields_ = 0;
     vpm::vec3* X_ = nullptr;          // Position
+	vpm::real* GammaX_ = nullptr;     // Scalar circulation in x-direction
     vpm::vec3* Gamma_ = nullptr;      // Vectorial circulation
     vpm::real* sigma_ = nullptr;     // Smoothing radius
     vpm::pidx_t* index_ = nullptr;          // Indices of particles
@@ -53,38 +61,103 @@ class ParticleBuffer {
     vpm::vec3* PSE_ = nullptr;            // Particle-strength exchange*/
     
 public:
-    const ParticleBufferType::Type bufferType;
-
-    ParticleBuffer(ParticleBufferType::Type bufferType, vpm::pidx_t size) : bufferType(bufferType), count(size) {};
+    ParticleBuffer(ParticleBufferType::Type type, vpm::pidx_t size) : type_(type), size_(size) {};
     ~ParticleBuffer() { freeFields(); }
 
-    __host__ __device__ vpm::pidx_t size() const { return count; }
-    __host__ __device__ int fields() const { return bufferFields; }
-    __host__ __device__ vpm::vec3* X() { return X_; }
-    __host__ __device__ vpm::vec3* Gamma() { return Gamma_; }
-    __host__ __device__ vpm::real* sigma() { return sigma_; }
-    __host__ __device__ vpm::pidx_t* index() { return index_; }
-    __host__ __device__ vpm::vec3* U() { return U_; }
-    __host__ __device__ vpm::mat3* J() { return J_; }
-    __host__ __device__ vpm::mat3* M() { return M_; }
-    __host__ __device__ vpm::vec3* C() { return C_; }
-    __host__ __device__ vpm::vec3* SFS() { return SFS_; }
+    ParticleBuffer(const ParticleBuffer& other) = delete;
+    ParticleBuffer& operator=(const ParticleBuffer& other) = delete;
 
-	// Const versions
-    __host__ __device__ const vpm::vec3* X() const { return X_; }
-    __host__ __device__ const vpm::vec3* Gamma() const { return Gamma_; }
-    __host__ __device__ const vpm::real* sigma() const { return sigma_; }
-    __host__ __device__ const vpm::pidx_t* index() const { return index_; }
-    __host__ __device__ const vpm::vec3* U() const { return U_; }
-    __host__ __device__ const vpm::mat3* J() const { return J_; }
-    __host__ __device__ const vpm::mat3* M() const { return M_; }
-    __host__ __device__ const vpm::vec3* C() const { return C_; }
-    __host__ __device__ const vpm::vec3* SFS() const { return SFS_; }
-    
-	/*vpm::real* vol() { return vol_; }
-	vpm::real* circulation() { return circulation_; }
-	bool* isStatic() { return isStatic_; }
-	vpm::vec3* PSE() { return PSE_; }*/
+    ParticleBuffer(ParticleBuffer&& other) noexcept;
+    ParticleBuffer& operator=(ParticleBuffer&& other) noexcept;
+
+    __host__ __device__ auto size() const { return size_; }
+    __host__ __device__ auto fields() const { return fields_; }
+	__host__ __device__ auto type() const { return type_; }
+
+    __host__ __device__ auto* X() { return X_; }
+    __host__ __device__ auto* Gamma() { return Gamma_; }
+    __host__ __device__ auto* sigma() { return sigma_; }
+    __host__ __device__ auto* index() { return index_; }
+    __host__ __device__ auto* U() { return U_; }
+    __host__ __device__ auto* J() { return J_; }
+    __host__ __device__ auto* M() { return M_; }
+    __host__ __device__ auto* C() { return C_; }
+    __host__ __device__ auto* SFS() { return SFS_; }
+
+    __host__ __device__ auto& X(vpm::pidx_t i) { return X_[i]; }
+    __host__ __device__ auto& Gamma(vpm::pidx_t i) { return Gamma_[i]; }
+    __host__ __device__ auto& sigma(vpm::pidx_t i) { return sigma_[i]; }
+    __host__ __device__ auto& index(vpm::pidx_t i) { return index_[i]; }
+    __host__ __device__ auto& U(vpm::pidx_t i) { return U_[i]; }
+    __host__ __device__ auto& J(vpm::pidx_t i) { return J_[i]; }
+    __host__ __device__ auto& M(vpm::pidx_t i) { return M_[i]; }
+    __host__ __device__ auto& C(vpm::pidx_t i) { return C_[i]; }
+    __host__ __device__ auto& SFS(vpm::pidx_t i) { return SFS_[i]; }
+
+    // Const versions
+    __host__ __device__ const auto* X() const { return X_; }
+    __host__ __device__ const auto* Gamma() const { return Gamma_; }
+    __host__ __device__ const auto* sigma() const { return sigma_; }
+    __host__ __device__ const auto* index() const { return index_; }
+    __host__ __device__ const auto* U() const { return U_; }
+    __host__ __device__ const auto* J() const { return J_; }
+    __host__ __device__ const auto* M() const { return M_; }
+    __host__ __device__ const auto* C() const { return C_; }
+    __host__ __device__ const auto* SFS() const { return SFS_; }
+
+    __host__ __device__ const auto& X(vpm::pidx_t i) const { return X_[i]; }
+    __host__ __device__ const auto& Gamma(vpm::pidx_t i) const { return Gamma_[i]; }
+    __host__ __device__ const auto& sigma(vpm::pidx_t i) const { return sigma_[i]; }
+    __host__ __device__ const auto& index(vpm::pidx_t i) const { return index_[i]; }
+    __host__ __device__ const auto& U(vpm::pidx_t i) const { return U_[i]; }
+    __host__ __device__ const auto& J(vpm::pidx_t i) const { return J_[i]; }
+    __host__ __device__ const auto& M(vpm::pidx_t i) const { return M_[i]; }
+    __host__ __device__ const auto& C(vpm::pidx_t i) const { return C_[i]; }
+    __host__ __device__ const auto& SFS(vpm::pidx_t i) const { return SFS_[i]; }
+
+    template <typename Fun>
+    void forEachField(Fun&& fun, int mask = BufferField::ALL)
+    {
+        if (mask & BufferField::X)      fun(X_);
+        if (mask & BufferField::U)      fun(U_);
+        if (mask & BufferField::J)      fun(J_);
+        if (mask & BufferField::GAMMA)  fun(Gamma_);
+        if (mask & BufferField::SIGMA)  fun(sigma_);
+        if (mask & BufferField::SFS)    fun(SFS_);
+        if (mask & BufferField::C)      fun(C_);
+        if (mask & BufferField::M)      fun(M_);
+        if (mask & BufferField::INDEX)  fun(index_);
+    }
+
+    template <typename Fun>
+    void forEachFieldPair(const ParticleBuffer& buffer,
+        Fun&& fun, int mask = BufferField::ALL)
+    {
+        if (mask & BufferField::X)      fun(X_, buffer.X());
+        if (mask & BufferField::U)      fun(U_, buffer.U());
+        if (mask & BufferField::J)      fun(J_, buffer.J());
+        if (mask & BufferField::GAMMA)  fun(Gamma_, buffer.Gamma());
+        if (mask & BufferField::SIGMA)  fun(sigma_, buffer.sigma());
+        if (mask & BufferField::SFS)    fun(SFS_, buffer.SFS());
+        if (mask & BufferField::C)      fun(C_, buffer.C());
+        if (mask & BufferField::M)      fun(M_, buffer.M());
+        if (mask & BufferField::INDEX)  fun(index_, buffer.index());
+    }
+
+    template <typename Fun>
+    void forEachFieldPair(ParticleBuffer& buffer,
+        Fun&& fun, int mask = BufferField::ALL)
+    {
+        if (mask & BufferField::X)      fun(X_, buffer.X());
+        if (mask & BufferField::U)      fun(U_, buffer.U());
+        if (mask & BufferField::J)      fun(J_, buffer.J());
+        if (mask & BufferField::GAMMA)  fun(Gamma_, buffer.Gamma());
+        if (mask & BufferField::SIGMA)  fun(sigma_, buffer.sigma());
+        if (mask & BufferField::SFS)    fun(SFS_, buffer.SFS());
+        if (mask & BufferField::C)      fun(C_, buffer.C());
+        if (mask & BufferField::M)      fun(M_, buffer.M());
+        if (mask & BufferField::INDEX)  fun(index_, buffer.index());
+    }
 
     void permute(std::span<const vpm::pidx_t> indices, int bufferMask);
     void mallocFields(int bufferMask);
@@ -95,5 +168,5 @@ public:
 vpm::pidx_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer,
     vpm::pidx_t dstIndex, vpm::pidx_t srcIndex, vpm::pidx_t count, int bufferMask,  cudaStream_t stream = 0);
 
-vpm::pidx_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer, int bufferMask,
-    cudaStream_t stream = 0);
+vpm::pidx_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer,
+    int bufferMask, cudaStream_t stream = 0);

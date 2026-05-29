@@ -28,21 +28,23 @@ __host__ __device__ inline vpm::vec3 nablaCrossX(const vpm::mat3& jacobianX) {
 }
 
 template <typename K>
-__global__ void calcEstrNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, ParticleBuffer targetParticles,
-    ParticleBuffer sourceParticles, K kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
+__global__ void calcEstrNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, const vpm::vec3* __restrict__ tX, const vpm::mat3* __restrict__ tJ,
+    vpm::vec3* __restrict__ tSFS, const vpm::vec3* __restrict__ sX, const vpm::mat3* __restrict__ sJ, const vpm::vec3* __restrict__ sGamma,
+    const vpm::real* __restrict__ ssigma, K kernel, bool reset, vpm::real testFilterFactor);
 
-void calcEstrNaiveWrapper(CUDAKernelParams params, vpm::pidx_t targetN, vpm::pidx_t sourceN, ParticleBuffer targetParticles,
-    ParticleBuffer sourceParticles, KernelType kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
+void calcEstrNaiveWrapper(CUDAKernelParams params, vpm::pidx_t targetN, vpm::pidx_t sourceN, ParticleBuffer& targetParticles,
+    ParticleBuffer& sourceParticles, KernelType kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
 
 template <typename K>
-__global__ void calcVelJacNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, ParticleBuffer targetParticles,
-    ParticleBuffer sourceParticles, K kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
+__global__ void calcVelJacNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, const vpm::vec3* __restrict__ tX, vpm::vec3* __restrict__ tU, vpm::mat3* __restrict__ tJ,
+    const vpm::vec3* __restrict__ sX, const vpm::vec3* __restrict__ sGamma, const vpm::real* __restrict__ ssigma, K kernel, bool reset, vpm::real testFilterFactor);
 
-void calcVelJacNaiveWrapper(CUDAKernelParams params, vpm::pidx_t targetN, vpm::pidx_t sourceN, ParticleBuffer targetParticles,
-    ParticleBuffer sourceParticles, KernelType kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
+void calcVelJacNaiveWrapper(CUDAKernelParams params, vpm::pidx_t targetN, vpm::pidx_t sourceN, ParticleBuffer& targetParticles,
+    ParticleBuffer& sourceParticles, KernelType kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
 
-__global__ void rungeKuttaStep(vpm::pidx_t N, ParticleBuffer particles, vpm::real a, vpm::real b, vpm::real dt,
-    vpm::real zeta0, vpm::vec3 Uinf);
+__global__ void rungeKuttaStep(vpm::pidx_t N, vpm::vec3* __restrict__ X, const vpm::vec3* __restrict__ U,
+    const vpm::mat3* __restrict__ J, const vpm::vec3* __restrict__ SFS, vpm::mat3* __restrict__ M, vpm::real* __restrict__ sigma,
+    vpm::vec3* __restrict__ Gamma, const vpm::vec3* __restrict__ C, vpm::real a, vpm::real b, vpm::real dt, vpm::real zeta0, vpm::vec3 Uinf);
 
 void rungeKutta(ParticleField& field, vpm::real dt, bool useRelax, int numBlocks, int blockSize, cudaStream_t stream = 0);
 
@@ -57,7 +59,7 @@ void runVPM(
     vpm::real dt,
     unsigned int fileSaveSteps,
     vpm::vec3 uInf,
-    ParticleBuffer particleBuffer,
+    ParticleBuffer& particleBuffer,
     RelaxationScheme *relaxation,
     SFSScheme *sfs,
     KernelType kernel,
