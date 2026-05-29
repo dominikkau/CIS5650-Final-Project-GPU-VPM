@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <cuda.h>
 
@@ -42,8 +43,8 @@ namespace vpm
 	using vec2 = glm::tvec2<real>;
 	using mat3 = glm::tmat3x3<real>;
 	using midx_t = uint64_t;	// type for octree node morton codes 
-	using nidx_t = uint32_t;	// type for octree node indeces
-	using pidx_t = uint32_t;	// type for particle indeces
+	using nidx_t = uint32_t;	// type for octree node indices
+	using pidx_t = uint32_t;	// type for particle indices
 }
 
 static constexpr int MAX_DEPTH = 20;

@@ -53,7 +53,7 @@ void ParticleBuffer::mallocFields(int bufferMask) {
         }
 
         if (bufferMask & BufferField::INDEX) {
-            cudaMalloc((void**)&index_, count * sizeof(size_t));
+            cudaMalloc((void**)&index_, count * sizeof(vpm::pidx_t));
             checkCUDAError("cudaMalloc of index failed!");
         }
 
@@ -87,7 +87,7 @@ void ParticleBuffer::mallocFields(int bufferMask) {
         if (bufferMask & BufferField::SFS) SFS_ = new vpm::vec3[count];
         if (bufferMask & BufferField::C) C_ = new vpm::vec3[count];
         if (bufferMask & BufferField::M) M_ = new vpm::mat3[count];
-        if (bufferMask & BufferField::INDEX) index_ = new size_t[count];
+        if (bufferMask & BufferField::INDEX) index_ = new vpm::pidx_t[count];
         /*if (bufferMask & BufferField::PSE) PSE_ = new vpm::vec3[count];
         if (bufferMask & BufferField::IS_STATIC) isStatic_ = new bool[count];
         if (bufferMask & BufferField::VOL) vol_ = new vpm::real[count];
@@ -103,7 +103,7 @@ void ParticleBuffer::mallocFields(int bufferMask) {
         if (bufferMask & BufferField::SFS) cudaMallocHost((void**)&SFS_, count * sizeof(vpm::vec3));
         if (bufferMask & BufferField::C) cudaMallocHost((void**)&C_, count * sizeof(vpm::vec3));
         if (bufferMask & BufferField::M) cudaMallocHost((void**)&M_, count * sizeof(vpm::mat3));
-        if (bufferMask & BufferField::INDEX) cudaMallocHost((void**)&index_, count * sizeof(size_t));
+        if (bufferMask & BufferField::INDEX) cudaMallocHost((void**)&index_, count * sizeof(vpm::pidx_t));
         /*if (bufferMask & BufferField::PSE) cudaMallocHost((void**)&PSE_, count * sizeof(vpm::vec3));
         if (bufferMask & BufferField::IS_STATIC) cudaMallocHost((void**)&isStatic_, count * sizeof(bool));
         if (bufferMask & BufferField::VOL) cudaMallocHost((void**)&vol_, count * sizeof(vpm::real));
@@ -115,7 +115,7 @@ void ParticleBuffer::mallocFields(int bufferMask) {
     bufferFields |= bufferMask;
 }
 
-void ParticleBuffer::permute(std::span<const size_t> indices, int bufferMask)
+void ParticleBuffer::permute(std::span<const vpm::pidx_t> indices, int bufferMask)
 {
 	if (indices.size() != count) {
 		std::cerr << "Permutation indices size does not match particle count" << std::endl;
@@ -134,10 +134,10 @@ void ParticleBuffer::permute(std::span<const size_t> indices, int bufferMask)
             visited[i] = true;
             continue;
         }
-        size_t j = i;
+        vpm::pidx_t j = static_cast<vpm::pidx_t>(i);
         while (!visited[j]) {
             visited[j] = true;
-            size_t next = indices[j];
+            vpm::pidx_t next = indices[j];
             if (!visited[next]) {
                 if (bufferMask & BufferField::X) std::swap(X_[j], X_[next]);
                 if (bufferMask & BufferField::U) std::swap(U_[j], U_[next]);
@@ -223,14 +223,14 @@ void ParticleBuffer::freeFields(int bufferMask) {
     bufferFields &= ~bufferMask;
 }
 
-size_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer, int bufferMask,
+vpm::pidx_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer, int bufferMask,
     cudaStream_t stream)
 {
 	return cpyParticleBuffer(dstBuffer, srcBuffer, 0, 0, std::min(dstBuffer.size(), srcBuffer.size()), bufferMask, stream);
 }
 
-size_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer,
-    size_t dstIndex, size_t srcIndex, size_t count, int bufferMask, cudaStream_t stream) {
+vpm::pidx_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer,
+    vpm::pidx_t dstIndex, vpm::pidx_t srcIndex, vpm::pidx_t count, int bufferMask, cudaStream_t stream) {
 
     // Determine cudaMemcpy direction
     cudaMemcpyKind cpyDirection;
@@ -279,7 +279,7 @@ size_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuf
         cudaMemcpyAsync(dstBuffer.M() + dstIndex, srcBuffer.M(), count * sizeof(vpm::mat3), cpyDirection, stream);
     }
     if (bufferMask & BufferField::INDEX) {
-        cudaMemcpyAsync(dstBuffer.index() + dstIndex, srcBuffer.index(), count * sizeof(size_t), cpyDirection, stream);
+        cudaMemcpyAsync(dstBuffer.index() + dstIndex, srcBuffer.index(), count * sizeof(vpm::pidx_t), cpyDirection, stream);
     }
     /*if (bufferMask & BufferField::PSE) {
         cudaMemcpyAsync(dstBuffer.PSE() + dstIndex, srcBuffer.PSE(), count * sizeof(vpm::vec3), cpyDirection, stream);

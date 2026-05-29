@@ -2,7 +2,7 @@
 #include "vpmmain.h"
 
 void PedrizzettiRelaxation::operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream) {
-    const int N = field.numParticles;
+    const vpm::pidx_t N = field.numParticles;
     const CUDAKernelParams params{ numBlocks, blockSize, 7 * blockSize * sizeof(vpm::real), stream };
     calcVelJacNaiveWrapper(params, N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     checkCUDAError("calcVelJacNaive (PedrizzettiRelaxation) failed!");
@@ -11,8 +11,8 @@ void PedrizzettiRelaxation::operator()(ParticleField& field, int numBlocks, int 
     checkCUDAError("PedrizzettiRelaxation failed!");
 }
 
-__global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpm::real relaxFactor) {
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+__global__ void pedrizzettiRelax(vpm::pidx_t N, ParticleBuffer particles, vpm::real relaxFactor) {
+    vpm::pidx_t index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
     const vpm::vec3 omega    = nablaCrossX(particles.J()[index]);
@@ -23,7 +23,7 @@ __global__ void pedrizzettiRelax(int N, ParticleBuffer particles, vpm::real rela
 }
 
 void CorrectedPedrizzettiRelaxation::operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream) {
-    const int N = field.numParticles;
+    const vpm::pidx_t N = field.numParticles;
     const CUDAKernelParams params{ numBlocks, blockSize, 7 * blockSize * sizeof(vpm::real), stream };
     calcVelJacNaiveWrapper(params, N, N, field.dev_particles, field.dev_particles, field.kernel, true);
     checkCUDAError("calcVelJacNaive (CorrectedPedrizzettiRelaxation) failed!");
@@ -32,8 +32,8 @@ void CorrectedPedrizzettiRelaxation::operator()(ParticleField& field, int numBlo
     checkCUDAError("CorrectedPedrizzettiRelaxation failed!");
 }
 
-__global__ void correctedPedrizzettiRelax(int N, ParticleBuffer particles, vpm::real relaxFactor) {
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+__global__ void correctedPedrizzettiRelax(vpm::pidx_t N, ParticleBuffer particles, vpm::real relaxFactor) {
+    vpm::pidx_t index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
     const vpm::vec3 omega      = nablaCrossX(particles.J()[index]);

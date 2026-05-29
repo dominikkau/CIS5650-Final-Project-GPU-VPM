@@ -16,7 +16,7 @@ ParticleBuffer vpmio::readParticleBuffer(const std::string& path)
 
     // Read number of particles
     std::getline(file, line);
-    size_t numParticles = std::stoull(line);
+    vpm::pidx_t numParticles = std::stoull(line);
 
     // Read field mask
     std::getline(file, line);
@@ -60,7 +60,7 @@ ParticleBuffer vpmio::readParticleBuffer(const std::string& path)
     // Read data for each field in order
     auto readField = [&](int field, auto readFn, auto* ptr) {
         if (!(fieldMask & field)) return;
-        for (size_t i = 0; i < numParticles; ++i) {
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) {
             if (!std::getline(file, line))
                 throw std::runtime_error("Unexpected end of file");
             readFn(line, ptr[i]);
@@ -75,7 +75,7 @@ ParticleBuffer vpmio::readParticleBuffer(const std::string& path)
         ss >> v;
         if (ss.fail()) throw std::runtime_error("Failed to parse float: " + line);
         }, buffer.sigma());
-    readField(BufferField::INDEX, [](const std::string& line, size_t& v) {
+    readField(BufferField::INDEX, [](const std::string& line, vpm::pidx_t& v) {
         std::istringstream ss(line);
         ss >> v;
         if (ss.fail()) throw std::runtime_error("Failed to parse int: " + line);
@@ -89,7 +89,7 @@ ParticleBuffer vpmio::readParticleBuffer(const std::string& path)
     return buffer;
 }
 
-void vpmio::writeParticleBuffer(const std::string& path, const ParticleBuffer& buffer, size_t numParticles, int fieldMask)
+void vpmio::writeParticleBuffer(const std::string& path, const ParticleBuffer& buffer, vpm::pidx_t numParticles, int fieldMask)
 {
     std::ofstream file(path);
     if (!file.is_open())
@@ -124,26 +124,26 @@ void vpmio::writeParticleBuffer(const std::string& path, const ParticleBuffer& b
 
     // Write fields in same order as read
     if (fieldMask & BufferField::X)
-        for (size_t i = 0; i < numParticles; ++i) writeVec3(buffer.X()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.X()[i]);
     if (fieldMask & BufferField::GAMMA)
-        for (size_t i = 0; i < numParticles; ++i) writeVec3(buffer.Gamma()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.Gamma()[i]);
     if (fieldMask & BufferField::SIGMA)
-        for (size_t i = 0; i < numParticles; ++i) file << buffer.sigma()[i] << "\n";
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) file << buffer.sigma()[i] << "\n";
     if (fieldMask & BufferField::INDEX)
-        for (size_t i = 0; i < numParticles; ++i) file << buffer.index()[i] << "\n";
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) file << buffer.index()[i] << "\n";
     if (fieldMask & BufferField::U)
-        for (size_t i = 0; i < numParticles; ++i) writeVec3(buffer.U()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.U()[i]);
     if (fieldMask & BufferField::J)
-        for (size_t i = 0; i < numParticles; ++i) writeMat3(buffer.J()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeMat3(buffer.J()[i]);
     if (fieldMask & BufferField::M)
-        for (size_t i = 0; i < numParticles; ++i) writeMat3(buffer.M()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeMat3(buffer.M()[i]);
     if (fieldMask & BufferField::C)
-        for (size_t i = 0; i < numParticles; ++i) writeVec3(buffer.C()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.C()[i]);
     if (fieldMask & BufferField::SFS)
-        for (size_t i = 0; i < numParticles; ++i) writeVec3(buffer.SFS()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.SFS()[i]);
 }
 
-void vpmio::writeOctreeVTK(const std::unordered_map<uint64_t, HCell>& treeMap,
+void vpmio::writeOctreeVTK(const std::unordered_map<vpm::midx_t, HCell>& treeMap,
     const std::string& outputPath)
 {
     leanvtk::VTUWriter writer;
@@ -153,14 +153,14 @@ void vpmio::writeOctreeVTK(const std::unordered_map<uint64_t, HCell>& treeMap,
     std::vector<double> depthValues;
     std::vector<double> mortonIndices;
 
-    int vertexIndex = 0;
+    size_t vertexIndex = 0;
 
     // Iterate through all nodes and extract leaf nodes
     for (const auto& [mortonIndex, cell] : treeMap) {
         if (!cell.childMask) {
             // Calculate depth from morton index
             int depth = 0;
-            uint64_t temp = mortonIndex;
+            vpm::midx_t temp = mortonIndex;
             while (temp > 1) {
                 temp >>= 3;
                 depth++;

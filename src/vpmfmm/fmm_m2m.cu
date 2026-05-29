@@ -30,8 +30,8 @@ __device__ __inline__ void static transZM2M(vpm::real* __restrict__ s_M, vpm::re
 }
 
 __global__ void fmm::m2m(
-	const size_t* __restrict__ parents,
-	const size_t* __restrict__ children,
+	const vpm::nidx_t* __restrict__ parents,
+	const vpm::nidx_t* __restrict__ children,
 	const vpm::vec3* __restrict__ distances,
 	vpm::real* M,
 	int p)
@@ -156,14 +156,14 @@ M2MInfo::~M2MInfo()
 	}
 }
 
-size_t M2MInfo::size() const
+vpm::nidx_t M2MInfo::size() const
 {
-	size_t size = 0;
+	vpm::nidx_t size = 0;
 	for (const auto& entry : entries_) size += entry.parents_.size();
 	return size;
 }
 
-void M2MInfo::add(int depth, size_t parent, size_t child, const vpm::vec3& distance)
+void M2MInfo::add(int depth, vpm::nidx_t parent, vpm::nidx_t child, const vpm::vec3& distance)
 {
 	if (depth >= entries_.size())
 	{
@@ -176,7 +176,7 @@ void M2MInfo::add(int depth, size_t parent, size_t child, const vpm::vec3& dista
 	entries_[depth].distances_.push_back(distance);
 }
 
-void M2MInfo::addOffsets(const std::array<size_t, MAX_DEPTH>& depthOffsets)
+void M2MInfo::addOffsets(const std::array<vpm::nidx_t, MAX_DEPTH>& depthOffsets)
 {
 	for (int depth = 1; depth < entries_.size(); ++depth)
 	{
@@ -192,27 +192,26 @@ void M2MInfo::toDevice() const
 {
 	if (dev_parents_ != nullptr) return;
 
-	const size_t count = size();
+	const vpm::nidx_t count = size();
 
-	cudaMalloc((void**)&dev_parents_,	sizeof(size_t) * count);
-	cudaMalloc((void**)&dev_children_,  sizeof(size_t) * count);
-	cudaMalloc((void**)&dev_distances_, sizeof(vpm::vec3) * count);
+	cudaMalloc((void**)&dev_parents_,	sizeof(vpm::nidx_t) * count);
+	cudaMalloc((void**)&dev_children_,  sizeof(vpm::nidx_t) * count);
+	cudaMalloc((void**)&dev_distances_, sizeof(vpm::vec3)   * count);
 
-	size_t offset = 0;
-	std::vector<size_t> offsets;
+	vpm::nidx_t offset = 0;
 	for (const auto& entry : entries_)
 	{
 		if (entry.size() == 0) continue;
 
-		cudaMemcpy(dev_parents_   + offset, entry.parents_.data(),   sizeof(size_t)    * entry.parents_.size(),   cudaMemcpyHostToDevice);
-		cudaMemcpy(dev_children_  + offset, entry.children_.data(),  sizeof(size_t)    * entry.children_.size(),  cudaMemcpyHostToDevice);
-		cudaMemcpy(dev_distances_ + offset, entry.distances_.data(), sizeof(vpm::vec3) * entry.distances_.size(), cudaMemcpyHostToDevice);
+		cudaMemcpy(dev_parents_   + offset, entry.parents_.data(),   sizeof(vpm::nidx_t) * entry.parents_.size(),   cudaMemcpyHostToDevice);
+		cudaMemcpy(dev_children_  + offset, entry.children_.data(),  sizeof(vpm::nidx_t) * entry.children_.size(),  cudaMemcpyHostToDevice);
+		cudaMemcpy(dev_distances_ + offset, entry.distances_.data(), sizeof(vpm::vec3)   * entry.distances_.size(), cudaMemcpyHostToDevice);
 
 		offset += entry.size();
 	}
 }
 
-size_t* M2MInfo::dev_parents(int depth) const
+vpm::nidx_t* M2MInfo::dev_parents(int depth) const
 {
 	if (dev_parents_ == nullptr) return nullptr;
 
@@ -225,7 +224,7 @@ size_t* M2MInfo::dev_parents(int depth) const
 	return dev_parents_ + offset;
 }
 
-size_t* M2MInfo::dev_children(int depth) const
+vpm::nidx_t* M2MInfo::dev_children(int depth) const
 {
 	if (dev_children_ == nullptr) return nullptr;
 

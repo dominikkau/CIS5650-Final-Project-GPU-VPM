@@ -28,31 +28,31 @@ __host__ __device__ inline vpm::vec3 nablaCrossX(const vpm::mat3& jacobianX) {
 }
 
 template <typename K>
-__global__ void calcEstrNaive(int targetN, int sourceN, ParticleBuffer targetParticles,
+__global__ void calcEstrNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, ParticleBuffer targetParticles,
     ParticleBuffer sourceParticles, K kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
 
-void calcEstrNaiveWrapper(CUDAKernelParams params, int targetN, int sourceN, ParticleBuffer targetParticles,
+void calcEstrNaiveWrapper(CUDAKernelParams params, vpm::pidx_t targetN, vpm::pidx_t sourceN, ParticleBuffer targetParticles,
     ParticleBuffer sourceParticles, KernelType kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
 
 template <typename K>
-__global__ void calcVelJacNaive(int targetN, int sourceN, ParticleBuffer targetParticles,
+__global__ void calcVelJacNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, ParticleBuffer targetParticles,
     ParticleBuffer sourceParticles, K kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
 
-void calcVelJacNaiveWrapper(CUDAKernelParams params, int targetN, int sourceN, ParticleBuffer targetParticles,
+void calcVelJacNaiveWrapper(CUDAKernelParams params, vpm::pidx_t targetN, vpm::pidx_t sourceN, ParticleBuffer targetParticles,
     ParticleBuffer sourceParticles, KernelType kernel, bool reset = false, vpm::real testFilterFactor = 1.0f);
 
-__global__ void rungeKuttaStep(int N, ParticleBuffer particles, vpm::real a, vpm::real b, vpm::real dt,
+__global__ void rungeKuttaStep(vpm::pidx_t N, ParticleBuffer particles, vpm::real a, vpm::real b, vpm::real dt,
     vpm::real zeta0, vpm::vec3 Uinf);
 
 void rungeKutta(ParticleField& field, vpm::real dt, bool useRelax, int numBlocks, int blockSize, cudaStream_t stream = 0);
 
-void writeVTK(ParticleBuffer& particles, size_t N, const std::string& filename, int outputMask);
+void writeVTK(ParticleBuffer& particles, vpm::pidx_t N, const std::string& filename, int outputMask);
 
 void runSimulation();
 
 void runVPM(
-    unsigned int maxParticles,
-    unsigned int numParticles,
+    vpm::pidx_t maxParticles,
+    vpm::pidx_t numParticles,
     unsigned int numTimeSteps,
     vpm::real dt,
     unsigned int fileSaveSteps,

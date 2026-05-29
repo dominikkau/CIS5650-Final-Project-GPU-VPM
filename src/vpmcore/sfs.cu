@@ -3,8 +3,8 @@
 #include "kernels.h"
 #include "vpmmain.h"
 
-__global__ void calculateTemporary(int N, ParticleBuffer particles, bool testFilter) {
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+__global__ void calculateTemporary(vpm::pidx_t N, ParticleBuffer particles, bool testFilter) {
+    vpm::pidx_t index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
     if (testFilter) {
@@ -17,10 +17,10 @@ __global__ void calculateTemporary(int N, ParticleBuffer particles, bool testFil
     }
 }
 
-__global__ void calculateCoefficient(int N, ParticleBuffer particles, vpm::real zeta0,
+__global__ void calculateCoefficient(vpm::pidx_t N, ParticleBuffer particles, vpm::real zeta0,
     vpm::real alpha, vpm::real relaxFactor, bool forcePositive, vpm::real minC, vpm::real maxC) {
 
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+    vpm::pidx_t index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
     const vpm::vec3 particleGamma  = particles.Gamma()[index];
@@ -71,7 +71,7 @@ __global__ void calculateCoefficient(int N, ParticleBuffer particles, vpm::real 
 void DynamicSFS::operator()(ParticleField& field, vpm::real a, vpm::real b, int numBlocks, int blockSize, cudaStream_t stream) {
     KernelType kernel = field.kernel;
     ParticleBuffer& particles = field.dev_particles;
-    const int N = field.numParticles;
+    const vpm::pidx_t N = field.numParticles;
     const CUDAKernelParams velParams{ numBlocks, blockSize, 7 * blockSize * sizeof(vpm::real), stream };
     const CUDAKernelParams estrParams{ numBlocks, blockSize, 16 * blockSize * sizeof(vpm::real), stream };
 
@@ -113,7 +113,7 @@ void DynamicSFS::operator()(ParticleField& field, vpm::real a, vpm::real b, int 
 }
 
 void NoSFS::operator()(ParticleField& field, vpm::real a, vpm::real b, int numBlocks, int blockSize, cudaStream_t stream) {
-    const int N = field.numParticles;
+    const vpm::pidx_t N = field.numParticles;
     const CUDAKernelParams params{ numBlocks, blockSize, 7 * blockSize * sizeof(vpm::real), stream };
 
     cudaMemset(field.dev_particles.SFS(), 0, N * sizeof(vpm::vec3));

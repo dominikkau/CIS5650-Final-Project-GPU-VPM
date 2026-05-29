@@ -21,7 +21,7 @@ namespace cg = cooperative_groups;
 
 // Computes Multipole expansion of particles
 // Evaluates regular spherical basis function
-__global__ void fmm::p2m(const size_t* nodes, const size_t* pointsEnd, const vpm::vec3* centers, size_t count, const vpm::vec3* xs, const vpm::vec3* qs, float* M, int p)
+__global__ void fmm::p2m(const vpm::nidx_t* nodes, const vpm::pidx_t* pointsEnd, const vpm::vec3* centers, size_t count, const vpm::vec3* xs, const vpm::vec3* qs, float* M, int p)
 {
     const size_t globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -80,9 +80,9 @@ __global__ void fmm::p2m(const size_t* nodes, const size_t* pointsEnd, const vpm
 	// Synchronize block to ensure shared memory is initialized
     //block.sync();
 
-    const size_t cellIdx  = nodes[globalIdx];
-    const size_t startIdx = globalIdx == 0 ? 0 : pointsEnd[globalIdx - 1];
-    const size_t endIdx   = pointsEnd[globalIdx];
+    const vpm::nidx_t cellIdx  = nodes[globalIdx];
+    const vpm::pidx_t startIdx = globalIdx == 0 ? 0 : pointsEnd[globalIdx - 1];
+    const vpm::pidx_t endIdx   = pointsEnd[globalIdx];
 
     //const int cellPtsIdxStart = point_index_analytic(globalCellIdx, depth, N);
     //const int cellPtsIdxEnd   = point_index_analytic(globalCellIdx + 1, depth, N);
@@ -91,7 +91,7 @@ __global__ void fmm::p2m(const size_t* nodes, const size_t* pointsEnd, const vpm
 	const vpm::real yc = centers[globalIdx].y;
 	const vpm::real zc = centers[globalIdx].z;
 
-    for (size_t ptsIdx = startIdx; ptsIdx < endIdx; ++ptsIdx) // TODO: This is exactly how not to do it...
+    for (vpm::pidx_t ptsIdx = startIdx; ptsIdx < endIdx; ++ptsIdx) // TODO: This is exactly how not to do it...
     {
         // Load position and charge data
 		//const int ptsIdx = cellPtsIdx + cell.thread_rank();
@@ -232,7 +232,7 @@ P2MInfo::~P2MInfo()
     }
 }
 
-void P2MInfo::add(size_t nodeIndex, int depth, size_t pointEndIndex, const vpm::vec3& nodeCenter)
+void P2MInfo::add(vpm::nidx_t nodeIndex, int depth, vpm::pidx_t pointEndIndex, const vpm::vec3& nodeCenter)
 {
     nodes_.push_back(nodeIndex);
 	depths_.push_back(depth);
@@ -240,7 +240,7 @@ void P2MInfo::add(size_t nodeIndex, int depth, size_t pointEndIndex, const vpm::
     centers_.push_back(nodeCenter);
 }
 
-void P2MInfo::addOffsets(const std::array<size_t, MAX_DEPTH>& depthOffsets)
+void P2MInfo::addOffsets(const std::array<vpm::nidx_t, MAX_DEPTH>& depthOffsets)
 {
     for (int i = 0; i < nodes_.size(); ++i)
     {
@@ -254,11 +254,11 @@ void P2MInfo::toDevice() const
 
     const size_t count = nodes_.size();
 
-    cudaMalloc((void**)&dev_nodes_,       sizeof(size_t) * count);
-    cudaMalloc((void**)&dev_pointsEnd_,   sizeof(size_t) * count);
+    cudaMalloc((void**)&dev_nodes_,       sizeof(vpm::nidx_t) * count);
+    cudaMalloc((void**)&dev_pointsEnd_,   sizeof(vpm::pidx_t) * count);
     cudaMalloc((void**)&dev_centers_,     sizeof(vpm::vec3) * count);
 
-    cudaMemcpy(dev_nodes_,       nodes_.data(),       sizeof(size_t) * count,    cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_pointsEnd_,   pointsEnd_.data(),   sizeof(size_t) * count,    cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_nodes_,       nodes_.data(),       sizeof(vpm::nidx_t) * count, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_pointsEnd_,   pointsEnd_.data(),   sizeof(vpm::pidx_t) * count, cudaMemcpyHostToDevice);
     cudaMemcpy(dev_centers_,     centers_.data(),     sizeof(vpm::vec3) * count, cudaMemcpyHostToDevice);
 }

@@ -24,7 +24,7 @@ struct Particle {
     vpm::vec3 X;          // Position
     vpm::vec3 Gamma;      // Vectorial circulation
     vpm::real sigma;     // Smoothing radius
-    int index;          // Indices of particles
+    vpm::pidx_t index;          // Indices of particles
     vpm::vec3 U;          // Velocity at particle
     vpm::mat3 J;          // Jacobian at particle
     vpm::mat3 M;          // Auxiliary memory
@@ -50,7 +50,7 @@ struct Particle {
 struct ParticleField {
     ParticleBuffer particles;        // Host particle buffer
     ParticleBuffer dev_particles;   // Device particle buffer
-    size_t numParticles;           // Number of particles in the field
+    vpm::pidx_t numParticles;           // Number of particles in the field
     unsigned int timeStep;               // Current time step
     KernelType kernel;                   // Vortex particle kernel
     vpm::vec3 uInf;               // Uniform freestream function
@@ -61,7 +61,7 @@ struct ParticleField {
     // Constructor
     ParticleField(
         ParticleBuffer particles,
-        size_t numParticles,
+        vpm::pidx_t numParticles,
         unsigned int timeStep = 0,
         KernelType kernel = KernelType::GAUSSIAN_ERF,
         vpm::vec3 uInf = vpm::vec3(0, 0, 0),
@@ -75,8 +75,8 @@ struct ParticleField {
 	void syncParticlesHostToDevice(int bufferMask, cudaStream_t stream = 0);
 
     void addParticleDevice(Particle& particle);
-    void overwriteParticleDevice(Particle& particle, size_t index);
-    void removeParticleDevice(size_t index);
-    void cpyParticlesDeviceToDevice(ParticleBuffer srcBuffer, size_t srcIndex, size_t count,
+    void overwriteParticleDevice(Particle& particle, vpm::pidx_t index);
+    void removeParticleDevice(vpm::pidx_t index);
+    void cpyParticlesDeviceToDevice(ParticleBuffer srcBuffer, vpm::pidx_t srcIndex, vpm::pidx_t count,
         int bufferMask);
 };

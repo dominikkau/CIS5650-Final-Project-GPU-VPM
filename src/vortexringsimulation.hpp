@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vpmcore/vpmmain.h"
+#include "vpmcore/common.h"
 
 namespace vortex_rings {
     struct VortexRing {
@@ -15,17 +16,17 @@ namespace vortex_rings {
         vpm::mat3 orientation{ 1.0f };
     };
 
-    size_t numberParticles(int Nphi, int nc, int extra_nc = 0);
+    vpm::pidx_t numberParticles(int Nphi, int nc, int extra_nc = 0);
 
-    size_t numberParticles(const VortexRing &ring);
+    vpm::pidx_t numberParticles(const VortexRing& ring);
 
-    size_t numberParticles(const std::vector<VortexRing>& rings);
+    vpm::pidx_t numberParticles(const std::vector<VortexRing>& rings);
 
-    size_t addVortexRing(ParticleBuffer particleBuffer, vpm::real circulation, vpm::real R, vpm::real Rcross,
+    vpm::pidx_t addVortexRing(ParticleBuffer& particleBuffer, vpm::real circulation, vpm::real R, vpm::real Rcross,
         int Nphi, int nc, vpm::real sigma, int extra_nc, vpm::vec3 ringPosition,
-        vpm::mat3 ringOrientation, size_t startingIndex);
+        vpm::mat3 ringOrientation, vpm::pidx_t startingIndex);
 
-    size_t initVortexRings(ParticleBuffer particleBuffer);
+    vpm::pidx_t initVortexRings(ParticleBuffer& particleBuffer);
 
-    size_t initParticleBuffer(ParticleBuffer particleBuffer, const std::vector<VortexRing> &rings);
+    vpm::pidx_t initParticleBuffer(ParticleBuffer& particleBuffer, const std::vector<VortexRing>& rings);
 }

@@ -6,26 +6,26 @@
 #include "vpmcore/vpmmain.h"
 
 // Function to calculate the number of particles
-size_t vortex_rings::numberParticles(int Nphi, int nc, int extra_nc) {
+vpm::pidx_t vortex_rings::numberParticles(int Nphi, int nc, int extra_nc) {
     return Nphi * (1 + 4 * (nc + extra_nc) * (nc + extra_nc + 1));
 }
 
 // Function to calculate the number of particles
-size_t vortex_rings::numberParticles(const VortexRing &ring) {
+vpm::pidx_t vortex_rings::numberParticles(const VortexRing &ring) {
     return ring.Nphi * (1 + 4 * (ring.nc + ring.extra_nc) * (ring.nc + ring.extra_nc + 1));
 }
 
 // Function to calculate the number of particles
-size_t vortex_rings::numberParticles(const std::vector<VortexRing>& rings) {
-	size_t totalParticles = 0;
+vpm::pidx_t vortex_rings::numberParticles(const std::vector<VortexRing>& rings) {
+    vpm::pidx_t totalParticles = 0;
 	for (const auto& ring : rings)
 		totalParticles += numberParticles(ring);
 	return totalParticles;
 }
 
-size_t vortex_rings::addVortexRing(ParticleBuffer particleBuffer, vpm::real circulation, vpm::real R, vpm::real Rcross,
+vpm::pidx_t vortex_rings::addVortexRing(ParticleBuffer& particleBuffer, vpm::real circulation, vpm::real R, vpm::real Rcross,
     int Nphi, int nc, vpm::real sigma, int extra_nc, vpm::vec3 ringPosition,
-    vpm::mat3 ringOrientation, size_t startingIndex) {
+    vpm::mat3 ringOrientation, vpm::pidx_t startingIndex) {
     // Lambda function definition
     // Arclength corresponding to phi for circle with radius r
     auto fun_S = [](vpm::real phi, vpm::real r) { return r * phi; };
@@ -63,7 +63,7 @@ size_t vortex_rings::addVortexRing(ParticleBuffer particleBuffer, vpm::real circ
     vpm::real ds = dS / Stot;
     vpm::real omega = circulation / (PI * Rcross * Rcross);
 
-    size_t idx = startingIndex;
+    vpm::pidx_t idx = startingIndex;
     for (int N = 0; N < Nphi; ++N) {
         vpm::real sc1 = ds * N;
         vpm::real sc2 = ds * (N + 1);
@@ -143,13 +143,13 @@ size_t vortex_rings::addVortexRing(ParticleBuffer particleBuffer, vpm::real circ
     return idx;
 }
 
-size_t vortex_rings::initVortexRings(ParticleBuffer particleBuffer) {
+vpm::pidx_t vortex_rings::initVortexRings(ParticleBuffer& particleBuffer) {
     // Number of rings
     const int nrings{ 2 };
     // Offset of rings
     vpm::real dZ{ 0.7906f };
 
-    size_t numParticles{ 0 };
+    vpm::pidx_t numParticles{ 0 };
     vpm::real circulations[nrings];
     vpm::real Rs[nrings];
     vpm::real Rcrosss[nrings];
@@ -180,7 +180,7 @@ size_t vortex_rings::initVortexRings(ParticleBuffer particleBuffer) {
         numParticles = particleBuffer.size();
     }
 
-    size_t startingIndex{ 0 };
+    vpm::pidx_t startingIndex{ 0 };
     for (int i = 0; i < nrings; ++i) {
         startingIndex = addVortexRing(particleBuffer, circulations[i], Rs[i], Rcrosss[i],
             Nphis[i], ncs[i], sigmas[i], extra_ncs[i], ringPositions[i],
@@ -192,16 +192,16 @@ size_t vortex_rings::initVortexRings(ParticleBuffer particleBuffer) {
     return numParticles;
 }
 
-size_t vortex_rings::initParticleBuffer(ParticleBuffer particleBuffer, const std::vector<VortexRing> &rings) 
+vpm::pidx_t vortex_rings::initParticleBuffer(ParticleBuffer& particleBuffer, const std::vector<VortexRing> &rings)
 {
-	size_t numParticles = numberParticles(rings);
+    vpm::pidx_t numParticles = numberParticles(rings);
     if (numParticles > particleBuffer.size()) {
         std::cout << "Number of particles (" << numParticles;
         std::cout << ") exceeds particleBuffer size (" << particleBuffer.size() << ")!" << std::endl;
         numParticles = particleBuffer.size();
     }
 
-	size_t startingIndex{ 0 };
+    vpm::pidx_t startingIndex{ 0 };
 	for (const auto &ring: rings) {
 		startingIndex = addVortexRing(particleBuffer, ring.circulation, ring.R, ring.Rcross,
 			ring.Nphi, ring.nc, ring.sigma, ring.extra_nc, ring.position,

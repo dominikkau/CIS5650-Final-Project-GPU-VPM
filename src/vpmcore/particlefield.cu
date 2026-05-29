@@ -11,7 +11,7 @@ __host__ __device__ void Particle::resetSFS() {
     SFS = vpm::vec3{ 0.0f };
 }
 
-void ParticleField::cpyParticlesDeviceToDevice(ParticleBuffer srcBuffer, size_t srcIndex, size_t count, 
+void ParticleField::cpyParticlesDeviceToDevice(ParticleBuffer srcBuffer, vpm::pidx_t srcIndex, vpm::pidx_t count,
     int bufferMask) {
 
     numParticles += cpyParticleBuffer(dev_particles, srcBuffer, numParticles,
@@ -36,7 +36,7 @@ void ParticleField::addParticleDevice(Particle& particle) {
 	cudaMemcpy(dev_particles.SFS() + numParticles, &dev_tmpParticle->SFS, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
 	cudaMemcpy(dev_particles.C() + numParticles, &dev_tmpParticle->C, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
 	cudaMemcpy(dev_particles.M() + numParticles, &dev_tmpParticle->M, sizeof(vpm::mat3), cudaMemcpyDeviceToDevice);
-	cudaMemcpy(dev_particles.index() + numParticles, &dev_tmpParticle->index, sizeof(int), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(dev_particles.index() + numParticles, &dev_tmpParticle->index, sizeof(vpm::pidx_t), cudaMemcpyDeviceToDevice);
     /*cudaMemcpy(dev_particles.PSE() + numParticles, &dev_tmpParticle->PSE, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
     cudaMemcpy(dev_particles.isStatic() + numParticles, &dev_tmpParticle->isStatic, sizeof(bool), cudaMemcpyDeviceToDevice);
     cudaMemcpy(dev_particles.vol() + numParticles, &dev_tmpParticle->vol, sizeof(vpm::real), cudaMemcpyDeviceToDevice);
@@ -47,7 +47,7 @@ void ParticleField::addParticleDevice(Particle& particle) {
 	cudaFree(dev_tmpParticle);
 }
 
-void ParticleField::overwriteParticleDevice(Particle& particle, size_t index) {
+void ParticleField::overwriteParticleDevice(Particle& particle, vpm::pidx_t index) {
     if (index > numParticles) {
         addParticleDevice(particle);
         return;
@@ -68,7 +68,7 @@ void ParticleField::overwriteParticleDevice(Particle& particle, size_t index) {
     cudaMemcpy(dev_particles.SFS() + index, &dev_tmpParticle->SFS, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
     cudaMemcpy(dev_particles.C() + index, &dev_tmpParticle->C, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
     cudaMemcpy(dev_particles.M() + index, &dev_tmpParticle->M, sizeof(vpm::mat3), cudaMemcpyDeviceToDevice);
-    cudaMemcpy(dev_particles.index() + index, &dev_tmpParticle->index, sizeof(int), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(dev_particles.index() + index, &dev_tmpParticle->index, sizeof(vpm::pidx_t), cudaMemcpyDeviceToDevice);
     /*cudaMemcpy(dev_particles.PSE() + index, &dev_tmpParticle->PSE, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
     cudaMemcpy(dev_particles.isStatic() + index, &dev_tmpParticle->isStatic, sizeof(bool), cudaMemcpyDeviceToDevice);
     cudaMemcpy(dev_particles.vol() + index, &dev_tmpParticle->vol, sizeof(vpm::real), cudaMemcpyDeviceToDevice);
@@ -77,7 +77,7 @@ void ParticleField::overwriteParticleDevice(Particle& particle, size_t index) {
     cudaFree(dev_tmpParticle);
 }
 
-void ParticleField::removeParticleDevice(size_t index) {
+void ParticleField::removeParticleDevice(vpm::pidx_t index) {
     // not the last particle
     if (index != numParticles - 1) {
         cudaMemcpy(dev_particles.X() + index, dev_particles.X() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
@@ -88,7 +88,7 @@ void ParticleField::removeParticleDevice(size_t index) {
         cudaMemcpy(dev_particles.SFS() + index, dev_particles.SFS() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
         cudaMemcpy(dev_particles.C() + index, dev_particles.C() + numParticles - 1, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
         cudaMemcpy(dev_particles.M() + index, dev_particles.M() + numParticles - 1, sizeof(vpm::mat3), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(dev_particles.index() + index, dev_particles.index() + numParticles - 1, sizeof(int), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(dev_particles.index() + index, dev_particles.index() + numParticles - 1, sizeof(vpm::pidx_t), cudaMemcpyDeviceToDevice);
         /*cudaMemcpy(dev_particles.PSE() + index, dev_particles.PSE() + numParticles, sizeof(vpm::vec3), cudaMemcpyDeviceToDevice);
         cudaMemcpy(dev_particles.isStatic() + index, dev_particles.isStatic() + numParticles, sizeof(bool), cudaMemcpyDeviceToDevice);
         cudaMemcpy(dev_particles.vol() + index, dev_particles.vol() + numParticles, sizeof(vpm::real), cudaMemcpyDeviceToDevice);
@@ -112,7 +112,7 @@ void ParticleField::syncParticlesHostToDevice(int bufferMask, cudaStream_t strea
 
 ParticleField::ParticleField(
     ParticleBuffer particles,
-    size_t numParticles,
+    vpm::pidx_t numParticles,
     unsigned int timeStep,
     KernelType kernel,
     vpm::vec3 uInf,

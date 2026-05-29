@@ -6,9 +6,9 @@
 #include "roundjetsimulation.hpp"
 #include "vpmcore/vpmmain.h"
 
-size_t addAnnulus(ParticleBuffer particleBuffer, vpm::real circulation, vpm::real R,
+vpm::pidx_t addAnnulus(ParticleBuffer particleBuffer, vpm::real circulation, vpm::real R,
     int Nphi, vpm::real sigma, vpm::real area, vpm::vec3 jetOrigin,
-    vpm::mat3 jetOrientation, bool isStatic, size_t startingIndex, size_t maxParticles) {
+    vpm::mat3 jetOrientation, bool isStatic, vpm::pidx_t startingIndex, vpm::pidx_t maxParticles) {
         
         // Arclength corresponding to phi for circle with radius r
         auto fun_S = [](vpm::real phi, vpm::real r) { return r * phi; };
@@ -42,7 +42,7 @@ size_t addAnnulus(ParticleBuffer particleBuffer, vpm::real circulation, vpm::rea
         // Non-dimensional perimeter spacing
         vpm::real ds = dS / Stot;
 
-        size_t idx = startingIndex;
+        vpm::pidx_t idx = startingIndex;
         // Discretization of annulus into cross-sections
         for (int i = 0; i < Nphi; i++){
             
@@ -87,8 +87,8 @@ size_t addAnnulus(ParticleBuffer particleBuffer, vpm::real circulation, vpm::rea
 }
 
 
-std::pair<size_t, size_t> initRoundJet(ParticleBuffer particleBuffer, ParticleBuffer boundaryBuffer,
-    size_t maxParticles) {
+std::pair<vpm::pidx_t, vpm::pidx_t> initRoundJet(ParticleBuffer particleBuffer, ParticleBuffer boundaryBuffer,
+    vpm::pidx_t maxParticles) {
 
     // ------- SIMULATION PARAMETERS ------- 
     // (m) jet diameter
@@ -116,7 +116,7 @@ std::pair<size_t, size_t> initRoundJet(ParticleBuffer particleBuffer, ParticleBu
     vpm::real dxotheta = 0.5f;        // Distance Δx between particles over momentum thickness θ
     vpm::real overlap = 2.4f;           // Overlap between particles
 
-    size_t numParticles{ 0 };
+    vpm::pidx_t numParticles{ 0 };
 
     // Define freestream (coflow) velocity
     vpm::vec3 Vfreestream = vpm::vec3{ 0, 0, U2 };
@@ -235,9 +235,9 @@ std::pair<size_t, size_t> initRoundJet(ParticleBuffer particleBuffer, ParticleBu
             }
         }
     }   
-    int j = 0;
+    vpm::pidx_t j = 0;
     // BCi always the same in
-    for (int i = 0; i < BCi.size(); i++){
+    for (vpm::pidx_t i = 0; i < BCi.size(); i++){
         boundaryBuffer.X()[j] = particleBuffer.X()[BCi[i]];
         boundaryBuffer.Gamma()[j] = particleBuffer.Gamma()[BCi[i]];
         boundaryBuffer.sigma()[j] = particleBuffer.sigma()[BCi[i]];
@@ -246,5 +246,5 @@ std::pair<size_t, size_t> initRoundJet(ParticleBuffer particleBuffer, ParticleBu
     }
     // remove all particles from particleBuffer that are not in the BCi array?
     // need to return initial boundary particle buffer
-    return {numParticles, BCi.size()}; // or BCi.size();
+    return {numParticles, static_cast<vpm::pidx_t>(BCi.size())}; // or BCi.size();
 }
