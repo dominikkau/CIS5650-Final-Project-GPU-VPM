@@ -3,29 +3,33 @@
 #include "kernels.h"
 #include "vpmmain.h"
 
-__global__ void calculateTemporary(vpm::pidx_t N, vpm::mat3* __restrict__ M, const vpm::mat3* __restrict__ J, const vpm::vec3* __restrict__ Gamma,
-    const vpm::vec3* __restrict__ SFS, bool testFilter) {
+template <bool testFilter>
+__global__ void calculateTemporary(vpm::pidx_t N, vpm::mat3* __restrict__ M, const vpm::mat3* __restrict__ J, const vpm::real* __restrict__ GammaX,
+    const vpm::real* __restrict__ GammaY, const vpm::real* __restrict__ GammaZ, const vpm::vec3* __restrict__ SFS) {
     vpm::pidx_t index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
+	const vpm::vec3 Gamma = { GammaX[index], GammaY[index], GammaZ[index] };
+
     if (testFilter) {
-        M[index][0] = xDotNablaY(Gamma[index], J[index]);
+        M[index][0] = xDotNablaY(Gamma, J[index]);
         M[index][1] = SFS[index];
     }
     else {
-        M[index][0] -= xDotNablaY(Gamma[index], J[index]);
+        M[index][0] -= xDotNablaY(Gamma, J[index]);
         M[index][1] -= SFS[index];
     }
 }
 
-__global__ void calculateCoefficient(vpm::pidx_t N, const vpm::mat3* __restrict__ M, const vpm::vec3* __restrict__ Gamma,
+__global__ void calculateCoefficient(vpm::pidx_t N, const vpm::mat3* __restrict__ M, const vpm::real* __restrict__ GammaX,
+    const vpm::real* __restrict__ GammaY, const vpm::real* __restrict__ GammaZ,
     const vpm::vec3* __restrict__ SFS, const vpm::real* __restrict__ sigma, vpm::vec3* __restrict__ C, vpm::real zeta0,
-    vpm::real alpha, vpm::real relaxFactor, bool forcePositive, vpm::real minC, vpm::real maxC) {
+    vpm::real alpha, vpm::real relaxFactor, bool forcePositive, vpm::vec2 limC) {
 
     vpm::pidx_t index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
 
-    const vpm::vec3 particleGamma = Gamma[index];
+    const vpm::vec3 particleGamma = { GammaX[index], GammaY[index], GammaZ[index] };
     const vpm::vec3 particleSFS   = SFS[index];
     const vpm::mat3 particleM     = M[index];
     const vpm::real particleSigma = sigma[index];
@@ -46,12 +50,12 @@ __global__ void calculateCoefficient(vpm::pidx_t N, const vpm::mat3* __restrict_
     denominator = relaxFactor * denominator + (1.0f - relaxFactor) * particleC[2];
 
     // Enforce maximum and minimum absolute values
-    if (fabs(numerator / denominator) > maxC) {
-        if (fabs(denominator) < fabs(particleC[2])) denominator = copysign(particleC[2], denominator);
+    if (fabs(numerator / denominator) > limC[1]) {
+        if (fabs(denominator) < fabs(particleC[2])) denominator = copysignf(particleC[2], denominator);
 
-        if (fabs(numerator / denominator) > maxC) numerator = copysign(denominator, numerator) * maxC;
+        if (fabs(numerator / denominator) > limC[1]) numerator = copysignf(denominator, numerator) * limC[1];
     }
-    else if (fabs(numerator / denominator) < minC) numerator = copysign(denominator, numerator) * minC;
+    else if (fabs(numerator / denominator) < limC[0]) numerator = copysignf(denominator, numerator) * limC[0];
 
     // Save numerator and denominator of model coefficient
     particleC[1] = numerator;
@@ -85,7 +89,7 @@ void DynamicSFS::operator()(ParticleField& field, vpm::real a, vpm::real b, int 
         calcEstrNaiveWrapper(estrParams, N, N, particles, particles, kernel, true, alpha);
         checkCUDAError("calcEstrNaive (DynamicsSFS: test filter) failed!");
 
-        calculateTemporary<<<numBlocks, blockSize, 0, stream>>>(N, particles.M(), particles.J(), particles.Gamma(), particles.SFS(), true);
+        calculateTemporary<true><<<numBlocks, blockSize, 0, stream>>>(N, particles.M(), particles.J(), particles.GammaX(), particles.GammaY(), particles.GammaZ(), particles.SFS());
         checkCUDAError("calculateTemporary (DynamicsSFS: test filter) failed!");
 
         // CALCULATIONS WITH DOMAIN FILTER
@@ -95,13 +99,13 @@ void DynamicSFS::operator()(ParticleField& field, vpm::real a, vpm::real b, int 
         calcEstrNaiveWrapper(estrParams, N, N, particles, particles, kernel, true);
         checkCUDAError("calcEstrNaive (DynamicsSFS: domain filter) failed!");
 
-        calculateTemporary<<<numBlocks, blockSize, 0, stream>>>(N, particles.M(), particles.J(), particles.Gamma(), particles.SFS(), false);
+        calculateTemporary<false><<<numBlocks, blockSize, 0, stream>>>(N, particles.M(), particles.J(), particles.GammaX(), particles.GammaY(), particles.GammaZ(), particles.SFS());
         checkCUDAError("calculateTemporary (DynamicsSFS: domain filter) failed!");
 
         // CALCULATE COEFFICIENT
         const Kernel* kernelPointer = getKernel(kernel);
-		calculateCoefficient<<<numBlocks, blockSize, 0, stream>>>(N, particles.M(), particles.Gamma(), particles.SFS(), 
-            particles.sigma(), particles.C(), kernelPointer->zeta(0.0), alpha, relaxFactor, forcePositive, minC, maxC);
+		calculateCoefficient<<<numBlocks, blockSize, 0, stream>>>(N, particles.M(), particles.GammaX(), particles.GammaY(), particles.GammaZ(), particles.SFS(),
+            particles.sigma(), particles.C(), kernelPointer->zeta(0.0), alpha, relaxFactor, forcePositive, limC);
         checkCUDAError("calculateCoefficient failed!");
         delete kernelPointer;
     }

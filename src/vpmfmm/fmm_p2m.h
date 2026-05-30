@@ -37,5 +37,5 @@ public:
 namespace fmm
 {
 	__global__ void p2m(const vpm::nidx_t* nodes, const vpm::pidx_t* pointsEnd, const vpm::vec3* centers,
-		size_t count, const vpm::vec3* xs, const vpm::vec3* qs, float* M, int p);
+		size_t count, const vpm::vec3* xs, const vpm::real* qs, float* M, int p);
 }

@@ -46,7 +46,8 @@ class ParticleBuffer
     int fields_ = 0;
     vpm::vec3* X_ = nullptr;          // Position
 	vpm::real* GammaX_ = nullptr;     // Scalar circulation in x-direction
-    vpm::vec3* Gamma_ = nullptr;      // Vectorial circulation
+	vpm::real* GammaY_ = nullptr;     // Scalar circulation in y-direction
+	vpm::real* GammaZ_ = nullptr;     // Scalar circulation in z-direction
     vpm::real* sigma_ = nullptr;     // Smoothing radius
     vpm::pidx_t* index_ = nullptr;          // Indices of particles
     vpm::vec3* U_ = nullptr;          // Velocity at particle
@@ -75,7 +76,9 @@ public:
 	__host__ __device__ auto type() const { return type_; }
 
     __host__ __device__ auto* X() { return X_; }
-    __host__ __device__ auto* Gamma() { return Gamma_; }
+    __host__ __device__ auto* GammaX() { return GammaX_; }
+    __host__ __device__ auto* GammaY() { return GammaY_; }
+    __host__ __device__ auto* GammaZ() { return GammaZ_; }
     __host__ __device__ auto* sigma() { return sigma_; }
     __host__ __device__ auto* index() { return index_; }
     __host__ __device__ auto* U() { return U_; }
@@ -85,7 +88,9 @@ public:
     __host__ __device__ auto* SFS() { return SFS_; }
 
     __host__ __device__ auto& X(vpm::pidx_t i) { return X_[i]; }
-    __host__ __device__ auto& Gamma(vpm::pidx_t i) { return Gamma_[i]; }
+    __host__ __device__ auto& GammaX(vpm::pidx_t i) { return GammaX_[i]; }
+    __host__ __device__ auto& GammaY(vpm::pidx_t i) { return GammaY_[i]; }
+    __host__ __device__ auto& GammaZ(vpm::pidx_t i) { return GammaZ_[i]; }
     __host__ __device__ auto& sigma(vpm::pidx_t i) { return sigma_[i]; }
     __host__ __device__ auto& index(vpm::pidx_t i) { return index_[i]; }
     __host__ __device__ auto& U(vpm::pidx_t i) { return U_[i]; }
@@ -96,7 +101,9 @@ public:
 
     // Const versions
     __host__ __device__ const auto* X() const { return X_; }
-    __host__ __device__ const auto* Gamma() const { return Gamma_; }
+    __host__ __device__ const auto* GammaX() const { return GammaX_; }
+    __host__ __device__ const auto* GammaY() const { return GammaY_; }
+    __host__ __device__ const auto* GammaZ() const { return GammaZ_; }
     __host__ __device__ const auto* sigma() const { return sigma_; }
     __host__ __device__ const auto* index() const { return index_; }
     __host__ __device__ const auto* U() const { return U_; }
@@ -106,7 +113,9 @@ public:
     __host__ __device__ const auto* SFS() const { return SFS_; }
 
     __host__ __device__ const auto& X(vpm::pidx_t i) const { return X_[i]; }
-    __host__ __device__ const auto& Gamma(vpm::pidx_t i) const { return Gamma_[i]; }
+    __host__ __device__ const auto& GammaX(vpm::pidx_t i) const { return GammaX_[i]; }
+    __host__ __device__ const auto& GammaY(vpm::pidx_t i) const { return GammaY_[i]; }
+    __host__ __device__ const auto& GammaZ(vpm::pidx_t i) const { return GammaZ_[i]; }
     __host__ __device__ const auto& sigma(vpm::pidx_t i) const { return sigma_[i]; }
     __host__ __device__ const auto& index(vpm::pidx_t i) const { return index_[i]; }
     __host__ __device__ const auto& U(vpm::pidx_t i) const { return U_[i]; }
@@ -121,7 +130,9 @@ public:
         if (mask & BufferField::X)      fun(X_);
         if (mask & BufferField::U)      fun(U_);
         if (mask & BufferField::J)      fun(J_);
-        if (mask & BufferField::GAMMA)  fun(Gamma_);
+		if (mask & BufferField::GAMMA)  fun(GammaX_);
+        if (mask & BufferField::GAMMA)  fun(GammaY_);
+        if (mask & BufferField::GAMMA)  fun(GammaZ_);
         if (mask & BufferField::SIGMA)  fun(sigma_);
         if (mask & BufferField::SFS)    fun(SFS_);
         if (mask & BufferField::C)      fun(C_);
@@ -129,35 +140,51 @@ public:
         if (mask & BufferField::INDEX)  fun(index_);
     }
 
-    template <typename Fun>
-    void forEachFieldPair(const ParticleBuffer& buffer,
-        Fun&& fun, int mask = BufferField::ALL)
+    template <typename BufferType, typename Fun>
+    void forEachFieldPair(BufferType&& buffer, Fun&& fun, int mask = BufferField::ALL)
     {
-        if (mask & BufferField::X)      fun(X_, buffer.X());
-        if (mask & BufferField::U)      fun(U_, buffer.U());
-        if (mask & BufferField::J)      fun(J_, buffer.J());
-        if (mask & BufferField::GAMMA)  fun(Gamma_, buffer.Gamma());
-        if (mask & BufferField::SIGMA)  fun(sigma_, buffer.sigma());
-        if (mask & BufferField::SFS)    fun(SFS_, buffer.SFS());
-        if (mask & BufferField::C)      fun(C_, buffer.C());
-        if (mask & BufferField::M)      fun(M_, buffer.M());
-        if (mask & BufferField::INDEX)  fun(index_, buffer.index());
+        if (mask & BufferField::X)      fun(X_,      buffer.X());
+        if (mask & BufferField::U)      fun(U_,      buffer.U());
+        if (mask & BufferField::J)      fun(J_,      buffer.J());
+        if (mask & BufferField::GAMMA)  fun(GammaX_, buffer.GammaX());
+        if (mask & BufferField::GAMMA)  fun(GammaY_, buffer.GammaY());
+        if (mask & BufferField::GAMMA)  fun(GammaZ_, buffer.GammaZ());
+        if (mask & BufferField::SIGMA)  fun(sigma_,  buffer.sigma());
+        if (mask & BufferField::SFS)    fun(SFS_,    buffer.SFS());
+        if (mask & BufferField::C)      fun(C_,      buffer.C());
+        if (mask & BufferField::M)      fun(M_,      buffer.M());
+        if (mask & BufferField::INDEX)  fun(index_,  buffer.index());
     }
 
-    template <typename Fun>
-    void forEachFieldPair(ParticleBuffer& buffer,
-        Fun&& fun, int mask = BufferField::ALL)
-    {
-        if (mask & BufferField::X)      fun(X_, buffer.X());
-        if (mask & BufferField::U)      fun(U_, buffer.U());
-        if (mask & BufferField::J)      fun(J_, buffer.J());
-        if (mask & BufferField::GAMMA)  fun(Gamma_, buffer.Gamma());
-        if (mask & BufferField::SIGMA)  fun(sigma_, buffer.sigma());
-        if (mask & BufferField::SFS)    fun(SFS_, buffer.SFS());
-        if (mask & BufferField::C)      fun(C_, buffer.C());
-        if (mask & BufferField::M)      fun(M_, buffer.M());
-        if (mask & BufferField::INDEX)  fun(index_, buffer.index());
-    }
+    //template <typename Fun>
+    //void forEachFieldPair(ParticleBuffer& buffer, Fun&& fun, int mask = BufferField::ALL)
+    //{
+    //    if (mask & BufferField::X)      fun(X_,      buffer.X());
+    //    if (mask & BufferField::U)      fun(U_,      buffer.U());
+    //    if (mask & BufferField::J)      fun(J_,      buffer.J());
+    //    if (mask & BufferField::GAMMA)  fun(GammaX_, buffer.GammaX());
+    //    if (mask & BufferField::GAMMA)  fun(GammaY_, buffer.GammaY());
+    //    if (mask & BufferField::GAMMA)  fun(GammaZ_, buffer.GammaZ());
+    //    if (mask & BufferField::SIGMA)  fun(sigma_,  buffer.sigma());
+    //    if (mask & BufferField::SFS)    fun(SFS_,    buffer.SFS());
+    //    if (mask & BufferField::C)      fun(C_,      buffer.C());
+    //    if (mask & BufferField::M)      fun(M_,      buffer.M());
+    //    if (mask & BufferField::INDEX)  fun(index_,  buffer.index());
+    //}
+
+    //template <typename Fun>
+    //void forEachFieldPair(Particle& particle, Fun&& fun, int mask = BufferField::ALL)
+    //{
+    //    if (mask & BufferField::X)      fun(X_,      particle.X());
+    //    if (mask & BufferField::U)      fun(U_,      particle.U());
+    //    if (mask & BufferField::J)      fun(J_,      particle.J());
+    //    if (mask & BufferField::GAMMA)  fun(GammaX_, particle.GammaX()); fun(GammaY_, particle.GammaY()); fun(GammaZ_, particle.GammaZ());
+    //    if (mask & BufferField::SIGMA)  fun(sigma_,  particle.sigma());
+    //    if (mask & BufferField::SFS)    fun(SFS_,    particle.SFS());
+    //    if (mask & BufferField::C)      fun(C_,      particle.C());
+    //    if (mask & BufferField::M)      fun(M_,      particle.M());
+    //    if (mask & BufferField::INDEX)  fun(index_,  particle.index());
+    //}
 
     void permute(std::span<const vpm::pidx_t> indices, int bufferMask);
     void mallocFields(int bufferMask);
@@ -170,3 +197,26 @@ vpm::pidx_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& s
 
 vpm::pidx_t cpyParticleBuffer(ParticleBuffer& dstBuffer, const ParticleBuffer& srcBuffer,
     int bufferMask, cudaStream_t stream = 0);
+
+// Leightweight struct to pass pointers to kernels
+struct ParticleBufferView
+{
+    const vpm::pidx_t size;
+    vpm::vec3* const X;
+    vpm::real* const GammaX;
+    vpm::real* const GammaY;
+    vpm::real* const GammaZ;
+    vpm::real* const sigma;
+    vpm::pidx_t* const index;
+    vpm::vec3* const U;
+    vpm::mat3* const J;
+    vpm::mat3* const M;
+    vpm::vec3* const C;
+    vpm::vec3* const SFS;
+
+    ParticleBufferView(ParticleBuffer& buffer)
+        : size(buffer.size()), X(buffer.X()), GammaX(buffer.GammaX()), GammaY(buffer.GammaY()), GammaZ(buffer.GammaZ()),
+        sigma(buffer.sigma()), index(buffer.index()), U(buffer.U()), J(buffer.J()), M(buffer.M()),
+        C(buffer.C()), SFS(buffer.SFS()) {
+    }
+};

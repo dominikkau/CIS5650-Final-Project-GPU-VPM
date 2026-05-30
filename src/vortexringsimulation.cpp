@@ -95,12 +95,15 @@ vpm::pidx_t vortex_rings::addVortexRing(ParticleBuffer& particleBuffer, vpm::rea
 
                 if (idx >= particleBuffer.size()) return 0;
 
-                particleBuffer.X()[idx] = fun_X_global(X);
-                particleBuffer.Gamma()[idx] = fun_Gamma_global(Gamma);
-                //particleBuffer.circulation()[idx] = crcltn;
-                particleBuffer.sigma()[idx] = sigma;
-                //particleBuffer.vol()[idx] = vol;
-                particleBuffer.index()[idx] = idx;
+                particleBuffer.X(idx) = fun_X_global(X);
+				const vpm::vec3 Gamma_global = fun_Gamma_global(Gamma);
+                particleBuffer.GammaX(idx) = Gamma_global.x;
+                particleBuffer.GammaY(idx) = Gamma_global.y;
+                particleBuffer.GammaZ(idx) = Gamma_global.z;
+                //particleBuffer.circulation(idx) = crcltn;
+                particleBuffer.sigma(idx) = sigma;
+                //particleBuffer.vol(idx) = vol;
+                particleBuffer.index(idx) = idx;
                 ++idx;
             }
             else {
@@ -128,12 +131,15 @@ vpm::pidx_t vortex_rings::addVortexRing(ParticleBuffer& particleBuffer, vpm::rea
 
                     if (idx >= particleBuffer.size()) return 0;
 
-                    particleBuffer.X()[idx] = fun_X_global(X);
-                    particleBuffer.Gamma()[idx] = fun_Gamma_global(Gamma);
-                    //particleBuffer.circulation()[idx] = crcltn;
-                    particleBuffer.sigma()[idx] = sigma;
-                    //particleBuffer.vol()[idx] = vol;
-                    particleBuffer.index()[idx] = idx;
+                    particleBuffer.X(idx) = fun_X_global(X);
+                    const vpm::vec3 Gamma_global = fun_Gamma_global(Gamma);
+                    particleBuffer.GammaX(idx) = Gamma_global.x;
+                    particleBuffer.GammaY(idx) = Gamma_global.y;
+                    particleBuffer.GammaZ(idx) = Gamma_global.z;
+                    //particleBuffer.circulation(idx) = crcltn;
+                    particleBuffer.sigma(idx) = sigma;
+                    //particleBuffer.vol(idx) = vol;
+                    particleBuffer.index(idx) = idx;
                     ++idx;
                 }
             }

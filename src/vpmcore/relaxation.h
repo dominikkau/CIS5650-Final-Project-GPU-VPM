@@ -21,7 +21,7 @@ public:
     void operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0);
 };
 
-__global__ void pedrizzettiRelax(vpm::pidx_t N, const vpm::mat3* __restrict__ J, vpm::vec3* __restrict__ Gamma, vpm::real relaxFactor);
+__global__ void pedrizzettiRelax(vpm::pidx_t N, const vpm::mat3* __restrict__ J, vpm::real* __restrict__ GammaX, vpm::real* __restrict__ GammaY, vpm::real* __restrict__ GammaZ, vpm::real relaxFactor);
 
 class CorrectedPedrizzettiRelaxation : public RelaxationScheme {
 private:
@@ -33,7 +33,7 @@ public:
     void operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0);
 };
 
-__global__ void correctedPedrizzettiRelax(vpm::pidx_t N, const vpm::mat3* __restrict__ J, vpm::vec3* __restrict__ Gamma, vpm::real relaxFactor);
+__global__ void correctedPedrizzettiRelax(vpm::pidx_t N, const vpm::mat3* __restrict__ J, vpm::real* __restrict__ GammaX, vpm::real* __restrict__ GammaY, vpm::real* __restrict__ GammaZ, vpm::real relaxFactor);
 
 class NoRelaxation : public RelaxationScheme {
     inline void operator()(ParticleField& field, int numBlocks, int blockSize, cudaStream_t stream = 0) {}

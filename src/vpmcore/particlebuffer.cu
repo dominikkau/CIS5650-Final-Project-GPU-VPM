@@ -9,7 +9,9 @@ ParticleBuffer::ParticleBuffer(ParticleBuffer&& other) noexcept
       size_(other.size_),
       fields_(other.fields_),
       X_(other.X_),
-      Gamma_(other.Gamma_),
+      GammaX_(other.GammaX_),
+      GammaY_(other.GammaY_),
+      GammaZ_(other.GammaZ_),
       sigma_(other.sigma_),
       index_(other.index_),
       U_(other.U_),
@@ -19,7 +21,9 @@ ParticleBuffer::ParticleBuffer(ParticleBuffer&& other) noexcept
       SFS_(other.SFS_)
 {
 	other.X_ = nullptr;
-	other.Gamma_ = nullptr;
+	other.GammaX_ = nullptr;
+    other.GammaY_ = nullptr;
+    other.GammaZ_ = nullptr;
 	other.sigma_ = nullptr;
 	other.index_ = nullptr;
 	other.U_ = nullptr;

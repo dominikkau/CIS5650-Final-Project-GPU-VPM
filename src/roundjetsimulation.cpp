@@ -74,12 +74,15 @@ vpm::pidx_t addAnnulus(ParticleBuffer& particleBuffer, vpm::real circulation, vp
 
             if (idx >= maxParticles - 1) return idx;
 
-            particleBuffer.X()[idx] = fun_X_global(X);
-            particleBuffer.Gamma()[idx] = fun_Gamma_global(Gamma);
-            //particleBuffer[idx]().circulation[idx] = circulation;
-            particleBuffer.sigma()[idx] = sigma;
-            //particleBuffer.vol()[idx] = area * length;
-            particleBuffer.index()[idx] = idx;
+            particleBuffer.X(idx) = fun_X_global(X);
+            const vpm::vec3 Gamma_global = fun_Gamma_global(Gamma);
+            particleBuffer.GammaX(idx) = Gamma_global.x;
+            particleBuffer.GammaY(idx) = Gamma_global.y;
+            particleBuffer.GammaZ(idx) = Gamma_global.z;
+            //particleBuffer.circulation(idx) = circulation;
+            particleBuffer.sigma(idx) = sigma;
+            //particleBuffer.vol(idx) = area * length;
+            particleBuffer.index(idx) = idx;
             //particleBuffer.isStatic()[idx] = isStatic;
             ++idx;
         }
@@ -238,10 +241,12 @@ std::pair<vpm::pidx_t, vpm::pidx_t> initRoundJet(ParticleBuffer& particleBuffer,
     vpm::pidx_t j = 0;
     // BCi always the same in
     for (vpm::pidx_t i = 0; i < BCi.size(); i++){
-        boundaryBuffer.X()[j] = particleBuffer.X()[BCi[i]];
-        boundaryBuffer.Gamma()[j] = particleBuffer.Gamma()[BCi[i]];
-        boundaryBuffer.sigma()[j] = particleBuffer.sigma()[BCi[i]];
-        boundaryBuffer.index()[j] = particleBuffer.index()[BCi[i]];
+        boundaryBuffer.X(j) = particleBuffer.X(BCi[i]);
+        boundaryBuffer.GammaX(j) = particleBuffer.GammaX(BCi[i]);
+        boundaryBuffer.GammaY(j) = particleBuffer.GammaY(BCi[i]);
+        boundaryBuffer.GammaZ(j) = particleBuffer.GammaZ(BCi[i]);
+        boundaryBuffer.sigma(j) = particleBuffer.sigma(BCi[i]);
+        boundaryBuffer.index(j) = particleBuffer.index(BCi[i]);
         j++;
     }
     // remove all particles from particleBuffer that are not in the BCi array?

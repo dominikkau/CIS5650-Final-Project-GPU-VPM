@@ -71,8 +71,8 @@ void testTree()
 
 	std::random_device rd;
 	std::mt19937 gen(13); // Mersenne Twister generator
-	std::normal_distribution<> disPos(0.0, 1.0); // mean=0, std_dev=1
-	std::normal_distribution<> disGamma(-1.0, 1.0); // mean=0, std_dev=1
+	std::normal_distribution<vpm::real> disPos(0.0, 1.0); // mean=0, std_dev=1
+	std::normal_distribution<vpm::real> disGamma(-1.0, 1.0); // mean=0, std_dev=1
 	//std::uniform_real_distribution<> dis(0.0, 1.0);
 
 	std::vector<vpm::vec3> positions;
@@ -84,7 +84,7 @@ void testTree()
 		particles.X(i).x = disPos(gen);
 		particles.X(i).y = disPos(gen);
 		particles.X(i).z = disPos(gen);
-		particles.Gamma(i).x = disGamma(gen);
+		particles.GammaX(i) = disGamma(gen);
 	}
 
 	std::cout << "Allocated and initialized particle buffer with " << numParticles << " particles." << std::endl;
@@ -162,7 +162,7 @@ void testTree()
 #pragma unroll
 	for (int i = 0; i < REPETITIONS; ++i) {
 		//fmmP2M << <numBlocks, blockSize, sharedMemSize >> > (p2mInfo.dev_nodes(), p2mInfo.dev_pointsStart(), p2mInfo.dev_pointsEnd(), p2mInfo.dev_centers(), p2mInfo.size(), dev_particles.X(), dev_particles.Gamma(), dev_M, p);
-		fmm::p2m<<<numBlocks, blockSize, sharedMemSize>>>(p2mInfo.dev_nodes(), p2mInfo.dev_pointsEnd(), p2mInfo.dev_centers(), p2mInfo.size(), dev_particles.X(), dev_particles.Gamma(), dev_M, p);
+		fmm::p2m<<<numBlocks, blockSize, sharedMemSize>>>(p2mInfo.dev_nodes(), p2mInfo.dev_pointsEnd(), p2mInfo.dev_centers(), p2mInfo.size(), dev_particles.X(), dev_particles.GammaX(), dev_M, p);
 		checkCUDAError("Kernel fmmP2M failed");
 		cudaDeviceSynchronize();
 	}

@@ -21,15 +21,17 @@ struct OutputType {
 };
 
 struct Particle {
-    vpm::vec3 X;          // Position
-    vpm::vec3 Gamma;      // Vectorial circulation
-    vpm::real sigma;     // Smoothing radius
-    vpm::pidx_t index;          // Indices of particles
-    vpm::vec3 U;          // Velocity at particle
-    vpm::mat3 J;          // Jacobian at particle
-    vpm::mat3 M;          // Auxiliary memory
-    vpm::vec3 C;          // SFS coefficient, numerator, denominator
-    vpm::vec3 SFS;
+    vpm::vec3 X_;          // Position
+    vpm::real GammaX_;      // Vectorial circulation
+    vpm::real GammaY_;
+    vpm::real GammaZ_;
+    vpm::real sigma_;     // Smoothing radius
+    vpm::pidx_t index_;          // Indices of particles
+    vpm::vec3 U_;          // Velocity at particle
+    vpm::mat3 J_;          // Jacobian at particle
+    vpm::mat3 M_;          // Auxiliary memory
+    vpm::vec3 C_;          // SFS coefficient, numerator, denominator
+    vpm::vec3 SFS_;
 
     /*vpm::real vol;            // Volume
     vpm::real circulation;    // Scalar circulation
@@ -38,12 +40,24 @@ struct Particle {
 
     // Constructor
     Particle()
-        : X(0.0f), Gamma(0.0f), sigma(0.0f),
-        U(0.0f), J(0.0f), M(0.0f), C(0.0f), SFS(0.0f), index(0) {}
+        : X_(0.0f), GammaX_(0.0f), GammaY_(0.0f), GammaZ_(0.0f), sigma_(0.0f),
+        U_(0.0f), J_(0.0f), M_(0.0f), C_(0.0f), SFS_(0.0f), index_(0) {}
     //PSE(0.0f), vol(0.0f), circulation(0.0f), isStatic(false), 
 
     __host__ __device__ void reset();    // Reset particle U, J and PSE
     __host__ __device__ void resetSFS(); // Reset particle SFS
+
+    __host__ __device__ auto* X() { return &X_; }
+    __host__ __device__ auto* GammaX() { return &GammaX_; }
+    __host__ __device__ auto* GammaY() { return &GammaY_; }
+    __host__ __device__ auto* GammaZ() { return &GammaZ_; }
+    __host__ __device__ auto* sigma() { return &sigma_; }
+    __host__ __device__ auto* index() { return &index_; }
+    __host__ __device__ auto* U() { return &U_; }
+    __host__ __device__ auto* J() { return &J_; }
+    __host__ __device__ auto* M() { return &M_; }
+    __host__ __device__ auto* C() { return &C_; }
+    __host__ __device__ auto* SFS() { return &SFS_; }
 };
 
 // ParticleField definition

@@ -21,7 +21,7 @@ namespace cg = cooperative_groups;
 
 // Computes Multipole expansion of particles
 // Evaluates regular spherical basis function
-__global__ void fmm::p2m(const vpm::nidx_t* nodes, const vpm::pidx_t* pointsEnd, const vpm::vec3* centers, size_t count, const vpm::vec3* xs, const vpm::vec3* qs, float* M, int p)
+__global__ void fmm::p2m(const vpm::nidx_t* nodes, const vpm::pidx_t* pointsEnd, const vpm::vec3* centers, size_t count, const vpm::vec3* xs, const vpm::real* qs, float* M, int p)
 {
     const size_t globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -103,7 +103,7 @@ __global__ void fmm::p2m(const vpm::nidx_t* nodes, const vpm::pidx_t* pointsEnd,
         const vpm::real x = xs[ptsIdx].x - xc;
         const vpm::real y = xs[ptsIdx].y - yc;
         const vpm::real z = xs[ptsIdx].z - zc;
-        const vpm::real q = qs[ptsIdx].x;
+        const vpm::real q = qs[ptsIdx];
 
         const vpm::real r2 = x * x + y * y + z * z;
 

@@ -42,6 +42,12 @@ ParticleBuffer vpmio::readParticleBuffer(const std::string& path)
     buffer.mallocFields(fieldMask);
 
     // Helper lambdas
+    auto readReal = [](const std::string& line, vpm::real& v) {
+        std::istringstream ss(line);
+        ss >> v;
+        if (ss.fail()) throw std::runtime_error("Failed to parse real: " + line);
+        };
+
     auto readVec3 = [](const std::string& line, vpm::vec3& v) {
         std::istringstream ss(line);
         ss >> v.x >> v.y >> v.z;
@@ -69,12 +75,10 @@ ParticleBuffer vpmio::readParticleBuffer(const std::string& path)
     
     // Read fields in a consistent order
     readField(BufferField::X, readVec3, buffer.X());
-    readField(BufferField::GAMMA, readVec3, buffer.Gamma());
-    readField(BufferField::SIGMA, [](const std::string& line, vpm::real& v) {
-        std::istringstream ss(line);
-        ss >> v;
-        if (ss.fail()) throw std::runtime_error("Failed to parse float: " + line);
-        }, buffer.sigma());
+    readField(BufferField::GAMMA, readReal, buffer.GammaX());
+    readField(BufferField::GAMMA, readReal, buffer.GammaY());
+    readField(BufferField::GAMMA, readReal, buffer.GammaZ());
+    readField(BufferField::SIGMA, readReal, buffer.sigma());
     readField(BufferField::INDEX, [](const std::string& line, vpm::pidx_t& v) {
         std::istringstream ss(line);
         ss >> v;
@@ -124,23 +128,27 @@ void vpmio::writeParticleBuffer(const std::string& path, const ParticleBuffer& b
 
     // Write fields in same order as read
     if (fieldMask & BufferField::X)
-        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.X()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.X(i));
     if (fieldMask & BufferField::GAMMA)
-        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.Gamma()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) file << buffer.GammaX(i) << "\n";
+    if (fieldMask & BufferField::GAMMA)
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) file << buffer.GammaY(i) << "\n";
+    if (fieldMask & BufferField::GAMMA)
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) file << buffer.GammaZ(i) << "\n";
     if (fieldMask & BufferField::SIGMA)
-        for (vpm::pidx_t i = 0; i < numParticles; ++i) file << buffer.sigma()[i] << "\n";
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) file << buffer.sigma(i) << "\n";
     if (fieldMask & BufferField::INDEX)
-        for (vpm::pidx_t i = 0; i < numParticles; ++i) file << buffer.index()[i] << "\n";
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) file << buffer.index(i) << "\n";
     if (fieldMask & BufferField::U)
-        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.U()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.U(i));
     if (fieldMask & BufferField::J)
-        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeMat3(buffer.J()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeMat3(buffer.J(i));
     if (fieldMask & BufferField::M)
-        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeMat3(buffer.M()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeMat3(buffer.M(i));
     if (fieldMask & BufferField::C)
-        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.C()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.C(i));
     if (fieldMask & BufferField::SFS)
-        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.SFS()[i]);
+        for (vpm::pidx_t i = 0; i < numParticles; ++i) writeVec3(buffer.SFS(i));
 }
 
 void vpmio::writeOctreeVTK(const std::unordered_map<vpm::midx_t, HCell>& treeMap,

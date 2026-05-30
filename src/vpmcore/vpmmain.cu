@@ -17,31 +17,31 @@ void calcEstrNaiveWrapper(CUDAKernelParams params, vpm::pidx_t targetN, vpm::pid
     {
     case KernelType::SINGULAR:
 		calcEstrNaive<<<params.numBlocks, params.blockSize, params.sharedBytes, params.stream>>>(targetN, sourceN, targetParticles.X(), targetParticles.J(), targetParticles.SFS(), 
-            sourceParticles.X(), sourceParticles.J(), sourceParticles.Gamma(), sourceParticles.sigma(), SingularKernel(), reset, testFilterFactor);
+            sourceParticles.X(), sourceParticles.J(), sourceParticles.GammaX(), sourceParticles.GammaY(), sourceParticles.GammaZ(), sourceParticles.sigma(), SingularKernel(), reset, testFilterFactor);
         break;
     case KernelType::GAUSSIAN:
         calcEstrNaive<<<params.numBlocks, params.blockSize, params.sharedBytes, params.stream>>>(targetN, sourceN, targetParticles.X(), targetParticles.J(), targetParticles.SFS(),
-            sourceParticles.X(), sourceParticles.J(), sourceParticles.Gamma(), sourceParticles.sigma(), GaussianKernel(), reset, testFilterFactor);
+            sourceParticles.X(), sourceParticles.J(), sourceParticles.GammaX(), sourceParticles.GammaY(), sourceParticles.GammaZ(), sourceParticles.sigma(), GaussianKernel(), reset, testFilterFactor);
         break;
     case KernelType::GAUSSIAN_ERF:
         calcEstrNaive<<<params.numBlocks, params.blockSize, params.sharedBytes, params.stream>>>(targetN, sourceN, targetParticles.X(), targetParticles.J(), targetParticles.SFS(),
-            sourceParticles.X(), sourceParticles.J(), sourceParticles.Gamma(), sourceParticles.sigma(), GaussianErfKernel(), reset, testFilterFactor);
+            sourceParticles.X(), sourceParticles.J(), sourceParticles.GammaX(), sourceParticles.GammaY(), sourceParticles.GammaZ(), sourceParticles.sigma(), GaussianErfKernel(), reset, testFilterFactor);
         break;
     case KernelType::WINCKELMAN:
         calcEstrNaive<<<params.numBlocks, params.blockSize, params.sharedBytes, params.stream>>>(targetN, sourceN, targetParticles.X(), targetParticles.J(), targetParticles.SFS(),
-            sourceParticles.X(), sourceParticles.J(), sourceParticles.Gamma(), sourceParticles.sigma(), WinckelmansKernel(), reset, testFilterFactor);
+            sourceParticles.X(), sourceParticles.J(), sourceParticles.GammaX(), sourceParticles.GammaY(), sourceParticles.GammaZ(), sourceParticles.sigma(), WinckelmansKernel(), reset, testFilterFactor);
         break;
     default:
         // Default to GaussianKernel if unknown type
         calcEstrNaive<<<params.numBlocks, params.blockSize, params.sharedBytes, params.stream>>>(targetN, sourceN, targetParticles.X(), targetParticles.J(), targetParticles.SFS(),
-            sourceParticles.X(), sourceParticles.J(), sourceParticles.Gamma(), sourceParticles.sigma(), GaussianKernel(), reset, testFilterFactor);
+            sourceParticles.X(), sourceParticles.J(), sourceParticles.GammaX(), sourceParticles.GammaY(), sourceParticles.GammaZ(), sourceParticles.sigma(), GaussianKernel(), reset, testFilterFactor);
         break;
     }
 }
 
 template <typename K>
-__global__ void calcEstrNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, const vpm::vec3* __restrict__ tX, const vpm::mat3* __restrict__ tJ,
-    vpm::vec3* __restrict__ tSFS, const vpm::vec3* __restrict__ sX, const vpm::mat3* __restrict__ sJ, const vpm::vec3* __restrict__ sGamma,
+__global__ void calcEstrNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, const vpm::vec3* tX, const vpm::mat3* tJ,
+    vpm::vec3* __restrict__ tSFS, const vpm::vec3* sX, const vpm::mat3* sJ, const vpm::real* __restrict__ sGammaX, const vpm::real* __restrict__ sGammaY, const vpm::real* __restrict__ sGammaZ,
     const vpm::real* __restrict__ ssigma, K kernel, bool reset, vpm::real testFilterFactor)
 {
     const vpm::pidx_t index = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -80,7 +80,7 @@ __global__ void calcEstrNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, const vp
             s_sourceInvSigma[s_index] = 1.0f / (ssigma[s_index + j] * testFilterFactor);
             s_sourceX[s_index] = sX[s_index + j];
             s_sourceJ[s_index] = sJ[s_index + j];
-            s_sourceGammaSigma[s_index] = sGamma[s_index + j]
+            s_sourceGammaSigma[s_index] = vpm::vec3{ sGammaX[s_index + j], sGammaY[s_index + j], sGammaZ[s_index + j] }
                 * s_sourceInvSigma[s_index] * s_sourceInvSigma[s_index] * s_sourceInvSigma[s_index];
         }
         __syncthreads();
@@ -106,31 +106,31 @@ void calcVelJacNaiveWrapper(CUDAKernelParams params, vpm::pidx_t targetN, vpm::p
     {
     case KernelType::SINGULAR:
         calcVelJacNaive<<<params.numBlocks, params.blockSize, params.sharedBytes, params.stream>>>(targetN, sourceN, targetParticles.X(), targetParticles.U(),
-            targetParticles.J(), sourceParticles.X(), sourceParticles.Gamma(), sourceParticles.sigma(), SingularKernel(), reset, testFilterFactor);
+            targetParticles.J(), sourceParticles.X(), sourceParticles.GammaX(), sourceParticles.GammaY(), sourceParticles.GammaZ(), sourceParticles.sigma(), SingularKernel(), reset, testFilterFactor);
         break;
     case KernelType::GAUSSIAN:
         calcVelJacNaive<<<params.numBlocks, params.blockSize, params.sharedBytes, params.stream>>>(targetN, sourceN, targetParticles.X(), targetParticles.U(),
-            targetParticles.J(), sourceParticles.X(), sourceParticles.Gamma(), sourceParticles.sigma(), GaussianKernel(), reset, testFilterFactor);
+            targetParticles.J(), sourceParticles.X(), sourceParticles.GammaX(), sourceParticles.GammaY(), sourceParticles.GammaZ(), sourceParticles.sigma(), GaussianKernel(), reset, testFilterFactor);
         break;
     case KernelType::GAUSSIAN_ERF:
         calcVelJacNaive<<<params.numBlocks, params.blockSize, params.sharedBytes, params.stream>>>(targetN, sourceN, targetParticles.X(), targetParticles.U(),
-            targetParticles.J(), sourceParticles.X(), sourceParticles.Gamma(), sourceParticles.sigma(), GaussianErfKernel(), reset, testFilterFactor);
+            targetParticles.J(), sourceParticles.X(), sourceParticles.GammaX(), sourceParticles.GammaY(), sourceParticles.GammaZ(), sourceParticles.sigma(), GaussianErfKernel(), reset, testFilterFactor);
         break;
     case KernelType::WINCKELMAN:
         calcVelJacNaive<<<params.numBlocks, params.blockSize, params.sharedBytes, params.stream>>>(targetN, sourceN, targetParticles.X(), targetParticles.U(),
-            targetParticles.J(), sourceParticles.X(), sourceParticles.Gamma(), sourceParticles.sigma(), WinckelmansKernel(), reset, testFilterFactor);
+            targetParticles.J(), sourceParticles.X(), sourceParticles.GammaX(), sourceParticles.GammaY(), sourceParticles.GammaZ(), sourceParticles.sigma(), WinckelmansKernel(), reset, testFilterFactor);
         break;
     default:
         // Default to GaussianKernel if unknown type
         calcVelJacNaive<<<params.numBlocks, params.blockSize, params.sharedBytes, params.stream>>>(targetN, sourceN, targetParticles.X(), targetParticles.U(),
-            targetParticles.J(), sourceParticles.X(), sourceParticles.Gamma(), sourceParticles.sigma(), GaussianKernel(), reset, testFilterFactor);
+            targetParticles.J(), sourceParticles.X(), sourceParticles.GammaX(), sourceParticles.GammaY(), sourceParticles.GammaZ(), sourceParticles.sigma(), GaussianKernel(), reset, testFilterFactor);
         break;
     }
 }
 
 template <typename K>
-__global__ void calcVelJacNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, const vpm::vec3* __restrict__ tX, vpm::vec3* __restrict__ tU, vpm::mat3* __restrict__ tJ,
-    const vpm::vec3* __restrict__ sX, const vpm::vec3* __restrict__ sGamma, const vpm::real* __restrict__ ssigma, K kernel, bool reset, vpm::real testFilterFactor)
+__global__ void calcVelJacNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, const vpm::vec3* tX, vpm::vec3* __restrict__ tU, vpm::mat3* __restrict__ tJ,
+    const vpm::vec3* sX, const vpm::real* __restrict__ sGammaX, const vpm::real* __restrict__ sGammaY, const vpm::real* __restrict__ sGammaZ, const vpm::real* __restrict__ ssigma, K kernel, bool reset, vpm::real testFilterFactor)
 {
 
     const vpm::pidx_t index = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -168,7 +168,7 @@ __global__ void calcVelJacNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, const 
     for (vpm::pidx_t j = 0; j < sourceN; j += blockDim.x) {
         if (j + s_index < sourceN) {
             s_sourceX[s_index]     = sX[s_index + j];
-            s_sourceGamma[s_index] = sGamma[s_index + j];
+            s_sourceGamma[s_index] = vpm::vec3{ sGammaX[s_index + j], sGammaY[s_index + j], sGammaZ[s_index + j] };
             s_sourceInvSigma[s_index] = invTestFilterFactor / ssigma[s_index + j];
         }
         __syncthreads();
@@ -218,7 +218,7 @@ __global__ void calcVelJacNaive(vpm::pidx_t targetN, vpm::pidx_t sourceN, const 
 
 __global__ void rungeKuttaStep(vpm::pidx_t N, vpm::vec3* __restrict__ X, const vpm::vec3* __restrict__ U,
     const vpm::mat3* __restrict__ J, const vpm::vec3* __restrict__ SFS, vpm::mat3* __restrict__ M, vpm::real* __restrict__ sigma,
-    vpm::vec3* __restrict__ Gamma, const vpm::vec3* __restrict__ C, vpm::real a, vpm::real b, vpm::real dt, vpm::real zeta0, vpm::vec3 Uinf)
+    vpm::real* __restrict__ GammaX, vpm::real* __restrict__ GammaY, vpm::real* __restrict__ GammaZ, const vpm::vec3* __restrict__ C, vpm::real a, vpm::real b, vpm::real dt, vpm::real zeta0, vpm::vec3 Uinf)
 {
     vpm::pidx_t index = threadIdx.x + (blockIdx.x * blockDim.x);
     if (index >= N) return;
@@ -229,7 +229,7 @@ __global__ void rungeKuttaStep(vpm::pidx_t N, vpm::vec3* __restrict__ X, const v
     const vpm::mat3  particleJ   = J[index];
     
     vpm::real particleSigma = sigma[index];
-    vpm::vec3 particleGamma = Gamma[index];
+    vpm::vec3 particleGamma = vpm::vec3{ GammaX[index], GammaY[index], GammaZ[index] };;
     vpm::vec3 particleX     = X[index];
     vpm::mat3 particleM;
     if (a == 1.0f || a == 0.0f) {
@@ -255,7 +255,9 @@ __global__ void rungeKuttaStep(vpm::pidx_t N, vpm::vec3* __restrict__ X, const v
     particleM[1] = a * particleM[1] + dt * (S - 3.0f * Z * particleGamma
         - particleC * particleSFS * particleSigma * particleSigma * particleSigma / zeta0);
     particleGamma += b * particleM[1];
-    Gamma[index] = particleGamma;
+    GammaX[index] = particleGamma.x;
+    GammaX[index] = particleGamma.y;
+    GammaX[index] = particleGamma.z;
 
 #ifndef CLASSIC_VPM
     // Sigma update
@@ -288,7 +290,7 @@ void rungeKutta(ParticleField& field, vpm::real dt, bool useRelax, int numBlocks
         (*field.sfs)(field, a, b, numBlocks, blockSize, stream);
 
         rungeKuttaStep<<<numBlocks, blockSize, 0, stream>>>(N, field.dev_particles.X(), field.dev_particles.U(), field.dev_particles.J(), field.dev_particles.SFS(),
-            field.dev_particles.M(), field.dev_particles.sigma(), field.dev_particles.Gamma(), field.dev_particles.C(), a, b, dt, kernelPointer->zeta(0.0f), field.uInf);
+            field.dev_particles.M(), field.dev_particles.sigma(), field.dev_particles.GammaX(), field.dev_particles.GammaY(), field.dev_particles.GammaZ(), field.dev_particles.C(), a, b, dt, kernelPointer->zeta(0.0f), field.uInf);
         checkCUDAError("rungeKuttaStep failed!");
     }
 
@@ -342,11 +344,16 @@ void writeVTK(ParticleBuffer& particles, vpm::pidx_t N, const std::string& filen
         writer.add_vector_field("velocity", particleU, dim);
     }
     if (outputMask & OutputType::GAMMA) {
-        particleGamma.insert(
-            particleGamma.end(),
-            (vpm::real*)particles.Gamma(),
-            (vpm::real*)(particles.Gamma() + N)
-        );
+        //particleGamma.insert(
+        //    particleGamma.end(),
+        //    (vpm::real*)particles.GammaX(),
+        //    (vpm::real*)(particles.GammaX() + N)
+        //);
+		for (vpm::pidx_t i = 0; i < N; ++i) {
+			particleGamma.push_back(particles.GammaX()[i]);
+			particleGamma.push_back(particles.GammaY()[i]);
+			particleGamma.push_back(particles.GammaZ()[i]);
+		}
 
         writer.add_vector_field("circulation", particleGamma, dim);
     }
@@ -404,17 +411,17 @@ void calcVortexRingMetrics(ParticleField& field, int iteration, std::string file
         vpm::vec3 ringCenter = vpm::vec3{ 0 };
         vpm::real totalGamma = 0;
         for (vpm::pidx_t i = offset; i < numParticlesRing + offset; ++i) {
-            vpm::real Gamma = glm::length(field.particles.Gamma()[i]);
+            vpm::real Gamma = glm::length(vpm::vec3{ field.particles.GammaX(i),field.particles.GammaY(i), field.particles.GammaZ(i) });
             totalGamma += Gamma;
-            ringCenter += Gamma * field.particles.X()[i];
+            ringCenter += Gamma * field.particles.X(i);
         }
         ringCenter /= totalGamma;
 
         // Calculate ring radius
         vpm::real ringRadius = 0;
         for (vpm::pidx_t i = offset; i < numParticlesRing + offset; ++i) {
-            vpm::real Gamma = glm::length(field.particles.Gamma()[i]);
-            vpm::real radius = glm::length(field.particles.X()[i] - ringCenter);
+            vpm::real Gamma = glm::length(vpm::vec3{ field.particles.GammaX(i),field.particles.GammaY(i), field.particles.GammaZ(i) });
+            vpm::real radius = glm::length(field.particles.X(i) - ringCenter);
             ringRadius += Gamma * radius;
         }
         ringRadius /= totalGamma;
