@@ -36,6 +36,7 @@ public:
 
 namespace fmm
 {
-	__global__ void p2m(const vpm::nidx_t* nodes, const vpm::pidx_t* pointsEnd, const vpm::vec3* centers,
-		size_t count, const vpm::vec3* xs, const vpm::real* qs, float* M, int p);
+	unsigned int shRequirementP2M(int p, int blockSize);
+	__global__ void p2m(const vpm::nidx_t* __restrict__ nodes, const vpm::pidx_t* __restrict__ pointsEnd, const vpm::vec3* __restrict__ centers,
+		size_t count, const vpm::vec3* __restrict__ xs, const vpm::real* __restrict__ qs, vpm::real* M, int p);
 }

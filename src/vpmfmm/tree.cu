@@ -61,9 +61,8 @@ void testTree()
 
 	//size_t numParticlesTrue = vortex_rings::initParticleBuffer(particleBuffer, vortexRings);
 	//std::cout << "Initialized " << numParticlesTrue << " particles in buffer" << std::endl;
-
-	constexpr int REPETITIONS = 10;
-	vpm::pidx_t numParticles = 10'000;
+	constexpr int REPETITIONS = 100;
+	vpm::pidx_t numParticles = 1000'000;
 	// Degree of expansion
 	constexpr int p = 8;
 
@@ -143,10 +142,10 @@ void testTree()
 
 
 
-	constexpr unsigned int blockSize = 64;
-	const unsigned int numBlocks = (p2mInfo.size() + blockSize - 1) / blockSize;
+	constexpr unsigned int blockSize = 32;
+	const unsigned int numBlocks = (p2mInfo.size() * 2 + blockSize - 1) / blockSize;
 
-	const unsigned int sharedMemSize = blockSize * (sizeof(vpm::real) * p * p);
+	const unsigned int sharedMemSize = fmm::shRequirementP2M(p, blockSize);
 
 	std::cout << "Shared memory: " << sharedMemSize << " bytes per block" << std::endl;
 
@@ -161,7 +160,6 @@ void testTree()
 
 #pragma unroll
 	for (int i = 0; i < REPETITIONS; ++i) {
-		//fmmP2M << <numBlocks, blockSize, sharedMemSize >> > (p2mInfo.dev_nodes(), p2mInfo.dev_pointsStart(), p2mInfo.dev_pointsEnd(), p2mInfo.dev_centers(), p2mInfo.size(), dev_particles.X(), dev_particles.Gamma(), dev_M, p);
 		fmm::p2m<<<numBlocks, blockSize, sharedMemSize>>>(p2mInfo.dev_nodes(), p2mInfo.dev_pointsEnd(), p2mInfo.dev_centers(), p2mInfo.size(), dev_particles.X(), dev_particles.GammaX(), dev_M, p);
 		checkCUDAError("Kernel fmmP2M failed");
 		cudaDeviceSynchronize();

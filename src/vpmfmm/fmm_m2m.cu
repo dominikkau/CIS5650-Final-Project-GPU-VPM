@@ -71,7 +71,7 @@ __global__ void fmm::m2m(
 			while (icoef >= coefsExpansion)
 			{
 				icoef -= coefsExpansion;
-				if (++icell >= warpSize) break;
+				if (++icell >= warpSize) break; // This does not work!!
 			}
 			sh[baseOffset + icell * coefsThread + icoef] = M[globalBaseOffset + icell * coefsExpansion + icoef];
 			icoef += warpSize;
