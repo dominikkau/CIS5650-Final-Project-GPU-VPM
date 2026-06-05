@@ -7,6 +7,7 @@
 #include "../vpmcore/particlebuffer.h"
 #include "fmm_p2m.h"
 #include "fmm_m2m.h"
+#include "fmm_m2l.h"
 
 struct HCell
 {
@@ -38,4 +39,4 @@ void testTree();
 std::unordered_map<vpm::midx_t, HCell> buildTree(const vpm::vec3* points, vpm::pidx_t numPoints,
 	int maxPointsPerNode, const DomainInfo& domain, const std::vector<vpm::midx_t>& mortonCodes,
 	P2MInfo& p2mInfo, M2MInfo& m2mInfo);
-void dualTreeTraversal(const std::unordered_map<vpm::midx_t, HCell>& treeMap, std::vector<Interaction>& p2pList, std::vector<Interaction>& m2lList);
+void dualTreeTraversal(const std::unordered_map<vpm::midx_t, HCell>& treeMap, std::vector<Interaction>& p2pList, M2LInfo& m2lInfo);

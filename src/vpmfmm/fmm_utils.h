@@ -20,7 +20,7 @@ namespace fmm
 	void writeSwapCoefs(int p);
 
 	// Rotate p-order local or multipole expansion M around z-axis by alpha = atan2(b, a) with c = sqrt(a^2 + b^2)
-	__device__ __forceinline__ void rotateZ(vpm::real* M, vpm::real a, vpm::real b, vpm::real c, int p)
+	__device__ __forceinline__ void rotateZ_old(vpm::real* M, vpm::real a, vpm::real b, vpm::real c, int p)
 	{
 		vpm::real tmp;
 		vpm::real c1 = a / c;
@@ -30,16 +30,39 @@ namespace fmm
 		for (int m = 1; m < p; ++m)
 		{
 			tmp = cm * c1 + sm * s1;
-			sm = sm * c1 - cm * s1;
-			cm = tmp;
+			sm  = sm * c1 - cm * s1;
+			cm  = tmp;
 			for (int n = m; n < p; ++n)
 			{
 				const int ip = (n * (n + 1)) + m;
 				const int im = (n * (n + 1)) - m;
 
-				tmp = M[ip] * cm - M[im] * sm;
+				tmp   = M[ip] * cm - M[im] * sm;
 				M[im] = M[im] * cm + M[ip] * sm;
 				M[ip] = tmp;
+			}
+		}
+	}
+
+	// Rotate p-order local or multipole expansion M around z-axis by alpha = atan2(b, a) with c = sqrt(a^2 + b^2)
+	__device__ __forceinline__ void rotateZ(vpm::real* E, vpm::real ca, vpm::real sa, int p)
+	{
+		vpm::real tmp;
+		vpm::real cm = 1.0f;
+		vpm::real sm = 0.0f;
+		for (int m = 1; m < p; ++m)
+		{
+			tmp = cm * ca + sm * sa;
+			sm  = sm * ca - cm * sa;
+			cm  = tmp;
+			for (int n = m; n < p; ++n)
+			{
+				const int ip = (n * (n + 1)) + m;
+				const int im = (n * (n + 1)) - m;
+
+				tmp	  = E[ip] * cm - E[im] * sm;
+				E[im] = E[im] * cm + E[ip] * sm;
+				E[ip] = tmp;
 			}
 		}
 	}

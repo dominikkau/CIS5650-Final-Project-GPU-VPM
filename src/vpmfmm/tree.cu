@@ -17,6 +17,7 @@
 #include "../vortexringsimulation.hpp"
 #include "../lean_vtk.hpp"
 #include "../vpmio.h"
+#include "fmm_l2l.h"
 
 #ifdef __INTELLISENSE__
 #define __CUDACC__
@@ -62,7 +63,7 @@ void testTree()
 	//size_t numParticlesTrue = vortex_rings::initParticleBuffer(particleBuffer, vortexRings);
 	//std::cout << "Initialized " << numParticlesTrue << " particles in buffer" << std::endl;
 	constexpr int REPETITIONS = 100;
-	vpm::pidx_t numParticles = 1000'000;
+	vpm::pidx_t numParticles = 1'000'000;
 	// Degree of expansion
 	constexpr int p = 8;
 
@@ -84,6 +85,7 @@ void testTree()
 		particles.X(i).y = disPos(gen);
 		particles.X(i).z = disPos(gen);
 		particles.GammaX(i) = disGamma(gen);
+		particles.GammaY(i) = 0.0f;
 	}
 
 	std::cout << "Allocated and initialized particle buffer with " << numParticles << " particles." << std::endl;
@@ -120,9 +122,14 @@ void testTree()
 	const vpm::nidx_t nodeCount = treeMap.size();
 	vpm::real* dev_M = nullptr;
 	cudaMalloc(&dev_M, nodeCount * p * p * sizeof(vpm::real));
-	checkCUDAError("Memory of expansion coefficients failed");
+	checkCUDAError("Memory of multipole coefficients failed");
+
+	vpm::real* dev_L = nullptr;
+	cudaMalloc(&dev_L, nodeCount * p * p * sizeof(vpm::real));
+	checkCUDAError("Memory of local coefficients failed");
 
 	cudaMemset(dev_M, 0, nodeCount * p * p * sizeof(vpm::real));
+	cudaMemset(dev_L, 0, nodeCount * p * p * sizeof(vpm::real));
 
 	std::cout << "Total number of nodes in tree: " << nodeCount << std::endl;
 	std::cout << "Total number of P2M interactions: " << p2mInfo.size() << std::endl;
@@ -180,33 +187,111 @@ void testTree()
     std::cout << "Kernel execution took " << milliseconds / REPETITIONS << " ms on average" << std::endl;
 
 	constexpr int checkCoeffs = 10;
+	constexpr int checkNodes = 5;
 	vpm::real* expansionCoeffs = new vpm::real[nodeCount * p * p];
 
 	cudaMemcpy(expansionCoeffs, dev_M, nodeCount * p * p * sizeof(vpm::real), cudaMemcpyDeviceToHost);
 	checkCUDAError("Copy of indices failed");
 
-	std::cout << "First " << checkCoeffs << " expansion coefficients (M) for first " << checkCoeffs << " leaf nodes:" << std::endl;
-	for (int i = 0; i < checkCoeffs; ++i) {
+	std::cout << "First " << checkCoeffs << " expansion coefficients (M) for first " << checkNodes << " leaf nodes:" << std::endl;
+	for (int i = 0; i < checkNodes; ++i) {
 		vpm::nidx_t nodeIndex = p2mInfo.nodes()[i];
 		std::cout << "Node " << nodeIndex << ": ";
-		for (int j = 0; j < 5; ++j) {
+		for (int j = 0; j < checkCoeffs; ++j) {
 			std::cout << expansionCoeffs[nodeIndex * p * p + j] << " ";
 		}
 		std::cout << std::endl;
 	}
 
+	delete[] expansionCoeffs;
+
 
 	int maxDepth = m2mInfo.depthCount();
 	constexpr unsigned int blockSizeM2M = 64;
-	const unsigned int numBlocksM2M = (m2mInfo.size(maxDepth-1) + blockSizeM2M - 1) / blockSizeM2M;
+	unsigned int numBlocksM2M = (m2mInfo.size(maxDepth-1) + blockSizeM2M - 1) / blockSizeM2M;
 
-	const unsigned int sharedMemSizeM2M = blockSizeM2M * (p * p + 2 * p - 1 + (p % 2 == 0)) * sizeof(vpm::real);
+	const unsigned int sharedMemSizeM2M = fmm::shRequirementM2M(p, blockSizeM2M);
 
-	
-	fmm::m2m<<<numBlocksM2M, blockSizeM2M, sharedMemSizeM2M>>>(m2mInfo.dev_parents(maxDepth - 1), m2mInfo.dev_children(maxDepth - 1), m2mInfo.dev_distances(maxDepth - 1), dev_M, p);
+	for (int d = maxDepth - 1; d > 2; --d)
+	{
+		numBlocksM2M = (m2mInfo.size(d) + blockSizeM2M - 1) / blockSizeM2M;
+		std::cout << "Running M2M for depth " << d << " with " << m2mInfo.size(d) << " interactions" << std::endl;
+		fmm::m2m<<<numBlocksM2M, blockSizeM2M, sharedMemSizeM2M>>>(m2mInfo.dev_parents(d), m2mInfo.children(d)[0], m2mInfo.dev_distances(d), dev_M, m2mInfo.size(d), p);
+		checkCUDAError("Kernel fmmM2M failed");
+	}
 
+	std::vector<Interaction> p2pList;
+	M2LInfo m2lInfo;
+	dualTreeTraversal(treeMap, p2pList, m2lInfo);
+	std::cout << "Total P2P interactions: " << p2pList.size() << std::endl;
+	std::cout << "Total M2L interactions: " << m2lInfo.size() << std::endl;
 
+	constexpr unsigned int blockSizeM2L = 64;
+	const unsigned int numBlocksM2L = (m2lInfo.size() + blockSizeM2L - 1) / blockSizeM2L;
+	const unsigned int sharedMemSizeM2L = fmm::shRequirementM2M(p, blockSizeM2L);
 
+	std::cout << "Attempting to launch M2L kernel with " << sharedMemSizeM2L << " bytes of shared memory per block" << std::endl;
+
+	m2lInfo.toDevice();
+
+	// Create CUDA events
+	cudaEventCreate(&cudaStart);
+	cudaEventCreate(&cudaStop);
+
+	// Record the start event
+	cudaEventRecord(cudaStart);
+	fmm::m2l<<<numBlocksM2L, blockSizeM2L, sharedMemSizeM2L>>>(m2lInfo.dev_targets(), m2lInfo.dev_sources(), m2lInfo.dev_distances(), dev_M, dev_L, m2lInfo.size(), p, false);
+	checkCUDAError("Kernel fmmM2L failed");
+	fmm::m2l<<<numBlocksM2L, blockSizeM2L, sharedMemSizeM2L>>>(m2lInfo.dev_sources(), m2lInfo.dev_targets(), m2lInfo.dev_distances(), dev_M, dev_L, m2lInfo.size(), p, true);
+	checkCUDAError("Kernel fmmM2L failed (reversed)");
+
+	// Record the stop event
+	cudaEventRecord(cudaStop);
+	cudaEventSynchronize(cudaStop);
+
+	// Calculate the elapsed time
+	milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, cudaStart, cudaStop);
+
+	cudaEventDestroy(cudaStart);
+	cudaEventDestroy(cudaStop);
+
+	// Output the duration
+	std::cout << "M2L Kernel execution took " << milliseconds << " ms on average" << std::endl;
+
+	constexpr unsigned int blockSizeL2L = 64;
+	unsigned int numBlocksL2L = (m2mInfo.size(maxDepth - 1) + blockSizeL2L - 1) / blockSizeL2L;
+	const unsigned int sharedMemSizeL2L = fmm::shRequirementM2M(p, blockSizeL2L);
+	for (int d = 2; d < maxDepth; d++)
+	{
+		numBlocksL2L = (m2mInfo.size(d) + blockSizeL2L - 1) / blockSizeL2L;
+		std::cout << "Running L2L for depth " << d << " with " << m2mInfo.size(d) << " interactions" << std::endl;
+		fmm::l2l<<<numBlocksL2L, blockSizeL2L, sharedMemSizeL2L >> > (m2mInfo.children(d)[0], m2mInfo.dev_parents(d), m2mInfo.dev_distances(d), dev_L, m2mInfo.size(d), p);
+		cudaDeviceSynchronize();
+		checkCUDAError("Kernel fmmL2L failed");
+	}
+
+	constexpr unsigned int blockSizeL2P = 64;
+	const unsigned int numBlocksL2P = (p2mInfo.size() + blockSizeL2P - 1) / blockSize;
+	const unsigned int sharedMemSizeL2P = blockSizeL2P * ((p * p + 1) * sizeof(vpm::real) + sizeof(vpm::nidx_t));
+
+	fmm::l2p<<<numBlocksL2P, blockSizeL2P, sharedMemSizeL2P>>>(p2mInfo.dev_nodes(), p2mInfo.dev_pointsEnd(), p2mInfo.dev_centers(), p2mInfo.size(), dev_particles.X(), dev_particles.GammaY(), dev_L, p);
+	cudaDeviceSynchronize();
+	checkCUDAError("Kernel fmmL2P failed");
+
+	constexpr int checkResult= 10;
+	vpm::real* results = new vpm::real[checkResult];
+
+	cudaMemcpy(results, dev_particles.GammaY(), checkResult * sizeof(vpm::real), cudaMemcpyDeviceToHost);
+	checkCUDAError("Copy of indices failed");
+
+	std::cout << "First " << checkResult << " results" << std::endl;
+	for (int i = 0; i < checkResult; ++i)
+	{
+		std::cout << results[i] << std::endl;
+	}
+
+	delete[] results;
 
 
 	return;
@@ -225,19 +310,19 @@ void testTree()
 	start = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < REPETITIONS; ++i) {
 		std::vector<Interaction> p2pList;
-		std::vector<Interaction> m2lList;
-		dualTreeTraversal(treeMap, p2pList, m2lList);
+		M2LInfo m2lInfo;
+		dualTreeTraversal(treeMap, p2pList, m2lInfo);
 	}
 	end = std::chrono::high_resolution_clock::now();
 
 	duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	std::cout << "Computing interactions took: " << duration.count() / REPETITIONS << " ms" << std::endl;
 
-	std::vector<Interaction> p2pList;
-	std::vector<Interaction> m2lList;
-	dualTreeTraversal(treeMap, p2pList, m2lList);
-	std::cout << "Total P2P interactions: " << p2pList.size() << std::endl;
-	std::cout << "Total M2L interactions: " << m2lList.size() << std::endl;
+	//std::vector<Interaction> p2pList;
+	//std::vector<Interaction> m2lList;
+	//dualTreeTraversal(treeMap, p2pList, m2lList);
+	//std::cout << "Total P2P interactions: " << p2pList.size() << std::endl;
+	//std::cout << "Total M2L interactions: " << m2lList.size() << std::endl;
 
 	//bool write_volume_mesh(const std::string & path,
 	//	const int dim,
@@ -512,7 +597,7 @@ static bool mac(const HCell* cellA, const HCell* cellB)
 }
 
 typedef std::pair<const HCell*, const HCell*> CellPair;
-void dualTreeTraversal(const std::unordered_map<vpm::midx_t, HCell>& treeMap, std::vector<Interaction>& p2pList, std::vector<Interaction>& m2lList)
+void dualTreeTraversal(const std::unordered_map<vpm::midx_t, HCell>& treeMap, std::vector<Interaction>& p2pList, M2LInfo& m2lInfo)
 {
 	std::vector<CellPair> stack;
 	stack.reserve(36 * MAX_DEPTH); // Reserve space to avoid reallocations
@@ -553,7 +638,8 @@ void dualTreeTraversal(const std::unordered_map<vpm::midx_t, HCell>& treeMap, st
 
 		if (mac(cellA, cellB))
 		{
-			m2lList.push_back({ cellA->index, cellB->index });
+			// Only add one direction as the interaction is symmetric
+			m2lInfo.add(cellA->index, cellB->index, cellA->center - cellB->center);
 			continue;
 		}
 

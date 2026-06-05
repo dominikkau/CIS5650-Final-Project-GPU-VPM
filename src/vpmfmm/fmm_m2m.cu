@@ -5,76 +5,113 @@
 
 __device__ __inline__ void static transZM2M(vpm::real* __restrict__ s_M, vpm::real* __restrict__ s_c, vpm::real z, int p)
 {
-	for (int m = 1 - p; m < p; ++m)
+	// m = 0
+	// Cache column from s_M to s_c
+	for (int n = 0; n < p; ++n)
 	{
-		const int absM = abs(m);
+		const int idx = (n * (n + 1));
+		s_c[n] = s_M[idx];
+		s_M[idx] = 0.0f;
+	}
 
-		// Cache column from s_M to s_c
-		for (int n = absM; n < p; ++n)
+	vpm::real fac = 1.0f;
+	for (int d = 0; d < p; ++d)
+	{
+		for (int n = d; n < p; ++n)
 		{
-			const int idx = (n * (n + 1)) + m;
-			s_c[n] = s_M[idx];
-			s_M[idx] = 0.0f;
+			s_M[(n * (n + 1))] += fac * s_c[n - d];
+		}
+		fac *= -z / (d + 1);
+	}
+
+	// m > 0
+	for (int m = 1; m < p; ++m)
+	{
+		// Cache column from s_M to s_c
+		for (int n = m; n < p; ++n)
+		{
+			const int idxp = (n * (n + 1)) + m;
+			const int idxm = (n * (n + 1)) - m;
+			s_c[n - 1    ] = s_M[idxp];
+			s_c[n - 1 + p] = s_M[idxm];
+			s_M[idxp] = 0.0f;
+			s_M[idxm] = 0.0f;
 		}
 
-		vpm::real fac = 1.0f;
-		for (int d = 0; d < p - absM; ++d) // Consider changing loop order to trade extra reads/writes for redundant calculations of fac
+		fac = 1.0f;
+		for (int d = 0; d < p - m; ++d)
 		{
-			for (int n = d + absM; n < p; ++n)
+			for (int n = d + m; n < p; ++n)
 			{
-				s_M[(n * (n + 1)) + m] += fac * s_c[n - d];
+				s_M[(n * (n + 1)) + m] += fac * s_c[n - d - 1    ];
+				s_M[(n * (n + 1)) - m] += fac * s_c[n - d - 1 + p];
 			}
 			fac *= -z / (d + 1);
 		}
 	}
 }
 
-__global__ void fmm::m2m(
-	const vpm::nidx_t* __restrict__ parents,
-	const vpm::nidx_t* __restrict__ children,
-	const vpm::vec3* __restrict__ distances,
-	vpm::real* M,
-	int p)
+unsigned int fmm::shRequirementM2M(int p, int blockSize)
 {
-	size_t globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
+	const unsigned int coefsExpansion = blockSize * (p * p + ((p % 2) == 0)) * sizeof(vpm::real);
+	const unsigned int coefsCache = blockSize * (2 * p - 1) * sizeof(vpm::real);
+	const unsigned int nodeIndices = blockSize * sizeof(vpm::nidx_t);
 
-	int firstChild = 100; // TODO: Get child offset
-	size_t cellIndex = firstChild + globalIndex; 
+	return coefsExpansion + coefsCache + nodeIndices;
+}
+
+__global__ void fmm::m2m(
+	const vpm::nidx_t* __restrict__ targets,
+	const vpm::nidx_t firstSource,
+	const vpm::vec3* __restrict__ distances,
+	vpm::real* __restrict__ M,
+	vpm::nidx_t count, int p)
+{
+	// Global index of this thread
+	const size_t globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
+	// Index of warp in this block
+	const int warpIndex = threadIdx.x >> 5;
+	// Index within this warp
+	const int laneIndex = threadIdx.x & (warpSize - 1);
+	// First global index processed by this warp
+	const int firstWarpIdx = blockIdx.x * blockDim.x + warpIndex * warpSize;
+
+	// Compute number of nodes processed by this warp (32 or less for the last warp)
+	const int warpNodesCount = firstWarpIdx < count ? min(warpSize, count - firstWarpIdx) : 0;
+	// Return if entire warp is out of bounds
+	if (warpNodesCount == 0) return;
 
 	// Number of coefficients for each expansion
 	const int coefsExpansion = p * p;
+	// Number of coefficients for each expansion (including possible padding)
+	const int coefsExpansionPad = p * p + ((p & 1) == 0);
 	// Number of coefficients in caching row
 	const int coefsCache = 2 * p - 1;
-	// Number of coefficients per thread, additional element for even p to avoid/reduce bank conflicts
-	const int coefsThread = coefsExpansion + (p & 1 == 0);
-	// Number of coefficients per warp
-	const int coefsWarp = (coefsThread + coefsCache) * warpSize;
 
-	// Current thread's lane and warp index
-	const int laneId = threadIdx.x & (warpSize - 1);
-	const int warpId = threadIdx.x >> 5;
-	//const int globalWarpId = globalIndex >> 5;
-
-	// Declare shared memory
-	extern __shared__ vpm::real sh[];
-
-	const int baseOffset = warpId * coefsWarp;
-	const int globalBaseOffset = (firstChild + warpId * warpSize) * coefsExpansion;
+	// Declare shared memory and shared memory pointers
+	extern __shared__ int sh[];
+	vpm::nidx_t* const indices = reinterpret_cast<vpm::nidx_t*>(sh);
+	vpm::real* const s_M = reinterpret_cast<vpm::real*>(indices + blockDim.x) + threadIdx.x * coefsExpansionPad;
+	vpm::real* const s_r = reinterpret_cast<vpm::real*>(indices + blockDim.x) + blockDim.x * coefsExpansionPad + threadIdx.x * coefsCache;
+	vpm::real* const s_Mw = reinterpret_cast<vpm::real*>(indices + blockDim.x) + warpIndex * warpSize * coefsExpansionPad;
 
 	// This access patterns will cause occasional 1-degree bank conflicts for even p, TODO: improve??
 	int icell = 0;
-	int icoef = laneId;
+	int icoef = laneIndex;
 	if (coefsExpansion < warpSize)
 	{
 		while (true)
 		{
-			while (icoef >= coefsExpansion)
+			if (icoef >= coefsExpansion)
 			{
 				icoef -= coefsExpansion;
-				if (++icell >= warpSize) break; // This does not work!!
+				if (++icell >= warpNodesCount) break;
 			}
-			sh[baseOffset + icell * coefsThread + icoef] = M[globalBaseOffset + icell * coefsExpansion + icoef];
-			icoef += warpSize;
+			else
+			{
+				s_Mw[icell * coefsExpansionPad + icoef] = M[(firstSource + icell) * coefsExpansion + icoef];
+				icoef += warpSize;
+			}
 		}
 	}
 	else
@@ -84,66 +121,82 @@ __global__ void fmm::m2m(
 			if (icoef >= coefsExpansion)
 			{
 				icoef -= coefsExpansion;
-				if (++icell >= warpSize) break;
+				if (++icell >= warpNodesCount) break;
 			}
-			sh[baseOffset + icell * coefsThread + icoef] = M[globalBaseOffset + icell * coefsExpansion + icoef];
+			s_Mw[icell * coefsExpansionPad + icoef] = M[(firstSource + icell) * coefsExpansion + icoef];
 			icoef += warpSize;
 		}
 	}
 
 	__syncwarp();
 
-	// Shared memory contains all expansion coefficients first (with possible padding), then caching rows follow
-	vpm::real* const s_M = sh + threadIdx.x * coefsThread;
-	vpm::real* const s_r = sh + blockDim.x * coefsThread + threadIdx.x * coefsCache;
+	if (globalIndex < count)
+	{
+		const vpm::real x = distances[globalIndex].x;
+		const vpm::real y = distances[globalIndex].y;
+		const vpm::real z = distances[globalIndex].z;
 
-	const vpm::real x = distances[globalIndex].x;
-	const vpm::real y = distances[globalIndex].y;
-	const vpm::real z = distances[globalIndex].z;
+		const vpm::real rxy2 = x * x + y * y;
+		const vpm::real rxy = sqrt(rxy2);
+		const vpm::real r = sqrt(rxy2 + z * z);
+		const vpm::real cosAlpha = y / rxy;
+		const vpm::real sinAlpha = -x / rxy;
+		const vpm::real cosBeta = z / r;
+		const vpm::real sinBeta = rxy / r;
 
-	const vpm::real rxy2 = x * x + y * y;
-	const vpm::real rxy = sqrtf(rxy2);
-	const vpm::real r = sqrtf(rxy2 + z * z);
+		fmm::rotateZ(s_M, cosAlpha, sinAlpha, p);
+		fmm::swapXZ<c_swapCoefsM>(s_M, s_r, p);
+		fmm::rotateZ(s_M, cosBeta, sinBeta, p);
+		fmm::swapXZ<c_swapCoefsM>(s_M, s_r, p);
 
-	// Rotate around z-axis by alpha = -atan2(x, y)
-	fmm::rotateZ(s_M, y, -x, rxy, p);
+		transZM2M(s_M, s_r, z, p);
 
-	// Swap axes z <-> x
-	fmm::swapXZ<c_swapCoefsM>(s_M, s_r, p);
+		fmm::swapXZ<c_swapCoefsM>(s_M, s_r, p);
+		fmm::rotateZ(s_M, cosBeta, -sinBeta, p);
+		fmm::swapXZ<c_swapCoefsM>(s_M, s_r, p);
+		fmm::rotateZ(s_M, cosAlpha, -sinAlpha, p);
+	}
 
-	// Rotate around z-axis (originally x) by beta = atan2(rxy, z)
-	fmm::rotateZ(s_M, z, rxy, r, p);
-
-	// Swap axes z <-> x
-	fmm::swapXZ<c_swapCoefsM>(s_M, s_r, p);
-
-	// Translate along z axis
-	transZM2M(s_M, s_r, z, p);
-
-	// Swap axes z <-> x
-	fmm::swapXZ<c_swapCoefsM>(s_M, s_r, p);
-
-	// Rotate around z-axis (originally x) by beta = -atan2(rxy, z)
-	fmm::rotateZ(s_M, z, -rxy, r, p);
-
-	// Swap axes z <-> x
-	fmm::swapXZ<c_swapCoefsM>(s_M, s_r, p);
-
-	// Rotate around z-axis by alpha = atan2(x, y)
-	fmm::rotateZ(s_M, y, -x, rxy, p);
+	// Load target indices into shared memory
+	if (globalIndex < count)
+		indices[threadIdx.x] = targets[globalIndex];
 
 	__syncwarp();
 
-	// TODO: Improve simple copy back to global memory
-	for (int i = 0; i < warpSize; ++i)
+	icell = 0;
+	icoef = laneIndex;
+	int nodeIdx = indices[warpIndex * warpSize];
+	if (coefsExpansion < warpSize)
 	{
-		for (int j = 0; j < coefsExpansion; j += warpSize)
+		while (true)
 		{
-			atomicAdd(&M[globalBaseOffset + i * coefsExpansion + j], sh[baseOffset + i * coefsThread + j]);
+			if (icoef >= coefsExpansion)
+			{
+				icoef -= coefsExpansion;
+				if (++icell >= warpNodesCount) break;
+				nodeIdx = indices[warpIndex * warpSize + icell];
+			}
+			else
+			{
+				atomicAdd(&M[nodeIdx * coefsExpansion + icoef], s_Mw[icell * coefsExpansionPad + icoef]);
+				icoef += warpSize;
+			}
 		}
 	}
-
-	return;
+	else
+	{
+		while (true)
+		{
+			if (icoef >= coefsExpansion)
+			{
+				icoef -= coefsExpansion;
+				if (++icell >= warpNodesCount) break;
+				nodeIdx = indices[warpIndex * warpSize + icell];
+			}
+			atomicAdd(&M[nodeIdx * coefsExpansion + icoef], s_Mw[icell * coefsExpansionPad + icoef]);
+			icoef += warpSize;
+		}
+	}
 }
 
 M2MInfo::~M2MInfo()
@@ -188,7 +241,7 @@ void M2MInfo::addOffsets(const std::array<vpm::nidx_t, MAX_DEPTH>& depthOffsets)
 	}
 }
 
-void M2MInfo::toDevice() const
+void M2MInfo::toDevice()
 {
 	if (dev_parents_ != nullptr) return;
 

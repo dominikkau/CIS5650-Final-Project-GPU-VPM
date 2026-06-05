@@ -44,6 +44,8 @@ set(headers
     src/vpmcore/sfs.h
 	src/vpmfmm/fmm_p2m.h
     src/vpmfmm/fmm_m2m.h
+    src/vpmfmm/fmm_m2l.h
+    src/vpmfmm/fmm_l2l.h
 	src/vpmfmm/fmm_utils.h
 	src/vpmfmm/tree.h
     src/lean_vtk.hpp
@@ -61,6 +63,8 @@ set(sources
     src/vpmcore/sfs.cu
 	src/vpmfmm/fmm_p2m.cu
     src/vpmfmm/fmm_m2m.cu
+    src/vpmfmm/fmm_m2l.cu
+    src/vpmfmm/fmm_l2l.cu
     src/vpmfmm/fmm_utils.cu
 	src/vpmfmm/tree.cu
     src/lean_vtk.cpp

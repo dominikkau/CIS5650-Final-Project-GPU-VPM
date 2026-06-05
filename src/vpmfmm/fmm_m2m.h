@@ -9,8 +9,8 @@
 // M2M data for a single depth of the tree
 struct M2MEntry
 {
-	std::vector<vpm::nidx_t> parents_;		// parent node indices
-	std::vector<vpm::nidx_t> children_;		// child node indices
+	std::vector<vpm::nidx_t> parents_;	// parent node indices
+	std::vector<vpm::nidx_t> children_;	// child node indices
 	std::vector<vpm::vec3> distances_;	// distance from child to parent (center of child - center of parent)
 
 	vpm::nidx_t size() const { return parents_.size(); }
@@ -31,7 +31,7 @@ public:
 	int depthCount() const { return entries_.size(); }
 	void add(int depth, vpm::nidx_t parent, vpm::nidx_t child, const vpm::vec3& distance);
 	void addOffsets(const std::array<vpm::nidx_t, MAX_DEPTH>& depthOffsets);
-	void toDevice() const;
+	void toDevice();
 
 	const std::vector<vpm::nidx_t>& parents(int depth) const { return entries_[depth].parents_; }
 	const std::vector<vpm::nidx_t>& children(int depth) const { return entries_[depth].children_; }
@@ -44,5 +44,13 @@ public:
 
 namespace fmm
 {
-	__global__ void m2m(const vpm::nidx_t* __restrict__ parents, const vpm::nidx_t* __restrict__ children, const vpm::vec3* __restrict__ distances, vpm::real* M, int p);
+	unsigned int shRequirementM2M(int p, int blockSize);
+
+	__global__ void m2m(
+		const vpm::nidx_t* __restrict__ targets,
+		const vpm::nidx_t firstSource,
+		const vpm::vec3* __restrict__ distances,
+		vpm::real* __restrict__ M,
+		vpm::nidx_t count, int p
+	);
 }

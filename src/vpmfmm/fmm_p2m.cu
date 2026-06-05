@@ -22,19 +22,23 @@
 
 namespace cg = cooperative_groups;
 
-template <typename AccumulatorFn>
+template <bool includePhase = false, bool doubleComplex = false, typename AccumulatorFn>
 __host__ __device__ __forceinline__ void rbsf(vpm::vec3 pos, vpm::real q, int p, AccumulatorFn acc)
 {
+    // Evaluated at compile-time
+    constexpr vpm::real sign = includePhase ? -1.0f : 1.0f;
+	constexpr vpm::real two = doubleComplex ? 2.0f : 1.0f;
+
 	const vpm::real x = pos.x;
 	const vpm::real y = pos.y;
 	const vpm::real z = pos.z;
     const vpm::real r2 = x * x + y * y + z * z;
 
     // Define initial values for recurrence
-    vpm::real Rnm1mm1pos =             q; // R_{n-1}^{m-1}
-    vpm::real Rnmneg     = -0.5f * y * q; // R_{n}^{-m}
-    vpm::real Rnmm1pos   =         z * q; // R_{n}^{m-1}
-    vpm::real Rnmpos     =  0.5f * x * q; // R_{n}^{m}
+    vpm::real Rnm1mm1pos =                          q; // R_{n-1}^{m-1}
+    vpm::real Rnmneg     = two * sign * 0.5f *  y * q; // R_{n}^{-m}
+    vpm::real Rnmm1pos   =       sign *        -z * q; // R_{n}^{m-1}
+    vpm::real Rnmpos     = two * sign * 0.5f * -x * q; // R_{n}^{m}
 
     acc(0, Rnm1mm1pos);
     acc(1, Rnmneg);
@@ -48,27 +52,27 @@ __host__ __device__ __forceinline__ void rbsf(vpm::vec3 pos, vpm::real q, int p,
     {
         const int n_2 = n_ * n_;
         const vpm::real facz = z * (2.0f * n_ - 1.0f);
-        const vpm::real Rnp1mm1pos = (facz * Rnmm1pos - r2 * Rnm1mm1pos) / n_2;
+        const vpm::real Rnp1mm1pos = -(sign * facz * Rnmm1pos + r2 * Rnm1mm1pos) / n_2;
         acc(n_2 + n_, Rnp1mm1pos);
         Rnm1mm1pos = Rnmm1pos;
         Rnmm1pos = Rnp1mm1pos;
     }
 
-    Rnm1mm1neg = Rnmneg;
-    Rnm1mm1pos = Rnmpos;
+    Rnm1mm1neg = two * Rnmneg;
+    Rnm1mm1pos = two * Rnmpos;
 
     for (int n = 2; n < p; n++)
     {
         int n2 = n * n;
-        vpm::real div = 0.5f / n;
+        vpm::real div = sign * -0.5f / n;
         Rnmneg = div * (x * Rnm1mm1neg - y * Rnm1mm1pos);
         Rnmpos = div * (x * Rnm1mm1pos + y * Rnm1mm1neg);
 
         acc(n2, Rnmneg);
         acc(n2 + 2 * n, Rnmpos);
 
-        Rnmm1neg = z * Rnm1mm1neg;
-        Rnmm1pos = z * Rnm1mm1pos;
+        Rnmm1neg = sign * -z * Rnm1mm1neg;
+        Rnmm1pos = sign * -z * Rnm1mm1pos;
 
         acc(n2 + 1, Rnmm1neg);
         acc(n2 + 2 * n - 1, Rnmm1pos);
@@ -78,10 +82,10 @@ __host__ __device__ __forceinline__ void rbsf(vpm::vec3 pos, vpm::real q, int p,
         for (int n_ = n + 1; n_ < p; n_++)
         {
             n2 = n_ * n_;
-            div = 1.0f / (n2 - m2);
-            const vpm::real facz = z * (2 * n_ - 1);
-            const vpm::real Rnp1mm1neg = (facz * Rnmm1neg - r2 * Rnm1mm1neg) * div;
-            const vpm::real Rnp1mm1pos = (facz * Rnmm1pos - r2 * Rnm1mm1pos) * div;
+            div = 1.0f / (m2 - n2);
+            const vpm::real facz = z * (2.0f * n_ - 1.0f);
+            const vpm::real Rnp1mm1neg = (sign * facz * Rnmm1neg + r2 * Rnm1mm1neg) * div;
+            const vpm::real Rnp1mm1pos = (sign * facz * Rnmm1pos + r2 * Rnm1mm1pos) * div;
 
             acc(n2 + n_ - m, Rnp1mm1neg);
             acc(n2 + n_ + m, Rnp1mm1pos);
@@ -103,7 +107,19 @@ __device__ __forceinline__ void evalRbsfDirect(vpm::vec3 pos, vpm::real q, int p
 	    {
 		    M[idx] += value;
 	    };
-	rbsf(pos, q, p, acc);
+    rbsf<true>(pos, q, p, acc);
+}
+
+__device__ __forceinline__ vpm::real evalLDirect(vpm::vec3 pos, int p, const vpm::real* L)
+{
+    vpm::real result = 0.0f;
+    auto acc = [&](int idx, vpm::real value)
+        {
+            result += L[idx] * value;
+        };
+    rbsf<false, true>(pos, 1.0f, p, acc);
+
+    return result;
 }
 
 __device__ __forceinline__ void evalRbsfDirectAtomic(vpm::vec3 pos, vpm::real q, int p, vpm::real* M)
@@ -112,7 +128,7 @@ __device__ __forceinline__ void evalRbsfDirectAtomic(vpm::vec3 pos, vpm::real q,
 	    {
 		    atomicAdd(&M[idx], value);
 	    };
-	rbsf(pos, q, p, acc);
+	rbsf<true>(pos, q, p, acc);
 }
 
 template <typename Group>
@@ -123,7 +139,7 @@ __device__ __forceinline__ void evalRbsfReduce(vpm::vec3 pos, vpm::real q, int p
             const auto sum = cg::reduce(group, value, cg::plus<vpm::real>());
             if (group.thread_rank() == 0) M[idx] += sum;
         };
-    rbsf(pos, q, p, acc);
+    rbsf<true>(pos, q, p, acc);
 }
 
 template <typename Group>
@@ -134,7 +150,7 @@ __device__ __forceinline__ void evalRbsfReduceAtomic(vpm::vec3 pos, vpm::real q,
 		    const auto sum = cg::reduce(group, value, cg::plus<vpm::real>());
 		    if (group.thread_rank() == 0) atomicAdd(&M[idx], sum);
 	    };
-	rbsf(pos, q, p, acc);
+    rbsf<true>(pos, q, p, acc);
 }
 
 __device__ __forceinline__ int getMask(int it, vpm::pidx_t ip, vpm::pidx_t pmin, vpm::pidx_t pmax, int& numThreads, int& leader)
@@ -170,7 +186,7 @@ __device__ __forceinline__ void evalRbsfReduceManual(vpm::vec3 pos, vpm::real q,
             }
             if (it == leader) M[idx] += value;
         };
-    rbsf(pos, q, p, acc);
+    rbsf<true>(pos, q, p, acc);
 }
 
 unsigned int fmm::shRequirementP2M(int p, int blockSize)
@@ -186,10 +202,15 @@ unsigned int fmm::shRequirementP2M(int p, int blockSize)
 
 // Computes Multipole expansion of particles
 // Evaluates regular spherical basis function
-__global__ void fmm::p2m(const vpm::nidx_t* __restrict__ nodes, const vpm::pidx_t* __restrict__ pointsEnd, 
-    const vpm::vec3* __restrict__ centers, size_t count, const vpm::vec3* __restrict__ xs, 
-    const vpm::real* __restrict__ qs, vpm::real* M, int p)
-{
+__global__ void fmm::p2m(
+    const vpm::nidx_t* __restrict__ nodes,
+    const vpm::pidx_t* __restrict__ pointsEnd, 
+    const vpm::vec3* __restrict__ centers,
+    size_t count,
+    const vpm::vec3* __restrict__ xs, 
+    const vpm::real* __restrict__ qs,
+    vpm::real* __restrict__ M, int p
+){
     const size_t globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
     constexpr int threadsPerNode = 2;
@@ -287,6 +308,97 @@ __global__ void fmm::p2m(const vpm::nidx_t* __restrict__ nodes, const vpm::pidx_
 	}
 }
 
+__global__ void fmm::l2p(
+    const vpm::nidx_t* __restrict__ nodes,
+    const vpm::pidx_t* __restrict__ pointsEnd,
+    const vpm::vec3* __restrict__ centers,
+    vpm::nidx_t count,
+    const vpm::vec3* __restrict__ xs,
+    vpm::real* __restrict__ ys,
+    const vpm::real* __restrict__ L, int p
+) {
+    // Global index of this thread
+    const size_t globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    // Index of warp in this block
+    const int warpIndex = threadIdx.x >> 5;
+    // Index within this warp
+    const int laneIndex = threadIdx.x & (warpSize - 1);
+    // First global index processed by this warp
+    const int firstWarpIdx = blockIdx.x * blockDim.x + warpIndex * warpSize;
+
+    // Compute number of nodes processed by this warp (32 or less for the last warp)
+    const int warpNodesCount = firstWarpIdx < count ? min(warpSize, count - firstWarpIdx) : 0;
+    // Return if entire warp is out of bounds
+    if (warpNodesCount == 0) return;
+
+    // Number of coefficients for each expansion
+    const int coefsExpansion = p * p;
+    // Number of coefficients for each expansion (including possible padding)
+    const int coefsExpansionPad = p * p + ((p & 1) == 0);
+
+    // Declare shared memory and shared memory pointers
+    extern __shared__ int sh[];
+    vpm::nidx_t* const indices = reinterpret_cast<vpm::nidx_t*>(sh);
+    vpm::real* const s_L = reinterpret_cast<vpm::real*>(indices + blockDim.x) + threadIdx.x * coefsExpansionPad;
+    vpm::real* const s_Lw = reinterpret_cast<vpm::real*>(indices + blockDim.x) + warpIndex * warpSize * coefsExpansionPad;
+
+    // Load source indices into shared memory
+    if (globalIndex < count)
+        indices[threadIdx.x] = nodes[globalIndex];
+
+    __syncwarp();
+
+    // This access patterns will cause occasional 1-degree bank conflicts for even p, TODO: improve??
+    int icell = 0;
+    int icoef = laneIndex;
+    int nodeIdx = indices[warpIndex * warpSize];
+    if (coefsExpansion < warpSize)
+    {
+        while (true)
+        {
+            if (icoef >= coefsExpansion)
+            {
+                icoef -= coefsExpansion;
+                if (++icell >= warpNodesCount) break;
+                nodeIdx = indices[warpIndex * warpSize + icell];
+            }
+            else
+            {
+                s_Lw[icell * coefsExpansionPad + icoef] = L[nodeIdx * coefsExpansion + icoef];
+                icoef += warpSize;
+            }
+        }
+    }
+    else
+    {
+        while (true)
+        {
+            if (icoef >= coefsExpansion)
+            {
+                icoef -= coefsExpansion;
+                if (++icell >= warpNodesCount) break;
+                nodeIdx = indices[warpIndex * warpSize + icell];
+            }
+            s_Lw[icell * coefsExpansionPad + icoef] = L[nodeIdx * coefsExpansion + icoef];
+            icoef += warpSize;
+        }
+    }
+
+    __syncwarp();
+
+
+    if (globalIndex < count)
+    {
+		const vpm::vec3 center = centers[globalIndex];
+        const vpm::pidx_t startIndex = (globalIndex == 0) ? 0 : pointsEnd[globalIndex - 1];
+
+        for (vpm::pidx_t i = startIndex; i < pointsEnd[globalIndex]; ++i)
+        {
+            ys[i] = evalLDirect(xs[i] - center, p, s_L);
+        }
+    }
+}
+
 P2MInfo::P2MInfo(size_t capacity)
 {
     nodes_.reserve(capacity);
@@ -321,7 +433,7 @@ void P2MInfo::addOffsets(const std::array<vpm::nidx_t, MAX_DEPTH>& depthOffsets)
     }
 }
 
-void P2MInfo::toDevice() const
+void P2MInfo::toDevice()
 {
 	if (dev_nodes_ != nullptr) return;
 

@@ -122,3 +122,16 @@ void fmm::writeSwapCoefs(int p)
 	cudaMemcpyToSymbol(c_swapCoefsM, swapCoefsM.data(), swapCoefsM.size() * sizeof(vpm::real));
 	cudaMemcpyToSymbol(c_swapCoefsL, swapCoefsL.data(), swapCoefsL.size() * sizeof(vpm::real));
 }
+
+//__device__ void fmm::writeCoefs(int* indices, vpm::real* M, vpm::real* s_M, int smOffsets, int p)
+//{
+//	// TODO: Improve simple copy back to global memory
+//	for (int i = 0; i < warpSize; ++i)
+//	{
+//		int nodeIdx = indices[i];
+//		for (int j = 0; j < p * p; j += warpSize)
+//		{
+//			atomicAdd(&M[nodeIdx * p * p + j], s_M[i * smOffsets + j]);
+//		}
+//	}
+//}
